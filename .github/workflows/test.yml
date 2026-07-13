@@ -5,4 +5,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: bash scripts/verify-clean-install.sh
       - run: bash scripts/verify-public-test-suite.sh
