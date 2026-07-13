@@ -1,0 +1,48 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"${CLAUDE_PROJECT_DIR:-}\"; if [[ -z \"$root\" ]]; then root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; fi; cat \"$root/CLAUDE.md\"'"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"${CLAUDE_PROJECT_DIR:-}\"; if [[ -z \"$root\" ]]; then root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; fi; bash \"$root/.agents/hooks/scripts/check-careful.sh\"'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"${CLAUDE_PROJECT_DIR:-}\"; if [[ -z \"$root\" ]]; then root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; fi; python3 \"$root/.agents/hooks/scripts/post_tool_use_review.py\"'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"${CLAUDE_PROJECT_DIR:-}\"; if [[ -z \"$root\" ]]; then root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; fi; python3 \"$root/.agents/hooks/scripts/stop_review_gate.py\"'",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

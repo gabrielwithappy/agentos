@@ -1,0 +1,537 @@
+{
+  "schema_version": 1,
+  "agents": [
+    {
+      "name": "backend-engineer",
+      "summary": "Implement backend APIs, services, data models, and server-side integration work.",
+      "triggers": [
+        "backend",
+        "api",
+        "server",
+        "database",
+        "migration",
+        "endpoint",
+        "service"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "build a backend API endpoint",
+          "implement a database migration",
+          "review server-side integration work"
+        ],
+        "negative_examples": [
+          "make slides",
+          "design a landing page",
+          "operate Discord bot bridge"
+        ],
+        "reason_template": "backend-engineer matches because the user request fits the backend-engineer harness role.",
+        "already_installed_behavior": "already installed; use the project-local backend-engineer catalog agent instead of reinstalling"
+      },
+      "source_path": "catalog/agents/backend-engineer",
+      "install_path": ".agents/agents/backend-engineer",
+      "role_source_path": "catalog/agents/backend-engineer/AGENT.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install backend-engineer --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/backend-engineer/AGENT.md"
+      },
+      "agent_tree_sha256": "fb9f2f67ff1eae52accd7dc8f9df950bd5ddfe4b247ea9c0c9bf358b5067b249"
+    },
+    {
+      "name": "codebase-explorer",
+      "summary": "Inspect repository structure, ownership, dependencies, and implementation locations.",
+      "triggers": [
+        "codebase",
+        "explore",
+        "inspect",
+        "where is",
+        "repository structure",
+        "find implementation",
+        "locate code"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "where is authentication implemented?",
+          "inspect this codebase structure",
+          "find the files responsible for routing"
+        ],
+        "negative_examples": [
+          "write the final feature",
+          "make a slide deck",
+          "archive a skill"
+        ],
+        "reason_template": "codebase-explorer matches because the user request fits the codebase-explorer harness role.",
+        "already_installed_behavior": "already installed; use the project-local codebase-explorer catalog agent instead of reinstalling"
+      },
+      "source_path": "catalog/agents/codebase-explorer",
+      "install_path": ".agents/agents/codebase-explorer",
+      "role_source_path": "catalog/agents/codebase-explorer/AGENT.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install codebase-explorer --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/codebase-explorer/AGENT.md"
+      },
+      "agent_tree_sha256": "6c39c6f2d6925510a6aeb15994c24ee8f452873a238f66031fb69fcc0052d695"
+    },
+    {
+      "name": "contrarian",
+      "summary": "Challenge assumptions, surface alternatives, and identify weak reasoning before commitment.",
+      "triggers": [
+        "contrarian",
+        "challenge",
+        "assumptions",
+        "alternative",
+        "devil advocate",
+        "tradeoff"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "challenge this approach",
+          "what assumptions are weak here?",
+          "give me alternatives before implementation"
+        ],
+        "negative_examples": [
+          "implement now",
+          "run tests only",
+          "install a skill"
+        ],
+        "reason_template": "contrarian matches because the user request fits the contrarian harness role.",
+        "already_installed_behavior": "already installed; use the project-local contrarian wrapper instead of reinstalling"
+      },
+      "source_path": "catalog/agents/contrarian",
+      "install_path": ".agents/agents/contrarian",
+      "role_source_path": ".agents/agents/harness/contrarian.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install contrarian --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/contrarian/AGENT.md"
+      },
+      "agent_tree_sha256": "72a289eedfc232118aa03f641b93514d81e69b63c3661320dff106f607506b70"
+    },
+    {
+      "name": "debug-investigator",
+      "summary": "Diagnose bugs, regressions, failing tests, and unexpected runtime behavior.",
+      "triggers": [
+        "debug",
+        "bug",
+        "failure",
+        "regression",
+        "root cause",
+        "failing test",
+        "error"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "find the root cause of this failure",
+          "debug this regression",
+          "investigate why the test fails"
+        ],
+        "negative_examples": [
+          "write a new plan from scratch",
+          "make a diagram",
+          "publish a PR"
+        ],
+        "reason_template": "debug-investigator matches because the user request fits the debug-investigator harness role.",
+        "already_installed_behavior": "already installed; use the project-local debug-investigator catalog agent instead of reinstalling"
+      },
+      "source_path": "catalog/agents/debug-investigator",
+      "install_path": ".agents/agents/debug-investigator",
+      "role_source_path": "catalog/agents/debug-investigator/AGENT.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install debug-investigator --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/debug-investigator/AGENT.md"
+      },
+      "agent_tree_sha256": "c2706cc78a66fedf55b8cb355221ba6c2252693317aa34c4d234ec8e123f413e"
+    },
+    {
+      "name": "designer-agent",
+      "summary": "Shape product, visual, and UX direction for design artifacts and user experiences.",
+      "triggers": [
+        "design",
+        "ux",
+        "visual",
+        "product surface",
+        "prototype",
+        "layout",
+        "user experience"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "design this user flow",
+          "review the UX direction",
+          "shape a visual product surface"
+        ],
+        "negative_examples": [
+          "debug CI",
+          "write database migration",
+          "operate bot bridge"
+        ],
+        "reason_template": "designer-agent matches because the user request fits the designer-agent harness role.",
+        "already_installed_behavior": "already installed; use the project-local designer-agent catalog agent instead of reinstalling"
+      },
+      "source_path": "catalog/agents/designer-agent",
+      "install_path": ".agents/agents/designer-agent",
+      "role_source_path": "catalog/agents/designer-agent/AGENT.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install designer-agent --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/designer-agent/AGENT.md"
+      },
+      "agent_tree_sha256": "5ca606d933eea5f7ea1691475ca420daf84723805266bb5ccd68acf9ec2d5046"
+    },
+    {
+      "name": "document-delivery-lead",
+      "summary": "Plan and verify structured document packages, handoff materials, and delivery readiness.",
+      "triggers": [
+        "document",
+        "delivery",
+        "handoff",
+        "report package",
+        "docs readiness",
+        "manual",
+        "guide"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "prepare a delivery document package",
+          "check docs readiness for handoff",
+          "organize this report set"
+        ],
+        "negative_examples": [
+          "fix backend bug",
+          "make ASCII art",
+          "install agent package"
+        ],
+        "reason_template": "document-delivery-lead matches because the user request fits the document-delivery-lead harness role.",
+        "already_installed_behavior": "already installed; use the project-local document-delivery-lead catalog agent instead of reinstalling"
+      },
+      "source_path": "catalog/agents/document-delivery-lead",
+      "install_path": ".agents/agents/document-delivery-lead",
+      "role_source_path": "catalog/agents/document-delivery-lead/AGENT.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install document-delivery-lead --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/document-delivery-lead/AGENT.md"
+      },
+      "agent_tree_sha256": "24251ae7030b0fb560d0ac6ce32dd2dd5b96dcac0e80b3314f034a4a62969837"
+    },
+    {
+      "name": "frontend-engineer",
+      "summary": "Implement frontend UI, components, pages, browser behavior, and client-side state.",
+      "triggers": [
+        "frontend",
+        "ui",
+        "component",
+        "page",
+        "browser app",
+        "react",
+        "css",
+        "form"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "build this UI component",
+          "fix the frontend page layout",
+          "implement the browser interaction"
+        ],
+        "negative_examples": [
+          "database migration",
+          "Discord bridge ops",
+          "review plan gate"
+        ],
+        "reason_template": "frontend-engineer matches because the user request fits the frontend-engineer harness role.",
+        "already_installed_behavior": "already installed; use the project-local frontend-engineer catalog agent instead of reinstalling"
+      },
+      "source_path": "catalog/agents/frontend-engineer",
+      "install_path": ".agents/agents/frontend-engineer",
+      "role_source_path": "catalog/agents/frontend-engineer/AGENT.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install frontend-engineer --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/frontend-engineer/AGENT.md"
+      },
+      "agent_tree_sha256": "ff880e86cf77d05414fe2350841f6c7e5c4a1ea2aeb7ba8ebd4e203a9413ccd1"
+    },
+    {
+      "name": "goal-alignment-reviewer",
+      "summary": "Check whether requirements, plans, and implementation direction match the user goal.",
+      "triggers": [
+        "goal alignment",
+        "requirements",
+        "user goal",
+        "scope alignment",
+        "intent",
+        "acceptance criteria"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "check this plan against the user goal",
+          "verify requirements alignment",
+          "does this implementation match intent?"
+        ],
+        "negative_examples": [
+          "write code immediately",
+          "make a deck",
+          "operate gateway"
+        ],
+        "reason_template": "goal-alignment-reviewer matches because the user request fits the goal-alignment-reviewer harness role.",
+        "already_installed_behavior": "already installed; use the project-local goal-alignment-reviewer wrapper instead of reinstalling"
+      },
+      "source_path": "catalog/agents/goal-alignment-reviewer",
+      "install_path": ".agents/agents/goal-alignment-reviewer",
+      "role_source_path": ".agents/agents/harness/goal-alignment-reviewer.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install goal-alignment-reviewer --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/goal-alignment-reviewer/AGENT.md"
+      },
+      "agent_tree_sha256": "56139886add3d5237ba446f1c71f01403aae79704741f068e1550c407cafbaa9"
+    },
+    {
+      "name": "harness-architect",
+      "summary": "Design or audit protected Agent Harness architecture and core governance changes.",
+      "triggers": [
+        "harness architecture",
+        "protected path",
+        "core harness",
+        "authorized architect",
+        "manifest",
+        "agent harness structure"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "audit a protected harness architecture change",
+          "design a core harness governance update",
+          "review manifest-affecting changes"
+        ],
+        "negative_examples": [
+          "ordinary app UI",
+          "slide generation",
+          "casual writing rewrite"
+        ],
+        "reason_template": "harness-architect matches because the user request fits the harness-architect harness role.",
+        "already_installed_behavior": "already installed; use the project-local harness-architect wrapper instead of reinstalling"
+      },
+      "source_path": "catalog/agents/harness-architect",
+      "install_path": ".agents/agents/harness-architect",
+      "role_source_path": ".agents/agents/harness/harness-architect.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install harness-architect --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/harness-architect/AGENT.md"
+      },
+      "agent_tree_sha256": "fbd4ba9f54d2228b30c4212d37c82d5a32cbd0405b411078d3e023776b4577f1"
+    },
+    {
+      "name": "plan-reviewer",
+      "summary": "Review implementation plans against Agent Harness execution-quality gates.",
+      "triggers": [
+        "plan",
+        "implementation plan",
+        "execution plan",
+        "review",
+        "gate 2",
+        "reviewed plan",
+        "하네스 에이전트와 리뷰",
+        "하네스 에이전트와 리뷰 후 구현",
+        "계획이 실행 가능한지"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "review this implementation plan",
+          "하네스 에이전트와 리뷰해",
+          "하네스 에이전트와 리뷰 후 구현해",
+          "계획이 실행 가능한지 봐줘",
+          "check whether this exec plan is ready to run",
+          "validate Gate 2 for the plan",
+          "find missing verification steps in this plan"
+        ],
+        "negative_examples": [
+          "operate Discord bot bridge",
+          "debug failing CI pytest job",
+          "write application code",
+          "make slides from a reference image"
+        ],
+        "reason_template": "plan-reviewer matches because the user request fits the plan-reviewer harness role.",
+        "already_installed_behavior": "already installed; use the project-local plan-reviewer wrapper instead of reinstalling"
+      },
+      "source_path": "catalog/agents/plan-reviewer",
+      "install_path": ".agents/agents/plan-reviewer",
+      "role_source_path": ".agents/agents/harness/plan-reviewer.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install plan-reviewer --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/plan-reviewer/AGENT.md"
+      },
+      "agent_tree_sha256": "df0e26005e64d4cd436a8eb76ca7625e2256d87363b017b1e1cffd1b1b4a1df9"
+    },
+    {
+      "name": "principle-auditor",
+      "summary": "Audit plans and architecture changes against Agent Harness P1-P4 principles.",
+      "triggers": [
+        "principle",
+        "audit",
+        "architecture",
+        "protected path",
+        "simplicity",
+        "P1",
+        "P4",
+        "하네스 에이전트와 리뷰",
+        "하네스 에이전트와 리뷰 후 구현",
+        "하네스 원칙"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "audit this architecture change against harness principles",
+          "하네스 에이전트와 리뷰해",
+          "하네스 에이전트와 리뷰 후 구현해",
+          "하네스 원칙에 맞는지 검토해",
+          "check protected path governance",
+          "review this plan for simplicity and reliability",
+          "verify P1 through P4 alignment"
+        ],
+        "negative_examples": [
+          "operate Discord bot bridge",
+          "make a slide deck",
+          "summarize active plans",
+          "write a feature without review"
+        ],
+        "reason_template": "principle-auditor matches because the user request fits the principle-auditor harness role.",
+        "already_installed_behavior": "already installed; use the project-local principle-auditor wrapper instead of reinstalling"
+      },
+      "source_path": "catalog/agents/principle-auditor",
+      "install_path": ".agents/agents/principle-auditor",
+      "role_source_path": ".agents/agents/harness/principle-auditor.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install principle-auditor --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/principle-auditor/AGENT.md"
+      },
+      "agent_tree_sha256": "076d5d9a4d3514c4a56849b22e6d67ae0cd79c917e67aa64280c3e16df3d9b9c"
+    },
+    {
+      "name": "qa-reviewer",
+      "summary": "Review completed code changes for security, quality, and regression risk.",
+      "triggers": [
+        "qa",
+        "quality",
+        "security",
+        "OWASP",
+        "regression",
+        "accessibility",
+        "code review",
+        "코드 리뷰"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "review these code changes for security",
+          "코드 리뷰해",
+          "review these code changes",
+          "run QA review on this implementation",
+          "check for regression risk",
+          "audit code quality before merge"
+        ],
+        "negative_examples": [
+          "operate Discord bot bridge",
+          "make a slide deck",
+          "write an implementation plan",
+          "install a skill"
+        ],
+        "reason_template": "qa-reviewer matches because the user request fits the qa-reviewer harness role.",
+        "already_installed_behavior": "already installed; use the project-local qa-reviewer catalog agent instead of reinstalling"
+      },
+      "source_path": "catalog/agents/qa-reviewer",
+      "install_path": ".agents/agents/qa-reviewer",
+      "role_source_path": "catalog/agents/qa-reviewer/AGENT.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install qa-reviewer --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/qa-reviewer/AGENT.md"
+      },
+      "agent_tree_sha256": "91e5a6e69be0e9414304d8d02c75b70ab17688f7332d981f35ac728eb31d7ce3"
+    },
+    {
+      "name": "simplifier",
+      "summary": "Reduce unnecessary complexity, duplication, and over-engineered design choices.",
+      "triggers": [
+        "simplify",
+        "reduce complexity",
+        "over-engineered",
+        "duplication",
+        "simplifier",
+        "KISS"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "simplify this plan",
+          "find unnecessary complexity",
+          "reduce duplicate architecture"
+        ],
+        "negative_examples": [
+          "add more features",
+          "debug runtime failure",
+          "make a presentation"
+        ],
+        "reason_template": "simplifier matches because the user request fits the simplifier harness role.",
+        "already_installed_behavior": "already installed; use the project-local simplifier wrapper instead of reinstalling"
+      },
+      "source_path": "catalog/agents/simplifier",
+      "install_path": ".agents/agents/simplifier",
+      "role_source_path": ".agents/agents/harness/simplifier.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install simplifier --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/simplifier/AGENT.md"
+      },
+      "agent_tree_sha256": "7a85ca0c855eb127923b22bb6dfcf73b223a40c39aa8349fac10fc95c1a51d51"
+    },
+    {
+      "name": "usability-reviewer",
+      "summary": "Review first-time user flows, prompts, setup wizards, docs, command output, and recovery guidance for usability blockers.",
+      "triggers": [
+        "usability",
+        "UX review",
+        "first-time user",
+        "prompt comprehension",
+        "setup wizard",
+        "CLI prompt",
+        "error recovery",
+        "onboarding",
+        "command output",
+        "사용성 리뷰",
+        "사용자 관점 리뷰",
+        "하네스 에이전트와 리뷰",
+        "하네스 에이전트와 리뷰 후 구현"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "review this setup wizard from a first-time user perspective",
+          "check whether this CLI prompt is understandable",
+          "사용자 관점에서 이 안내를 리뷰해",
+          "사용성 리뷰해",
+          "will a first-time user know what to enter here?",
+          "review error recovery wording",
+          "check prompt comprehension before implementation"
+        ],
+        "negative_examples": [
+          "operate Discord bot bridge",
+          "security-only code review",
+          "own visual system direction",
+          "write application code"
+        ],
+        "reason_template": "usability-reviewer matches because prompt comprehension, first-time user flow, or recovery wording needs review.",
+        "already_installed_behavior": "already installed; use the project-local usability-reviewer wrapper instead of reinstalling"
+      },
+      "source_path": "catalog/agents/usability-reviewer",
+      "install_path": ".agents/agents/usability-reviewer",
+      "role_source_path": ".agents/agents/harness/usability-reviewer.md",
+      "license": "Agent Harness project license",
+      "verification": {
+        "install_smoke": "aha agents install usability-reviewer --project <target> --yes",
+        "use_smoke": "test -f .agents/agents/usability-reviewer/AGENT.md"
+      },
+      "agent_tree_sha256": "9bc443f0768f2895b317f19173989b96d648ca91e2316c8d1add2df5e00083cc"
+    }
+  ]
+}

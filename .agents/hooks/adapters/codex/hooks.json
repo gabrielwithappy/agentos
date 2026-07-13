@@ -1,0 +1,52 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'if [[ \"${CODEX_BRIDGE_LIGHTWEIGHT_STARTUP:-0}\" == \"1\" ]]; then printf \"[bridge-lightweight-sessionstart]\\n\"; else root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; cat \"$root/AGENTS.md\" && printf \"\\n\\n\" && cat \"$root/.agents/vendors/codex.md\"; fi'",
+            "statusMessage": "Loading AGENTS.md and Codex guide"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; bash \"$root/.agents/hooks/scripts/check-careful.sh\"'",
+            "statusMessage": "Checking Bash command"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; python3 \"$root/.agents/hooks/scripts/post_tool_use_review.py\"'",
+            "statusMessage": "Reviewing Bash output"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; python3 \"$root/.agents/hooks/scripts/stop_review_gate.py\"'",
+            "statusMessage": "Running completion review gate",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "harness_engine": "1.0.0",
+  "harness_assets": {
+    "version": "4.3.1",
+    "components": ["agents", "skills", "docs"]
+  },
+  "harness_tests": "1.0.0",
+  "authorized_architects": ["harness-architect", "antigravity", "codex"],
+  "distribution": {
+    "id": "v2026-03-26",
+    "standard": "Cognitive OS v1.0",
+    "notes": "Full encapsulated harness distribution with unified asset and test suites",
+    "authorized_architects": ["harness-architect", "antigravity", "codex"]
+  }
+}

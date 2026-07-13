@@ -1,0 +1,13 @@
+{
+  "version": "4.3.1",
+  "agents": [
+    "contrarian",
+    "goal-alignment-reviewer",
+    "harness-architect",
+    "knowledge-curator",
+    "plan-reviewer",
+    "principle-auditor",
+    "simplifier",
+    "usability-reviewer"
+  ]
+}

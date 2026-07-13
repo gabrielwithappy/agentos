@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${1:-}" == "-f" ]]; then
+  shift
+  python3 - "$@" <<'PY'
+import os
+import sys
+from pathlib import Path
+
+for arg in sys.argv[1:]:
+    resolved = str(Path(arg).resolve())
+    if resolved.startswith("/private/"):
+        resolved = resolved.removeprefix("/private")
+    print(resolved)
+PY
+  exit 0
+fi
+
+if command -v /usr/bin/readlink >/dev/null 2>&1; then
+  exec /usr/bin/readlink "$@"
+fi
+
+python3 - "$@" <<'PY'
+import sys
+from pathlib import Path
+
+for arg in sys.argv[1:]:
+    print(Path(arg))
+PY

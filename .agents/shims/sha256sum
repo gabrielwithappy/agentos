@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v /usr/bin/sha256sum >/dev/null 2>&1; then
+  exec /usr/bin/sha256sum "$@"
+fi
+
+python3 - "$@" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+args = sys.argv[1:]
+if not args:
+    data = sys.stdin.buffer.read()
+    print(hashlib.sha256(data).hexdigest(), " -")
+    raise SystemExit(0)
+for path in args:
+    data = Path(path).read_bytes()
+    print(hashlib.sha256(data).hexdigest(), path)
+PY

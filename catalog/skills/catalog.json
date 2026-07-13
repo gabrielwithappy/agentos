@@ -1,0 +1,749 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "name": "future-slide",
+      "summary": "Create slide decks from reference slide images, source files, and a deck goal.",
+      "triggers": [
+        "slide",
+        "slides",
+        "deck",
+        "presentation",
+        "ppt",
+        "pitch deck",
+        "reference slide",
+        "slide image generation"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "make a presentation deck from a reference slide image",
+          "create slides that match this deck style",
+          "turn these source files into a pitch deck",
+          "generate slide prompts and page images for a report deck"
+        ],
+        "negative_examples": [
+          "debug failing CI pytest job",
+          "audit dependency risk",
+          "operate Discord bot bridge",
+          "design database schema",
+          "review this pull request"
+        ],
+        "reason_template": "future-slide matches because the user asked for slide/deck production from reference visuals or source content.",
+        "already_installed_behavior": "already installed; use the project-local future-slide skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/future-slide",
+      "legacy_source_paths": [
+        "skill-catalog/skills/future-slide",
+        "skill-pool/skills/future-slide"
+      ],
+      "legacy_catalog_sha256": "12f79d82fbc7aaca35a3488fe77bdb0e6c3a3c74c30ad7674e373820da65f5cd",
+      "install_path": ".agents/skills/future-slide",
+      "license": "Apache-2.0",
+      "upstream": {
+        "url": "https://github.com/bytonylee/future-slide-skill",
+        "commit": "76a3874ed8669062490d41b768c19901839353b6"
+      },
+      "verification": {
+        "install_smoke": "aha skills install future-slide --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/future-slide/SKILL.md"
+      },
+      "skill_tree_sha256": "f62205ef7317f81cb20de1e299b80858b87a65f3fb5b1755500562cb0fa0bdb0"
+    },
+    {
+      "name": "systematic-debugging",
+      "summary": "Root-cause-first debugging workflow for technical failures.",
+      "triggers": [
+        "debug",
+        "bug",
+        "test failure",
+        "build failure",
+        "root cause",
+        "unexpected behavior",
+        "regression"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "find the root cause of this failing pytest",
+          "debug an unexpected runtime error",
+          "investigate why the build started failing",
+          "stop guessing and diagnose this regression"
+        ],
+        "negative_examples": [
+          "write a new feature plan",
+          "make a slide deck",
+          "install a Discord bridge",
+          "count lines of code",
+          "publish a GitHub PR"
+        ],
+        "reason_template": "systematic-debugging matches because the user asked for root-cause investigation of a technical failure.",
+        "already_installed_behavior": "already installed; use the project-local systematic-debugging skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/systematic-debugging",
+      "install_path": ".agents/skills/systematic-debugging",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill software-development/systematic-debugging",
+        "profile": "agentharnessdevel"
+      },
+      "verification": {
+        "install_smoke": "aha skills install systematic-debugging --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/systematic-debugging/SKILL.md"
+      },
+      "skill_tree_sha256": "54075764cc1b24063d81a4a7ca87f64fc2b79419812b09795d2cf5f27c2a6594"
+    },
+    {
+      "name": "requesting-code-review",
+      "summary": "Local pre-commit review checklist before commit, merge, push, or handoff.",
+      "triggers": [
+        "review my changes",
+        "pre-commit review",
+        "before merge",
+        "before push",
+        "verify local diff",
+        "local changes",
+        "ship this safely"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "review my local changes before commit",
+          "verify this diff before merging",
+          "check for security issues before push",
+          "do a final code review of this branch"
+        ],
+        "negative_examples": [
+          "remote GitHub PR inline comments",
+          "debug a failing test from scratch",
+          "create presentation slides",
+          "operate Discord bot bridge",
+          "inspect repository size"
+        ],
+        "reason_template": "requesting-code-review matches because the user asked for a local code review or pre-merge verification pass.",
+        "already_installed_behavior": "already installed; use the project-local requesting-code-review skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/requesting-code-review",
+      "install_path": ".agents/skills/requesting-code-review",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill software-development/requesting-code-review",
+        "profile": "agentharnessdevel"
+      },
+      "verification": {
+        "install_smoke": "aha skills install requesting-code-review --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/requesting-code-review/SKILL.md"
+      },
+      "skill_tree_sha256": "d3a4a000b571ca5ce174dd97c8aeb1affad7769da6c53939765a1730123379de"
+    },
+    {
+      "name": "codebase-inspection",
+      "summary": "Inspect repository size, file inventory, and language composition with safe fallbacks.",
+      "triggers": [
+        "lines of code",
+        "loc",
+        "language breakdown",
+        "repo size",
+        "codebase size",
+        "file count",
+        "composition"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "how many lines of code are in this repo",
+          "show the language breakdown",
+          "which directories dominate this codebase",
+          "count source files excluding dependencies"
+        ],
+        "negative_examples": [
+          "debug a runtime failure",
+          "review my diff before commit",
+          "make a slide deck",
+          "configure Discord gateway",
+          "scan dependencies for CVEs"
+        ],
+        "reason_template": "codebase-inspection matches because the user asked for repository size or language composition metrics.",
+        "already_installed_behavior": "already installed; use the project-local codebase-inspection skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/codebase-inspection",
+      "install_path": ".agents/skills/codebase-inspection",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill github/codebase-inspection",
+        "profile": "agentharnessdevel"
+      },
+      "verification": {
+        "install_smoke": "aha skills install codebase-inspection --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/codebase-inspection/SKILL.md"
+      },
+      "skill_tree_sha256": "2beb5f559097a9dd1a7023f78fef1b87514599ac2a1258bc4255ffcd9ab3c299"
+    },
+    {
+      "name": "architecture-diagram",
+      "summary": "Create dark, self-contained HTML/SVG architecture diagrams.",
+      "category": "diagramming",
+      "triggers": [
+        "architecture diagram",
+        "system architecture",
+        "cloud diagram",
+        "service map",
+        "deployment topology",
+        "infra diagram",
+        "architecture",
+        "diagram"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "draw a system architecture diagram",
+          "make a dark cloud architecture SVG",
+          "visualize our API/database/service topology"
+        ],
+        "negative_examples": [
+          "make a hand-drawn whiteboard flow",
+          "create a math animation",
+          "generate a slide deck"
+        ],
+        "reason_template": "architecture-diagram matches because the user asked for a technical system or cloud architecture diagram.",
+        "already_installed_behavior": "already installed; use the project-local architecture-diagram skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/architecture-diagram",
+      "install_path": ".agents/skills/architecture-diagram",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: architecture-diagram",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install architecture-diagram --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/architecture-diagram/SKILL.md"
+      },
+      "skill_tree_sha256": "cd14f0f9a8e6e858059853af2c75893ba98e0e118278782b34d728a7102bde7a"
+    },
+    {
+      "name": "ascii-art",
+      "summary": "Create text banners, boxes, and small ASCII/Unicode art.",
+      "category": "text-and-ideation",
+      "triggers": [
+        "ascii art",
+        "figlet",
+        "text banner",
+        "terminal logo",
+        "box drawing",
+        "unicode art"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "make an ASCII banner for this project",
+          "draw a terminal text logo",
+          "put this warning in a box"
+        ],
+        "negative_examples": [
+          "render a production video",
+          "design a database schema",
+          "review this pull request"
+        ],
+        "reason_template": "ascii-art matches because the user asked for terminal-style text art or banners.",
+        "already_installed_behavior": "already installed; use the project-local ascii-art skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/ascii-art",
+      "install_path": ".agents/skills/ascii-art",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: ascii-art",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install ascii-art --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/ascii-art/SKILL.md"
+      },
+      "skill_tree_sha256": "92c8e18180eae6aa546df6795b428b69ee798347b1a3c9d7a21f67146b6dc037"
+    },
+    {
+      "name": "baoyu-comic",
+      "summary": "Plan educational comics, biography comics, and tutorial comic prompts.",
+      "category": "visual-assets",
+      "triggers": [
+        "comic",
+        "knowledge comic",
+        "educational comic",
+        "tutorial comic",
+        "biography comic",
+        "storyboard"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "turn this lesson into a knowledge comic",
+          "make a biography comic storyboard",
+          "create panel prompts for a tutorial comic"
+        ],
+        "negative_examples": [
+          "debug failing tests",
+          "summarize a spreadsheet",
+          "configure GitHub auth"
+        ],
+        "reason_template": "baoyu-comic matches because the user asked for an educational or tutorial comic workflow.",
+        "already_installed_behavior": "already installed; use the project-local baoyu-comic skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/baoyu-comic",
+      "install_path": ".agents/skills/baoyu-comic",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: baoyu-comic",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install baoyu-comic --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/baoyu-comic/SKILL.md"
+      },
+      "skill_tree_sha256": "5becf5571876439b5e2c30d1ab47f2726641b56e19387c95f4edfb627d09317d"
+    },
+    {
+      "name": "baoyu-infographic",
+      "summary": "Plan dense infographics, information cards, and visual summaries.",
+      "category": "visual-assets",
+      "triggers": [
+        "infographic",
+        "visual summary",
+        "information card",
+        "comparison matrix",
+        "bento grid",
+        "roadmap visual"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "make an infographic from these notes",
+          "turn this report into a visual summary",
+          "create a comparison matrix graphic"
+        ],
+        "negative_examples": [
+          "write backend API code",
+          "open a GitHub PR",
+          "operate Discord bot bridge"
+        ],
+        "reason_template": "baoyu-infographic matches because the user asked for an infographic or visual summary.",
+        "already_installed_behavior": "already installed; use the project-local baoyu-infographic skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/baoyu-infographic",
+      "install_path": ".agents/skills/baoyu-infographic",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: baoyu-infographic",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install baoyu-infographic --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/baoyu-infographic/SKILL.md"
+      },
+      "skill_tree_sha256": "96a51e3136b4ead9e3e839a7f497f03e32396ba6d27cc0b6e170dd84d6ffa223"
+    },
+    {
+      "name": "claude-design",
+      "summary": "Design one-off HTML artifacts, prototypes, decks, and component studies.",
+      "category": "visual-design-html",
+      "triggers": [
+        "html artifact",
+        "prototype",
+        "landing page",
+        "component lab",
+        "design mockup",
+        "motion study"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "create a polished standalone HTML prototype",
+          "design this landing page",
+          "make a component study for this UI"
+        ],
+        "negative_examples": [
+          "write a DESIGN.md token spec",
+          "count lines of code",
+          "fix CI failure"
+        ],
+        "reason_template": "claude-design matches because the user asked for a designed one-off HTML or prototype artifact.",
+        "already_installed_behavior": "already installed; use the project-local claude-design skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/claude-design",
+      "install_path": ".agents/skills/claude-design",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: claude-design",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install claude-design --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/claude-design/SKILL.md"
+      },
+      "skill_tree_sha256": "efb78c5cd5060517041a1d12b741162b945864f549196cbec05fcb670d0307b8"
+    },
+    {
+      "name": "design-md",
+      "summary": "Author, review, and export DESIGN.md design-token specifications.",
+      "category": "visual-design-html",
+      "triggers": [
+        "design.md",
+        "design tokens",
+        "design system spec",
+        "token spec",
+        "wcag contrast",
+        "dtcg"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "write a DESIGN.md for this brand",
+          "turn this style guide into design tokens",
+          "review these tokens for contrast"
+        ],
+        "negative_examples": [
+          "make a one-off landing page",
+          "draw an architecture diagram",
+          "summarize a YouTube video"
+        ],
+        "reason_template": "design-md matches because the user asked for a durable design-token specification.",
+        "already_installed_behavior": "already installed; use the project-local design-md skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/design-md",
+      "install_path": ".agents/skills/design-md",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: design-md",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install design-md --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/design-md/SKILL.md"
+      },
+      "skill_tree_sha256": "9a323fe664da07b941e26d4c3f7fdd887d4488fb6cf7003b17beac7ec705db5b"
+    },
+    {
+      "name": "humanizer",
+      "summary": "Rewrite stiff AI-like prose into clear, natural human language.",
+      "category": "text-and-ideation",
+      "triggers": [
+        "humanize",
+        "less ai",
+        "natural tone",
+        "rewrite naturally",
+        "make it sound human",
+        "warmer copy",
+        "human",
+        "human sounding",
+        "sound human",
+        "natural"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "make this sound less AI-written",
+          "rewrite this in a natural voice",
+          "humanize this product copy"
+        ],
+        "negative_examples": [
+          "change the factual meaning",
+          "imitate a private living person",
+          "debug code"
+        ],
+        "reason_template": "humanizer matches because the user asked to make prose sound more natural.",
+        "already_installed_behavior": "already installed; use the project-local humanizer skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/humanizer",
+      "install_path": ".agents/skills/humanizer",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: humanizer",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install humanizer --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/humanizer/SKILL.md"
+      },
+      "skill_tree_sha256": "77c957053290cf793ffdf1fe4d99f7334e0d47dd5afe70ad2dd3bb97a27949ab"
+    },
+    {
+      "name": "p5js",
+      "summary": "Create p5.js generative art, interactive sketches, and canvas demos.",
+      "category": "visual-design-html",
+      "triggers": [
+        "p5.js",
+        "p5js",
+        "generative art",
+        "creative coding",
+        "canvas sketch",
+        "interactive sketch"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "make a p5.js generative art demo",
+          "build an interactive canvas sketch",
+          "create a shader-like browser sketch"
+        ],
+        "negative_examples": [
+          "build a CRUD dashboard",
+          "write a GitHub issue",
+          "archive a skill"
+        ],
+        "reason_template": "p5js matches because the user asked for a p5.js or creative-coding sketch.",
+        "already_installed_behavior": "already installed; use the project-local p5js skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/p5js",
+      "install_path": ".agents/skills/p5js",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: p5js",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install p5js --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/p5js/SKILL.md"
+      },
+      "skill_tree_sha256": "2100fa3a4d5e0c48dcc120b691547471cd20df8b82273d41e8e5c9f5ee58158d"
+    },
+    {
+      "name": "popular-web-designs",
+      "summary": "Use known product design vocabularies for HTML/CSS visual direction.",
+      "category": "visual-design-html",
+      "triggers": [
+        "stripe style",
+        "linear style",
+        "vercel style",
+        "notion style",
+        "popular web design",
+        "make it look like"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "make this page feel like Linear",
+          "design a dashboard with Vercel-like restraint",
+          "use Stripe-like visual language"
+        ],
+        "negative_examples": [
+          "copy a logo exactly",
+          "review a pull request",
+          "render a video"
+        ],
+        "reason_template": "popular-web-designs matches because the user asked to borrow a known web-product visual vocabulary.",
+        "already_installed_behavior": "already installed; use the project-local popular-web-designs skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/popular-web-designs",
+      "install_path": ".agents/skills/popular-web-designs",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: popular-web-designs",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install popular-web-designs --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/popular-web-designs/SKILL.md"
+      },
+      "skill_tree_sha256": "89bf41e5f2c15b2f066abcd90fba62b0f59c8e7c80018087e947bac719cd8e0d"
+    },
+    {
+      "name": "pretext",
+      "summary": "Build browser demos with text layout, typography, and ASCII-like motion.",
+      "category": "visual-design-html",
+      "triggers": [
+        "pretext",
+        "kinetic typography",
+        "text layout demo",
+        "text as geometry",
+        "typographic animation",
+        "ascii browser demo"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "make a kinetic typography demo",
+          "create text flowing around a moving shape",
+          "build a text-as-geometry browser sketch"
+        ],
+        "negative_examples": [
+          "create a database migration",
+          "summarize an arXiv paper",
+          "install a Discord gateway"
+        ],
+        "reason_template": "pretext matches because the user asked for a creative browser demo centered on text layout or motion.",
+        "already_installed_behavior": "already installed; use the project-local pretext skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/pretext",
+      "install_path": ".agents/skills/pretext",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: pretext",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install pretext --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/pretext/SKILL.md"
+      },
+      "skill_tree_sha256": "21e46fe73637afd3f4a45d0f8b9e33d50bce3bfd18e8232a878846e677c335da"
+    },
+    {
+      "name": "sketch",
+      "summary": "Produce quick disposable HTML mockup variants for comparison.",
+      "category": "visual-design-html",
+      "triggers": [
+        "sketch this screen",
+        "mockup variants",
+        "design variants",
+        "compare layouts",
+        "throwaway mockup",
+        "2-3 takes"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "sketch two directions for this page",
+          "mock up three dashboard variants",
+          "compare layout options before building"
+        ],
+        "negative_examples": [
+          "ship production UI",
+          "write final backend code",
+          "run CI"
+        ],
+        "reason_template": "sketch matches because the user asked for disposable UI variants before committing to implementation.",
+        "already_installed_behavior": "already installed; use the project-local sketch skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/sketch",
+      "install_path": ".agents/skills/sketch",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: sketch",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install sketch --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/sketch/SKILL.md"
+      },
+      "skill_tree_sha256": "e652e84548c90bc0551e3d51f5cdefa0f2b637010557bd45544133dc4e0da418"
+    },
+    {
+      "name": "spike",
+      "summary": "Run short throwaway experiments to validate technical uncertainty.",
+      "category": "software-development",
+      "triggers": [
+        "spike",
+        "feasibility",
+        "proof of concept",
+        "quick experiment",
+        "validate approach",
+        "technical uncertainty"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "spike whether this library can parse our files",
+          "run a proof of concept before building",
+          "validate this approach quickly"
+        ],
+        "negative_examples": [
+          "implement the final feature now",
+          "write marketing copy",
+          "install a skill catalog package"
+        ],
+        "reason_template": "spike matches because the user asked for a bounded feasibility experiment.",
+        "already_installed_behavior": "already installed; use the project-local spike skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/spike",
+      "install_path": ".agents/skills/spike",
+      "license": "MIT",
+      "upstream": {
+        "source": "Hermes profile skill adapted for AHA catalog: spike",
+        "profile": "myprofile",
+        "copied": "adapted-summary-only"
+      },
+      "verification": {
+        "install_smoke": "aha skills install spike --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/spike/SKILL.md"
+      },
+      "skill_tree_sha256": "fa389f3d217ee32e36e0c2c5fbfa775e51c8a5429b784583040d91f2563fd39b"
+    },
+    {
+      "name": "frontend-design",
+      "summary": "Design and implement visually strong frontend pages, apps, prototypes, and UI experiences.",
+      "category": "frontend",
+      "triggers": [
+        "frontend",
+        "UI",
+        "prototype",
+        "landing page",
+        "app design",
+        "visual design",
+        "web app",
+        "interface"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "build a frontend prototype",
+          "make a visually polished landing page",
+          "design and implement this app UI",
+          "improve the layout and interaction design of this page"
+        ],
+        "negative_examples": [
+          "edit an xlsx spreadsheet",
+          "debug a backend API failure",
+          "operate Discord bot bridge",
+          "review a protected harness plan"
+        ],
+        "reason_template": "frontend-design matches because the user asked for frontend UI, prototype, landing page, or visual application work.",
+        "already_installed_behavior": "already installed; use the project-local frontend-design skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/frontend-design",
+      "install_path": ".agents/skills/frontend-design",
+      "license": "Agent Harness project license",
+      "upstream": {
+        "source": "Agent Harness repo-local skill migrated to optional catalog"
+      },
+      "verification": {
+        "install_smoke": "aha skills install frontend-design --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/frontend-design/SKILL.md"
+      },
+      "skill_tree_sha256": "f17fb91c8c226a1a7c448b9dfd1d4b95d87f1dc9eaed3a4c90f51e2f97802ce9"
+    },
+    {
+      "name": "xlsx",
+      "summary": "Create, read, edit, clean, and validate spreadsheet files such as .xlsx, .xlsm, .csv, and .tsv.",
+      "category": "productivity",
+      "triggers": [
+        "xlsx",
+        "spreadsheet",
+        "excel",
+        "workbook",
+        "csv",
+        "tsv",
+        "table cleaning",
+        "sheet"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "edit an xlsx spreadsheet",
+          "create a workbook from this data",
+          "clean this CSV into a spreadsheet",
+          "fix formulas and formatting in an Excel file"
+        ],
+        "negative_examples": [
+          "build a frontend prototype",
+          "debug failing CI",
+          "operate Discord bot bridge",
+          "write a Word document only"
+        ],
+        "reason_template": "xlsx matches because the user asked to create, edit, clean, or validate spreadsheet data or files.",
+        "already_installed_behavior": "already installed; use the project-local xlsx skill instead of reinstalling"
+      },
+      "source_path": "catalog/skills/xlsx",
+      "install_path": ".agents/skills/xlsx",
+      "license": "MIT",
+      "upstream": {
+        "source": "Agent Harness repo-local skill migrated to optional catalog"
+      },
+      "verification": {
+        "install_smoke": "aha skills install xlsx --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/xlsx/SKILL.md && test -f .agents/skills/xlsx/scripts/recalc.py"
+      },
+      "skill_tree_sha256": "51d85101d96802cc764e67ed835f05152b52d612148543b723394e9177792758"
+    }
+  ]
+}

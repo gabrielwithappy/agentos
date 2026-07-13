@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+real_rg=""
+for candidate in /opt/homebrew/bin/rg /usr/local/bin/rg /usr/bin/rg; do
+  if [[ -x "$candidate" ]]; then
+    real_rg="$candidate"
+    break
+  fi
+done
+
+if [[ -n "$real_rg" ]]; then
+  exec "$real_rg" "$@"
+fi
+
+pattern=""
+quiet=0
+invert=0
+files=()
+extended=1
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -q)
+      quiet=1
+      shift
+      ;;
+    -F)
+      extended=0
+      shift
+      ;;
+    -E|-G|-n|-H|-h|-i|-I|-r|-R|-s|-S|-l|-L|-z)
+      shift
+      ;;
+    --)
+      shift
+      files=("$@")
+      break
+      ;;
+    -*)
+      # Ignore unsupported flag details for the fallback path.
+      shift
+      ;;
+    *)
+      if [[ -z "$pattern" ]]; then
+        pattern="$1"
+      else
+        files+=("$1")
+      fi
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$pattern" ]]; then
+  echo "rg shim: missing pattern" >&2
+  exit 2
+fi
+
+if [[ ${#files[@]} -eq 0 ]]; then
+  files=("-")
+fi
+
+grep_args=(-R)
+if [[ $extended -eq 1 ]]; then
+  grep_args+=(-E)
+fi
+if [[ $quiet -eq 1 ]]; then
+  grep_args+=(-q)
+fi
+
+status=1
+for file in "${files[@]}"; do
+  if [[ "$file" == "-" ]]; then
+    if grep "${grep_args[@]}" -- "$pattern"; then
+      status=0
+      break
+    fi
+  elif grep "${grep_args[@]}" -- "$pattern" "$file"; then
+    status=0
+    break
+  fi
+done
+exit "$status"

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v /usr/bin/stat >/dev/null 2>&1; then
+  exec /usr/bin/stat "$@"
+fi
+
+if [[ "${1:-}" == "-c" && "${2:-}" == "%a" && -n "${3:-}" ]]; then
+  python3 - "$3" <<'PY'
+import os
+import stat
+import sys
+from pathlib import Path
+
+mode = Path(sys.argv[1]).stat().st_mode
+print(oct(stat.S_IMODE(mode))[2:])
+PY
+  exit 0
+fi
+
+echo "stat shim: unsupported arguments: $*" >&2
+exit 2

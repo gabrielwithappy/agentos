@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(git rev-parse --show-toplevel)
+python3 "$ROOT/scripts/security/scan-public-boundary.py" --staged
