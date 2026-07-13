@@ -52,8 +52,8 @@ if not entry:
     raise SystemExit("fixture plan missing from active registry")
 if entry.get("status") != "구현 계획 (실행 대기)":
     raise SystemExit(f"status was not parsed without <br>: {entry!r}")
-if entry.get("reviewed") is not True:
-    raise SystemExit(f"reviewed flag was not parsed with <br>: {entry!r}")
+if entry.get("reviewed", False) is not False or entry.get("review_evidence_status") != "missing":
+    raise SystemExit(f"reviewed status did not fail closed without review evidence: {entry!r}")
 if entry.get("user_outcome") != "Metadata renders as separate visible lines.":
     raise SystemExit(f"Korean user outcome was not parsed: {entry!r}")
 if entry.get("progress") != "Fixture.":

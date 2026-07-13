@@ -8,9 +8,12 @@ parser.add_argument('--worktree', action='store_true')
 parser.add_argument('--staged', action='store_true')
 parser.add_argument('--stage-allowlisted', action='store_true')
 parser.add_argument('--require-staged-equals-allowlist', action='store_true')
+parser.add_argument('--root', type=Path, default=ROOT,
+                    help='repository root used by isolated negative tests')
 args = parser.parse_args()
+ROOT = args.root.resolve()
 manifest = json.loads((ROOT / 'config/public-boundary.json').read_text())
-paths = set(manifest['paths']) | {'LICENSE','README.md','README.ko.md','CONTRIBUTING.md','SECURITY.md','.gitignore','.gitattributes','setup.sh','config/public-boundary.json','docs/maintainers/release-checklist.md','scripts/security/check-license.py','scripts/security/scan-public-boundary.py','scripts/security/verify-public-repo.sh','scripts/security/check-identities.py','scripts/security/pre-commit','scripts/security/install-hooks.sh','scripts/verify-public-test-suite.sh','scripts/verify-clean-install.sh','.github/workflows/security.yml','.github/workflows/test.yml'}
+paths = set(manifest['paths'])
 bad_markers = ('/' + 'home/', '/' + 'Users/', 'gabrielwith' + 'happy@gmail.com', 'gabriel' + 'yang', 'BEGIN ' + 'PRIVATE KEY', 'gh' + 'p_')
 if args.stage_allowlisted:
     subprocess.run(['git','-C',str(ROOT),'add','--',*sorted(paths)], check=True)

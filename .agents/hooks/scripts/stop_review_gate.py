@@ -9,7 +9,21 @@ SCRIPT_DIR = Path(__file__).resolve().parents[2] / "skills" / "harness" / "writi
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from review_artifacts import REVIEWED_RE, check_plan
+try:
+    from review_artifacts import REVIEWED_RE, check_plan
+except ModuleNotFoundError:
+    # Project-local hook installs intentionally omit the full harness skill tree.
+    # They still must run safely for projects with no reviewed exec-plan; a full
+    # harness install supplies the authoritative artifact validator above.
+    REVIEWED_RE = re.compile(r"^>\s*reviewed:\s*true\s*$", re.MULTILINE)
+
+    class _MissingArtifacts:
+        valid = False
+        missing = ("review-artifacts-unavailable",)
+        invalid = ()
+
+    def check_plan(_root: Path, _plan: str) -> _MissingArtifacts:
+        return _MissingArtifacts()
 
 
 COMPLETION_PATTERNS = (
