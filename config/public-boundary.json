@@ -163,6 +163,7 @@
         ".agents/skills/harness/verification-before-completion/SKILL.md",
         ".agents/skills/harness/writing-plans/SKILL.md",
         "config/public-boundary.json",
+        "docs/getting-started.md",
         "docs/maintainers/release-checklist.md",
         "harness-loop.sh",
         "scripts/maintenance/check-maintainer-docs.py",
