@@ -9,7 +9,6 @@
         ".obsidian/",
         "docs/exec-plans/",
         "docs/knowledge/",
-        "docs/project/",
         "profiles/",
         ".env",
         ".env.example",
