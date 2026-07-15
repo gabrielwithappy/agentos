@@ -8,3 +8,5 @@ runtime/
 knowledge/
 *.tar
 docs/exec-plans
+CLAUDE.md
+GEMINI.md
