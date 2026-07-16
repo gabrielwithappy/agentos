@@ -1,0 +1,23 @@
+[project]
+name = "agentos"
+version = "0.1.0"
+description = "AgentOS CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12.3",
+    "rich>=13.7.1",
+]
+
+[project.scripts]
+agentos = "agentos.cli:app"
+aos = "agentos.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
