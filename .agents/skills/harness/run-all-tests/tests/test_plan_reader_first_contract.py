@@ -48,7 +48,7 @@ def test_executing_plans_updates_reader_first_progress_only_after_verification()
 
 
 def test_korean_active_plans_have_reader_first_sections():
-    active_dir = ROOT / "docs/exec-plans/active"
+    active_dir = ROOT / ".agentos/project/exec-plans/active"
     plans = sorted(active_dir.glob("*.ko.md"))
     if not plans:
         return

@@ -95,7 +95,7 @@ def _loop_locked(cwd: str) -> bool:
 
 
 def _invalid_reviewed_plan(cwd: str) -> tuple[str, str] | None:
-    active_dir = Path(cwd) / "docs" / "exec-plans" / "active"
+    active_dir = Path(cwd) / ".agentos" / "project" / "exec-plans" / "active"
     if not active_dir.is_dir():
         return None
     for path in sorted(active_dir.glob("*.md")):

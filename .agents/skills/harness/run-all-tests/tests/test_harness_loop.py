@@ -26,7 +26,7 @@ from loop_state import LoopState
 
 def write_reviewed_active_plan(
     root: Path,
-    relative_path: str = "docs/exec-plans/active/2026-04-10-active.md",
+    relative_path: str = ".agentos/project/exec-plans/active/2026-04-10-active.md",
     mcp_servers: str = "[]",
 ) -> str:
     plan_path = root / relative_path
@@ -114,7 +114,7 @@ def completion_output(summary: str = "baseline fixed") -> str:
     return "\n".join(
         [
             "검증 명령/결과: pytest => passed",
-            "최종 산출물 경로: docs/exec-plans/active/2026-04-10-active.md",
+            "최종 산출물 경로: .agentos/project/exec-plans/active/2026-04-10-active.md",
             f"마지막 checkpoint 요약: {summary}",
             "<promise>HARNESS_COMPLETE</promise>",
         ]
@@ -159,7 +159,7 @@ def evolution_completion_output(summary: str = "evolution closeout") -> str:
             "최종 산출물 경로: .agents/skills/harness-evolution/SKILL.md, .agents/skills/harness/core-engine/harness_loop.py",
             f"마지막 checkpoint 요약: {summary}",
             "strategy_artifact_path: .agents/skills/harness-evolution/SKILL.md",
-            "final_conclusion_path: docs/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md#final-closeout-evidence",
+            "final_conclusion_path: .agentos/project/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md#final-closeout-evidence",
             "harness-architect: PASS",
             "<promise>HARNESS_COMPLETE</promise>",
         ]
@@ -257,19 +257,19 @@ def test_completion_branch_behavior_unchanged(tmp_path):
 
 
 def test_extracts_plan_path_into_state_and_events(tmp_path):
-    write_reviewed_active_plan(tmp_path, "docs/exec-plans/active/2026-04-10-sample.md")
-    prompt = "docs/exec-plans/active/2026-04-10-sample.md 계획 문서를 기준으로 랄프 루프로 개발하라"
+    write_reviewed_active_plan(tmp_path, ".agentos/project/exec-plans/active/2026-04-10-sample.md")
+    prompt = ".agentos/project/exec-plans/active/2026-04-10-sample.md 계획 문서를 기준으로 랄프 루프로 개발하라"
     loop, sf = make_loop(tmp_path, prompt=prompt)
     with patch("cli_adapters.ClaudeAdapter.run",
                return_value=(0, completion_output())):
         assert loop.run() == 0
 
     loaded = LoopState.from_file(sf)
-    assert loaded.plan_path == "docs/exec-plans/active/2026-04-10-sample.md"
+    assert loaded.plan_path == ".agentos/project/exec-plans/active/2026-04-10-sample.md"
     events = [json.loads(line) for line in events_path(tmp_path).read_text().splitlines()]
-    assert events[0]["plan_path"] == "docs/exec-plans/active/2026-04-10-sample.md"
-    assert events[1]["plan_path"] == "docs/exec-plans/active/2026-04-10-sample.md"
-    assert events[-1]["plan_path"] == "docs/exec-plans/active/2026-04-10-sample.md"
+    assert events[0]["plan_path"] == ".agentos/project/exec-plans/active/2026-04-10-sample.md"
+    assert events[1]["plan_path"] == ".agentos/project/exec-plans/active/2026-04-10-sample.md"
+    assert events[-1]["plan_path"] == ".agentos/project/exec-plans/active/2026-04-10-sample.md"
 
 
 def test_mcp_free_default_records_state_and_configures_codex(tmp_path):
@@ -294,7 +294,7 @@ def test_mcp_plan_selection_configures_codex_adapter(tmp_path):
     write_mcp_render_helper(tmp_path)
     plan_path = write_reviewed_active_plan(
         tmp_path,
-        "docs/exec-plans/active/2026-04-10-mcp-selection.md",
+        ".agentos/project/exec-plans/active/2026-04-10-mcp-selection.md",
         mcp_servers="[penpot, stitch]",
     )
     loop, sf = make_loop(
@@ -323,7 +323,7 @@ def test_unknown_mcp_blocks_dispatch(tmp_path):
     write_mcp_render_helper(tmp_path)
     plan_path = write_reviewed_active_plan(
         tmp_path,
-        "docs/exec-plans/active/2026-04-10-unknown-mcp.md",
+        ".agentos/project/exec-plans/active/2026-04-10-unknown-mcp.md",
         mcp_servers="[unknown]",
     )
     loop, sf = make_loop(
@@ -357,7 +357,7 @@ def test_unknown_mcp_blocks_dispatch(tmp_path):
 def test_malformed_mcp_servers_blocks_dispatch_before_child_launch(tmp_path, mcp_servers, expected):
     plan_path = write_reviewed_active_plan(
         tmp_path,
-        "docs/exec-plans/active/2026-04-10-malformed-mcp.md",
+        ".agentos/project/exec-plans/active/2026-04-10-malformed-mcp.md",
         mcp_servers=mcp_servers,
     )
     loop, sf = make_loop(
@@ -378,11 +378,11 @@ def test_malformed_mcp_servers_blocks_dispatch_before_child_launch(tmp_path, mcp
 
 def test_harness_evolution_context_detection():
     assert is_harness_evolution_context(
-        "docs/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md 계획을 실행하라",
-        "docs/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md",
+        ".agentos/project/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md 계획을 실행하라",
+        ".agentos/project/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md",
     )
     assert is_harness_evolution_context("run harness-evolution skill", "")
-    assert not is_harness_evolution_context("docs/exec-plans/active/2026-04-10-active.md 계획을 실행하라", "")
+    assert not is_harness_evolution_context(".agentos/project/exec-plans/active/2026-04-10-active.md 계획을 실행하라", "")
 
 
 def test_harness_evolution_completion_evidence_detection():
@@ -392,7 +392,7 @@ def test_harness_evolution_completion_evidence_detection():
 
 def test_harness_evolution_requires_extra_completion_evidence(tmp_path):
     plan_path = write_reviewed_active_plan(
-        tmp_path, "docs/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md"
+        tmp_path, ".agentos/project/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md"
     )
     loop, sf = make_loop(
         tmp_path,
@@ -432,7 +432,7 @@ def test_stops_on_completion_contract_missing(tmp_path):
 
 def test_harness_evolution_completes_with_extra_completion_evidence(tmp_path):
     plan_path = write_reviewed_active_plan(
-        tmp_path, "docs/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md"
+        tmp_path, ".agentos/project/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md"
     )
     loop, sf = make_loop(
         tmp_path,
@@ -1288,7 +1288,7 @@ def test_execution_contract_normalizes_to_active_plan_and_refreshes_registry(tmp
     assert loaded.active is False
     assert loaded.last_event == "plan_normalized"
     assert loaded.stop_reason == "review_required"
-    assert loaded.plan_path.startswith("docs/exec-plans/active/")
+    assert loaded.plan_path.startswith(".agentos/project/exec-plans/active/")
     normalized_plan = (tmp_path / loaded.plan_path)
     assert normalized_plan.exists()
     plan_text = normalized_plan.read_text(encoding="utf-8")
@@ -1303,7 +1303,7 @@ def test_execution_contract_normalizes_to_active_plan_and_refreshes_registry(tmp
     assert "## 정규화된 실행 계약" in plan_text
     plan_json = json.loads((tmp_path / ".agents" / "mission" / "plan.json").read_text(encoding="utf-8"))
     assert any(item["path"] == loaded.plan_path for item in plan_json["active_plans"])
-    readme = (tmp_path / "docs" / "exec-plans" / "README.md").read_text(encoding="utf-8")
+    readme = (tmp_path / ".agentos" / "project" / "exec-plans" / "README.md").read_text(encoding="utf-8")
     assert loaded.plan_path in readme
 
 
@@ -1313,7 +1313,7 @@ def test_completion_after_quiet_prefers_completion_over_stagnation(tmp_path):
         [
             "[completion-after-quiet] completion-after-quiet promise detected before stagnation closeout",
             "검증 명령/결과: pytest => passed",
-            "최종 산출물 경로: docs/exec-plans/active/2026-04-10-active.md",
+            "최종 산출물 경로: .agentos/project/exec-plans/active/2026-04-10-active.md",
             "마지막 checkpoint 요약: quiet closeout",
             "<promise>HARNESS_COMPLETE</promise>",
         ]

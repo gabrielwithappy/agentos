@@ -45,10 +45,10 @@ Follow the brainstorm workflow step by step:
    - **Mode B**: intent, constraints, scope 관련 질문 순차 진행
 4. **Phase 3 - Approaches**: Propose 2-3 approaches with a recommended option and trade-off matrix
 5. **Phase 4 - Design**: Present the detailed design section by section, getting user approval at each step
-6. **Phase 5 - Documentation**: Save the approved design as a reference mission document under `docs/exec-plans/archive/reference/architecture/` and project memory.
+6. **Phase 5 - Documentation**: Save the approved design as a reference mission document under `.agentos/project/exec-plans/archive/reference/architecture/` and project memory.
    After saving, **Mandatory Assignment**: "지금 당장 할 수 있는 한 가지 구체적 행동"을 반드시 제시.
    예: "오늘 실제 사용자 1명과 10분 대화하기", "최소 기능 프로토타입 1개 만들기", "경쟁 제품 3개 직접 써보기"
-7. **Phase 6 - Transition**: Invoke `pm` skill (write-plan) for task decomposition. The executable plan is created under `docs/exec-plans/active/`, while `.agents/mission/plan.json` remains the lifecycle registry SSOT.
+7. **Phase 6 - Transition**: Invoke `pm` skill (write-plan) for task decomposition. The executable plan is created under `.agentos/project/exec-plans/active/`, while `.agents/mission/plan.json` remains the lifecycle registry SSOT.
 
 요약: `brainstorm`는 아이디어 탐색과 접근 비교를 위한 단계이고, `requirement-discovery`는 사용자 목표를 `Requirement Brief`로 고정하는 요구사항 문서화 단계다.
 

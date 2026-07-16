@@ -59,7 +59,7 @@ Load plan, review critically, execute all tasks, report when complete.
      ```
      Expected: `execution_locked: false`
      → `execution_locked: true` 또는 파일 없음이면 실행 금지. "랄프 루프 완료 대기 중" 에스컬레이션 후 중단.
-3. 대상 계획이 `docs/exec-plans/active/` 아래에 있는지 확인하고, 필요하면 board를 재생성한다:
+3. 대상 계획이 `.agentos/project/exec-plans/active/` 아래에 있는지 확인하고, 필요하면 board를 재생성한다:
    ```bash
    python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh
    ```
@@ -96,7 +96,7 @@ Progress maintenance rules:
 ### Step 3: Complete Development
 
 After all tasks complete and verified:
-- 계획 문서를 `docs/exec-plans/active/`에 유지한 채 `> **상태:** 완료`로 바꾸고 아래 closeout metadata를 추가하거나 갱신한다:
+- 계획 문서를 `.agentos/project/exec-plans/active/`에 유지한 채 `> **상태:** 완료`로 바꾸고 아래 closeout metadata를 추가하거나 갱신한다:
   ```markdown
   > implementation_started_at: YYYY-MM-DDTHH:MM:SSZ
   > implementation_completed_at: YYYY-MM-DDTHH:MM:SSZ
@@ -125,7 +125,7 @@ After all tasks complete and verified:
   ```bash
   python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py archive <plan-path> --status 완료
   ```
-- refresh/archive 명령은 `docs/exec-plans/README.md`와 `.agents/mission/plan.json`도 함께 갱신한다
+- refresh/archive 명령은 `.agentos/project/exec-plans/README.md`와 `.agents/mission/plan.json`도 함께 갱신한다
 - Announce: "I'm using the finishing-a-development-branch skill to complete this work."
 - **REQUIRED SUB-SKILL:** Use finishing-a-development-branch
 - Follow that skill to verify tests, present options, execute choice

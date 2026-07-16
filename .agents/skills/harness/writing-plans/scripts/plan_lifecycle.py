@@ -42,9 +42,9 @@ ALLOWED_STATUSES = {
     "통합됨",
     "보관됨",
 }
-ACTIVE_PREFIX = "docs/exec-plans/active/"
-ARCHIVE_PREFIX = "docs/exec-plans/archive/"
-REFERENCE_ARCHIVE_PREFIX = "docs/exec-plans/archive/reference/"
+ACTIVE_PREFIX = ".agentos/project/exec-plans/active/"
+ARCHIVE_PREFIX = ".agentos/project/exec-plans/archive/"
+REFERENCE_ARCHIVE_PREFIX = ".agentos/project/exec-plans/archive/reference/"
 EXEC_BOARD_ACTIVE_RECENT_LIMIT = 20
 EXEC_BOARD_ARCHIVED_RECENT_LIMIT = 20
 EXEC_BOARD_REFERENCE_RECENT_LIMIT = 10
@@ -126,7 +126,7 @@ def classify_plan(entry: PlanEntry) -> str:
 
 
 def collect_plans(root: Path) -> tuple[list[PlanEntry], list[PlanEntry], list[PlanEntry]]:
-    exec_plans_dir = root / "docs" / "exec-plans"
+    exec_plans_dir = root / ".agentos" / "project" / "exec-plans"
     active: list[PlanEntry] = []
     reference: list[PlanEntry] = []
     archived: list[PlanEntry] = []
@@ -298,7 +298,7 @@ def refresh(root: Path) -> None:
         encoding="utf-8",
     )
 
-    readme_path = root / "docs" / "exec-plans" / "README.md"
+    readme_path = root / ".agentos" / "project" / "exec-plans" / "README.md"
     readme_path.write_text(build_readme(plan_json), encoding="utf-8")
 
 
@@ -350,7 +350,7 @@ def archive_plan(root: Path, plan_path: str, status: str) -> None:
     if rel_path.startswith(ARCHIVE_PREFIX):
         raise ValueError(f"plan is already archived: {plan_path}")
 
-    archive_dir = root / "docs" / "exec-plans" / "archive"
+    archive_dir = root / ".agentos" / "project" / "exec-plans" / "archive"
     destination = archive_dir / path.name
     if destination.exists():
         raise ValueError(f"archive destination already exists: {destination.relative_to(root).as_posix()}")
