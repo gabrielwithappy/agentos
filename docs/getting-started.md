@@ -9,11 +9,11 @@ AgentOS 저장소에 오신 것을 환영합니다!
 AgentOS 환경을 셋업하려면 저장소 루트에서 다음 명령어들을 순서대로 실행하세요.
 
 ```bash
-bash setup.sh
+uv run agentos setup
 bash scripts/verify-public-test-suite.sh
 ```
 
-- `setup.sh`: AgentOS 실행에 필요한 필수 의존성 패키지와 환경을 구성합니다.
+- `uv run agentos setup`: AgentOS 실행에 필요한 필수 의존성 패키지와 환경을 구성합니다.
 - `verify-public-test-suite.sh`: 현재 시스템 환경이 공개 배포 및 실행에 적합한지 테스트합니다.
 
 터미널에 `PASS agentos-public-suite`가 출력되면 설치와 기본 검증이 완벽하게 성공한 것입니다!
@@ -23,7 +23,7 @@ bash scripts/verify-public-test-suite.sh
 
 현재 버전의 AgentOS는 초기 설치 시 프로필(profile), 루틴(routine), 지식 베이스(knowledge), Discord 연동 데이터를 자동으로 생성하지 않습니다. 
 
-이러한 확장 기능들은 기존 `agent-harness` 프로젝트에서 사용되던 기능들이며, 향후 업데이트를 통해 점진적으로 AgentOS 내부로 마이그레이션 및 정식 지원될 예정입니다.
+이러한 확장 기능들은 기존 `agent-harness` 프로젝트에서 사용되던 기능들이며, 향후 업데이트를 통해 점진적으로 AgentOS 내부로 마이그레이션 및 정식 지원될 예정입니다. (예: 계획 문서는 이제 `docs/exec-plans/`가 아닌 `.agentos/project/exec-plans/` 경로에 저장됩니다.)
 
 ## 다음에 할 일
 

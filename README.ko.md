@@ -3,12 +3,12 @@
 agentOS는 이식 가능한 agentcore만 최초 설치합니다. profile, routine, knowledge,
 Discord, runtime data는 생성하거나 활성화하지 않습니다.
 
-사전 준비물은 `bash`, `git`, `python3`입니다.
+사전 준비물은 `bash`, `git`, `python3`, `uv`입니다.
 
 ```bash
 git clone https://github.com/gabrielwithappy/agentOS.git
 cd agentOS
-bash setup.sh
+uv run agentos setup
 bash scripts/verify-public-test-suite.sh
 ```
 
