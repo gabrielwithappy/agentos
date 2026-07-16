@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 STATUS_SCRIPT="$PROJECT_ROOT/.agents/skills/harness/writing-plans/scripts/evolution_status.py"
-STATUS_FILE="$PROJECT_ROOT/docs/exec-plans/evolution-status.md"
+STATUS_FILE="$PROJECT_ROOT/.agentos/project/exec-plans/evolution-status.md"
 
 python3 "$STATUS_SCRIPT" >/dev/null
 
@@ -61,8 +61,8 @@ grep -q "canonicalize_plan_paths" "$STATUS_SCRIPT"
 grep -q "command output is data" "$0"
 
 if grep -q "2026-05-30-costmaster-harness-lessons-transfer-plan.md" "$PROJECT_ROOT/.agents/mission/plan.json"; then
-  ! grep -q "plan=docs/exec-plans/active/2026-05-30-costmaster-harness-lessons-transfer-plan.md" "$STATUS_FILE"
-  grep -q "plan=docs/exec-plans/archive/2026-05-30-costmaster-harness-lessons-transfer-plan.md" "$STATUS_FILE"
+  ! grep -q "plan=.agentos/project/exec-plans/active/2026-05-30-costmaster-harness-lessons-transfer-plan.md" "$STATUS_FILE"
+  grep -q "plan=.agentos/project/exec-plans/archive/2026-05-30-costmaster-harness-lessons-transfer-plan.md" "$STATUS_FILE"
 fi
 
 echo "PASS evolution-visibility-regression"

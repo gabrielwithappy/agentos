@@ -6,9 +6,9 @@ LIFECYCLE="$PROJECT_ROOT/.agents/skills/harness/writing-plans/scripts/plan_lifec
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/plan-lifecycle-completion-XXXXXX")"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
-PLAN_REL="docs/exec-plans/active/completed-active-plan.md"
+PLAN_REL=".agentos/project/exec-plans/active/completed-active-plan.md"
 PLAN_PATH="$TMP_ROOT/$PLAN_REL"
-mkdir -p "$(dirname "$PLAN_PATH")" "$TMP_ROOT/docs/exec-plans/archive"
+mkdir -p "$(dirname "$PLAN_PATH")" "$TMP_ROOT/.agentos/project/exec-plans/archive"
 
 cat > "$PLAN_PATH" <<'MD'
 # 완료 Active Fixture 구현 계획
@@ -98,10 +98,10 @@ from pathlib import Path
 
 data = json.loads(Path(__import__("sys").argv[1]).read_text(encoding="utf-8"))
 archived = {entry["path"]: entry for entry in data.get("archived_plans", [])}
-if "docs/exec-plans/archive/completed-active-plan.md" not in archived:
+if ".agentos/project/exec-plans/archive/completed-active-plan.md" not in archived:
     raise SystemExit("explicit archive did not move plan into archived_plans")
 PY
-test -f "$TMP_ROOT/docs/exec-plans/archive/completed-active-plan.md"
+test -f "$TMP_ROOT/.agentos/project/exec-plans/archive/completed-active-plan.md"
 test ! -e "$PLAN_PATH"
 echo "PASS archive-requires-explicit-command"
 echo "PASS plan-completion-lifecycle-contract"

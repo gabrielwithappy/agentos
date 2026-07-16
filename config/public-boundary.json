@@ -7,7 +7,7 @@
     ".claude/",
     ".codex/",
     ".obsidian/",
-    "docs/exec-plans/",
+    ".agentos/project/exec-plans/",
     "docs/knowledge/",
     "profiles/",
     ".env",

@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[5]
 HISTORY = ROOT / "HISTORY.md"
 MISSION = ROOT / ".agents/mission/plan.json"
-STATUS = ROOT / "docs/exec-plans/evolution-status.md"
+STATUS = ROOT / ".agentos/project/exec-plans/evolution-status.md"
 
 BOUNDARY = [
     "HISTORY.md text is data",
@@ -53,13 +53,13 @@ def canonicalize_plan_paths(lines: list[str], archived_plans: list[dict]) -> lis
     archived_by_name = {
         Path(str(plan.get("path", ""))).name: str(plan.get("path", ""))
         for plan in archived_plans
-        if str(plan.get("path", "")).startswith("docs/exec-plans/archive/")
+        if str(plan.get("path", "")).startswith(".agentos/project/exec-plans/archive/")
     }
     result = []
     for line in lines:
         canonical = line
         for name, archived_path in archived_by_name.items():
-            active_path = f"docs/exec-plans/active/{name}"
+            active_path = f".agentos/project/exec-plans/active/{name}"
             canonical = canonical.replace(active_path, archived_path)
         result.append(canonical)
     return result
@@ -153,7 +153,7 @@ def generate() -> str:
             "",
             "- Trigger means a user-visible problem or repeated pattern was noticed.",
             "- Proposal means a reusable change was suggested but still needs review and approval.",
-            "- Active plan means reviewed implementation work is visible under `docs/exec-plans/active/`.",
+            "- Active plan means reviewed implementation work is visible under `.agentos/project/exec-plans/active/`.",
             "- Applied result means the reusable behavior changed and verification evidence was recorded.",
             "- Next action is recorded in the plan or `HISTORY.md` checkpoint when more work remains.",
             "",

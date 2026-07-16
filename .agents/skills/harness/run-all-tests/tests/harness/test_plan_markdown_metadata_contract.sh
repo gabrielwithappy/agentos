@@ -23,7 +23,7 @@ if "hard line break" not in text:
     raise SystemExit("missing hard line break guidance")
 PY
 
-PLAN_REL="docs/exec-plans/active/metadata-hardbreak-plan.md"
+PLAN_REL=".agentos/project/exec-plans/active/metadata-hardbreak-plan.md"
 PLAN_PATH="$TMP_ROOT/$PLAN_REL"
 mkdir -p "$(dirname "$PLAN_PATH")"
 cat > "$PLAN_PATH" <<'MD'

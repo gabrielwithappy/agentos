@@ -49,7 +49,7 @@ Regression coverage: `.agents/skills/harness/run-all-tests/tests/test_mcp_lifecy
 
 직접 실행은 두 경로만 허용한다.
 
-1. `docs/exec-plans/active/*.md` 경로가 프롬프트에 있고, 해당 문서에 `reviewed: true`가 존재한다.
+1. `.agentos/project/exec-plans/active/*.md` 경로가 프롬프트에 있고, 해당 문서에 `reviewed: true`가 존재한다.
 2. 프롬프트가 strict `Execution Contract` fenced block 하나를 포함한다.
 
 ```text
@@ -66,7 +66,7 @@ Done When: ...
 - `Actions`는 실행 작업을 1개 이상 포함해야 한다.
 - `Verification`은 검증 명령 또는 기대 결과를 1개 이상 포함해야 한다.
 - `Done When`은 완료 조건을 1개 이상 포함해야 한다.
-- long prompt는 별도 policy layer를 만들지 않는다. 필요한 경우 canonical `docs/exec-plans/active/YYYY-MM-DD-<slug>.md` active plan으로 물질화한다.
+- long prompt는 별도 policy layer를 만들지 않는다. 필요한 경우 canonical `.agentos/project/exec-plans/active/YYYY-MM-DD-<slug>.md` active plan으로 물질화한다.
 
 ## Gate Outcomes
 
@@ -131,7 +131,7 @@ Non-goals: No Hermes gateway, No dashboard, No scheduler, No provider transport,
 최종 산출물 경로: .agents/skills/harness-evolution/SKILL.md, .agents/skills/harness/core-engine/harness_loop.py
 마지막 checkpoint 요약: evolution strategy contract + focused regression 반영
 strategy_artifact_path: .agents/skills/harness-evolution/SKILL.md
-final_conclusion_path: docs/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md#final-closeout-evidence
+final_conclusion_path: .agentos/project/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md#final-closeout-evidence
 harness-architect: PASS
 <promise>HARNESS_COMPLETE</promise>
 ```
@@ -250,7 +250,7 @@ Codex child failure phase는 아래 토큰으로 surface 된다.
 ## 자연어 프롬프트 예시
 
 ```bash
-./.agents/skills/harness/harness-loop.sh "docs/exec-plans/active/plan.md 계획을 단계별로 구현하라"
+./.agents/skills/harness/harness-loop.sh ".agentos/project/exec-plans/active/plan.md 계획을 단계별로 구현하라"
 ./.agents/skills/harness/harness-loop.sh "버그를 찾아서 수정하고 테스트까지 통과시켜라" --cli gemini
 ./.agents/skills/harness/harness-loop.sh "리팩터링 계획을 실행하고 HARNESS_COMPLETE 를 출력하라" --max-iterations 10
 ./.agents/skills/harness/harness-loop.sh "외부 의존성 preflight를 실행하라" --cli codex --stagnation-timeout 180

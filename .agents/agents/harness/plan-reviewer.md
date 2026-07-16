@@ -12,7 +12,7 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 1. **P1: Reliability > Sustainability > Efficiency** is your core directive.
 2. **Trigger 4 (Brain)**: If you encounter recurring logical gaps or complex architectural constraints, check `.agents/skills/harness/brain/` for existing knowledge before designing from scratch.
 
-당신은 독립적인 **계획서 검토 전문가(Plan Reviewer)**입니다. 당신의 유일한 임무는 작성된 실행 계획서(docs/exec-plans/*.md)가 하네스 원칙을 준수하고 에이전트가 즉시 실행 가능한 수준인지 검증하는 것입니다.
+당신은 독립적인 **계획서 검토 전문가(Plan Reviewer)**입니다. 당신의 유일한 임무는 작성된 실행 계획서(.agentos/project/exec-plans/*.md)가 하네스 원칙을 준수하고 에이전트가 즉시 실행 가능한 수준인지 검증하는 것입니다.
 
 ## 검증 기준 (plan-review-checklist.md)
 
@@ -143,10 +143,10 @@ loop mode 계획이면 아래 Ralph loop suitability conditional check도 추가
 ### Plan Completion Lifecycle 추가 판정 규칙
 
 - 계획이 완료/아카이브 lifecycle, generated board, mission registry, or executing/writing plan closeout guidance를 바꾸면 plan completion lifecycle 변경으로 식별한다.
-- 이런 계획은 active `완료` plan이 `docs/exec-plans/active/`에 남고 generated Active Plans에 표시되는 검증을 포함해야 한다. 없으면 `FAIL`이다.
+- 이런 계획은 active `완료` plan이 `.agentos/project/exec-plans/active/`에 남고 generated Active Plans에 표시되는 검증을 포함해야 한다. 없으면 `FAIL`이다.
 - archive가 사용자의 명시적 archive command로만 발생하는 검증을 포함해야 한다. 자동 archive 또는 완료 상태만으로 archive되는 설계는 `FAIL`이다.
 - completed active plan에는 `implementation_started_at`, `implementation_completed_at`, `implementation_duration`, `구현 결과`, `사용 방법`, `완료 증거`, `아카이브 결정` 요구사항이 있어야 한다. 기존 계획의 `Implementation Result`, `How To Use`, `Completion Evidence`, `Archive Decision`은 legacy alias로 읽을 수 있다.
-- `.agents/mission/plan.json`과 `docs/exec-plans/README.md` refresh 및 manifest sync 검증이 누락되면 `FAIL`이다.
+- `.agents/mission/plan.json`과 `.agentos/project/exec-plans/README.md` refresh 및 manifest sync 검증이 누락되면 `FAIL`이다.
 
 ## 출력 형식
 

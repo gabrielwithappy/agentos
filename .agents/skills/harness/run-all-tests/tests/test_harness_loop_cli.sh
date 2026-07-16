@@ -33,7 +33,7 @@ current_task: |
 current_step: |
   tmux restart
 plan_path: |
-  docs/exec-plans/2026-04-09-harness-loop-observability.md
+  .agentos/project/exec-plans/2026-04-09-harness-loop-observability.md
 prompt_summary: |
   trace observability plan
 result_summary: |
@@ -56,11 +56,11 @@ pending_escalation_summary: |
 pending_override_response: |
 ---
 
-docs/exec-plans/2026-04-09-harness-loop-observability.md 계획을 실행하라.
+.agentos/project/exec-plans/2026-04-09-harness-loop-observability.md 계획을 실행하라.
 EOF
 
 cat > "$EVENTS_FILE" <<'EOF'
-{"ts":"2026-04-09T05:35:11Z","type":"loop_started","iteration":1,"summary":"CLI=codex","loop_id":"loop-20260409-abc123","plan_path":"docs/exec-plans/2026-04-09-harness-loop-observability.md"}
+{"ts":"2026-04-09T05:35:11Z","type":"loop_started","iteration":1,"summary":"CLI=codex","loop_id":"loop-20260409-abc123","plan_path":".agentos/project/exec-plans/2026-04-09-harness-loop-observability.md"}
 {"ts":"2026-04-09T05:37:55Z","type":"blocked","iteration":3,"summary":"tmux access denied","loop_id":"loop-20260409-abc123"}
 EOF
 

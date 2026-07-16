@@ -17,7 +17,7 @@ from loop_state import LoopState
 
 def write_reviewed_active_plan(
     root: Path,
-    relative_path: str = "docs/exec-plans/active/2026-04-30-mcp-lifecycle.md",
+    relative_path: str = ".agentos/project/exec-plans/active/2026-04-30-mcp-lifecycle.md",
     mcp_servers: str = "[lifecycle-probe]",
 ) -> str:
     plan_path = root / relative_path

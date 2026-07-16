@@ -36,8 +36,8 @@ HEARTBEAT_INTERVAL = 5
 CHILD_PROGRESS_POLL_SECONDS = 1.0
 CHILD_PROGRESS_HEARTBEAT_SECONDS = 5.0
 LOOP_CONFIG_FILE = ".harness-loop.json"
-PLAN_PATH_RE = re.compile(r"(docs/exec-plans/[^\s\"']+\.md)")
-ACTIVE_PLAN_PATH_RE = re.compile(r"(docs/exec-plans/active/[^\s\"']+\.md)")
+PLAN_PATH_RE = re.compile(r"(.agentos/project/exec-plans/[^\s\"']+\.md)")
+ACTIVE_PLAN_PATH_RE = re.compile(r"(.agentos/project/exec-plans/active/[^\s\"']+\.md)")
 EXECUTION_CONTRACT_RE = re.compile(
     r"\[EXECUTION_CONTRACT\]\s*(?P<body>.*?)\s*\[/EXECUTION_CONTRACT\]",
     re.DOTALL,
@@ -49,7 +49,7 @@ BARE_PROMISE_GUIDANCE = (
     "bare promise completion is rejected; include 검증 명령/결과, 최종 산출물 경로, 마지막 checkpoint 요약."
 )
 DIRECT_EXECUTION_GUIDANCE = (
-    "Use writing-plans or provide a reviewed: true docs/exec-plans/active/*.md path. "
+    "Use writing-plans or provide a reviewed: true .agentos/project/exec-plans/active/*.md path. "
     "Alternative: provide one strict [EXECUTION_CONTRACT] block with Goal:/Scope:/Actions:/Verification:/Done When:. "
     "Do not use prd.json/progress.txt or dangerous direct execution shortcuts."
 )
@@ -569,7 +569,7 @@ class HarnessLoop:
         return bool(REVIEWED_RE.search(path.read_text(encoding="utf-8")))
 
     def _build_materialized_plan_path(self, goal: str) -> Path:
-        active_dir = self.project_root / "docs" / "exec-plans" / "active"
+        active_dir = self.project_root / ".agentos" / "project" / "exec-plans" / "active"
         active_dir.mkdir(parents=True, exist_ok=True)
         date_prefix = datetime.now().strftime("%Y-%m-%d")
         base_name = f"{date_prefix}-{slugify(goal)}"
@@ -625,7 +625,7 @@ class HarnessLoop:
                 "",
                 "| 마일스톤 | 사용자에게 보이는 결과 | 구현 소유 surface | 검증 |",
                 "|---|---|---|---|",
-                "| 1. 계약 정규화 | active plan 문서가 생성된다. | `docs/exec-plans/active/` | `plan_lifecycle.py refresh` 완료 |",
+                "| 1. 계약 정규화 | active plan 문서가 생성된다. | `.agentos/project/exec-plans/active/` | `plan_lifecycle.py refresh` 완료 |",
                 "| 2. 리뷰 대기 | 실행 전 reviewer gate가 명확히 보인다. | 계획 본문, HISTORY evidence | reviewer PASS 기록 |",
                 "",
                 "## MCP 사용 계획",

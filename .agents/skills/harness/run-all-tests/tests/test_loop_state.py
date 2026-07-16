@@ -16,7 +16,7 @@ def test_roundtrip_all_fields(tmp_path):
         current_phase="Phase 2-1 완료",
         current_task="reconcile contract",
         current_step="Phase 2-1 완료",
-        plan_path="docs/exec-plans/demo.md",
+        plan_path=".agentos/project/exec-plans/demo.md",
         prompt_summary="summary",
         result_summary="final answer summary",
         outcome_code="blocked",
@@ -44,7 +44,7 @@ def test_roundtrip_all_fields(tmp_path):
     assert loaded.current_phase == "Phase 2-1 완료"
     assert loaded.current_task == "reconcile contract"
     assert loaded.current_step == "Phase 2-1 완료"
-    assert loaded.plan_path == "docs/exec-plans/demo.md"
+    assert loaded.plan_path == ".agentos/project/exec-plans/demo.md"
     assert loaded.prompt_summary == "summary"
     assert loaded.result_summary == "final answer summary"
     assert loaded.outcome_code == "blocked"
