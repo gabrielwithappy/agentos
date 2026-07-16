@@ -1,36 +1,30 @@
 # 시작 가이드
 
-처음에는 아래에서 사용 중인 제품을 고르세요. 두 제품은 이름이 비슷하지만 설치 후 제공하는 범위가 다릅니다.
+AgentOS 저장소에 오신 것을 환영합니다! 
 
-## agent-harness를 사용하나요?
+현재 AgentOS는 가볍고 이식성 높은 **Portable AgentCore** 기능을 중심으로 구성되어 있습니다. 향후 `agent-harness`가 제공하던 풍부한 다중 에이전트 관리 기능과 CLI(`aha`) 기능들이 점진적으로 AgentOS 환경으로 통합(마이그레이션)될 예정입니다.
 
-agent-harness는 전역 `aha` 명령으로 profile을 준비하고, 작업할 프로젝트에 연결해 개발 작업을 검증하는 흐름입니다.
+## 초기 설치 및 검증
 
-저장소 루트에서 다음을 실행합니다.
-
-```bash
-bash setup.sh
-export PATH="${PREFIX:-$HOME/.local}/bin:$PATH"
-aha onboard --yes
-aha attach --project "$PWD" --yes
-aha doctor --project "$PWD"
-```
-
-마지막 명령이 성공하면 현재 프로젝트 연결 상태를 확인한 것입니다. `aha`를 찾지 못하면 같은 터미널에서 위 PATH 설정을 다시 적용합니다. `aha doctor --project "$PWD"`가 실패하면 출력의 차단 이유를 확인한 뒤 `aha help doctor`를 읽고 같은 명령을 다시 실행합니다.
-
-## agentOS를 사용하나요?
-
-agentOS는 portable agentcore만 설치합니다. 초기 설치는 AHA CLI, profile, routine, knowledge, Discord 데이터를 만들지 않습니다.
-
-저장소 루트에서 다음을 실행합니다.
+AgentOS 환경을 셋업하려면 저장소 루트에서 다음 명령어들을 순서대로 실행하세요.
 
 ```bash
 bash setup.sh
 bash scripts/verify-public-test-suite.sh
 ```
 
-`PASS agentos-public-suite`가 출력되면 설치와 공개 배포 검사가 성공한 것입니다. 검사가 실패하면 출력된 조건을 고친 뒤 같은 검사를 다시 실행합니다.
+- `setup.sh`: AgentOS 실행에 필요한 필수 의존성 패키지와 환경을 구성합니다.
+- `verify-public-test-suite.sh`: 현재 시스템 환경이 공개 배포 및 실행에 적합한지 테스트합니다.
+
+터미널에 `PASS agentos-public-suite`가 출력되면 설치와 기본 검증이 완벽하게 성공한 것입니다!
+(만약 검사가 실패한다면, 출력된 오류 조건과 로그를 확인하고 조치한 뒤 같은 스크립트를 다시 실행하세요.)
+
+## 기능 마이그레이션 안내 (Agent Harness -> AgentOS)
+
+현재 버전의 AgentOS는 초기 설치 시 프로필(profile), 루틴(routine), 지식 베이스(knowledge), Discord 연동 데이터를 자동으로 생성하지 않습니다. 
+
+이러한 확장 기능들은 기존 `agent-harness` 프로젝트에서 사용되던 기능들이며, 향후 업데이트를 통해 점진적으로 AgentOS 내부로 마이그레이션 및 정식 지원될 예정입니다.
 
 ## 다음에 할 일
 
-어느 제품을 선택했는지와 마지막 확인 명령의 결과를 함께 기록하면, 다음 작업을 맡은 에이전트나 협업자가 현재 상태를 빠르게 이어받을 수 있습니다.
+초기 설치와 테스트가 무사히 끝났다면, 현재 상태(예: 테스트 PASS 로그)를 기록해 두는 것을 권장합니다. 이를 통해 다음 작업을 맡은 에이전트나 협업자가 현재 저장소의 준비 상태를 명확히 인지하고 개발을 이어받을 수 있습니다.

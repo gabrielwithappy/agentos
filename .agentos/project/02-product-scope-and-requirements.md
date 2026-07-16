@@ -8,16 +8,18 @@
 
 ## 사용자 결과
 
-- 주요 사용자:
-- 사용자 워크플로우:
-- 원하는 결과:
-- 피해야 할 실패 상태:
+- 주요 사용자: AgentOS를 처음 접하는 개발자 및 기여자
+- 사용자 워크플로우: 프로젝트 클론 -> setup.sh 실행 -> 시작 가이드 문서를 통한 환경 이해
+- 원하는 결과: `agent-harness`에 대한 혼란 없이, 최소한의 AgentOS(portable agentcore) 실행 환경을 셋업하고 agent-harness 기능들이 점진적으로 도입될 것임을 인지하는 것
+- 피해야 할 실패 상태: `aha` 등 아직 AgentOS에 완전히 편입되지 않은 명령어를 시도하다 실패하여 이탈하는 것
 
 ## 요구사항과 acceptance
 
 | ID | requirement | Priority | acceptance | 추적성 | Evidence link / 검증 근거 | status |
 |---|---|---|---|---|---|---|
-| REQ-001 |  | must |  |  |  | 초안 |
+| REQ-001 | `docs/getting-started.md`에서 agent-harness 관련 혼란 문구 완전 제거 | must | 해당 문서에 `aha` CLI 및 agent-harness의 즉시 사용을 지시하는 가이드가 없음 | | | 현재 |
+| REQ-002 | AgentOS 설치 후 기본 확인 가이드 제공 | must | `setup.sh` 및 `verify-public-test-suite.sh` 통과 후의 명확한 상태 안내 제공 | | | 현재 |
+| REQ-003 | agent-harness 기능의 점진적 마이그레이션 안내 | must | 향후 agent-harness 기능들이 AgentOS로 통합될 예정임이 가이드에 명시됨 | | | 현재 |
 
 추적성 규칙:
 
@@ -28,15 +30,17 @@
 
 포함:
 
--
+- `docs/getting-started.md` 전면 개편
+- `README.md` 문맥 교정 (필요시)
 
 제외:
 
--
+- 실제 코드나 스크립트 수정
+- agent-harness 기능 자체의 실제 마이그레이션 (이번 태스크에서는 안내 문구만 포함)
 
 범위 변경 트리거:
 
--
+- 추가적인 문서(예: SECURITY.md)에서도 혼동을 주는 문구가 발견될 경우
 
 ## 시각적 의도
 
