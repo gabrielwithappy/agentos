@@ -10,7 +10,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install -e .[dev]
+        run: pip install -e . pytest
       - name: Run verify clean install
         run: bash scripts/verify-clean-install.sh
       - name: Run public test suite
