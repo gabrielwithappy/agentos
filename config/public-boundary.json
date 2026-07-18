@@ -37,6 +37,7 @@
     ".agentos/project/reference/implementation/python-cli-implementation.md",
     ".agentos/project/reference/operations/README.md",
     ".agents/_version.json",
+    ".agents/AGENTS.md",
     ".agents/agents/README.md",
     ".agents/agents/harness/_version.json",
     ".agents/agents/harness/contrarian.md",
