@@ -12,3 +12,4 @@ knowledge/
 *.tar
 CLAUDE.md
 GEMINI.md
+.agentos/mission/
