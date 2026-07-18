@@ -18,8 +18,10 @@ git worktree list
 
 - 새 worktree는 새 목적이 있을 때만 만든다
 - 같은 브랜치를 여러 worktree에 붙이는 시도는 피한다
-- 경로는 저장소 루트 바깥의 형제 디렉터리를 우선 고려한다
+- helper의 기본 경로는 ignored `<repo>/.agentos/worktrees/<branch-slug>`다. 이 directory가 symlink면 fail-closed한다
+- `--path`를 명시한 경우에는 기존 호환대로 repo 밖 경로도 사용할 수 있지만, 존재하는 경로는 덮어쓰지 않는다
 - 기존 경로가 존재하면 덮어쓰지 말고 먼저 상태를 확인한다
+- 충돌이면 `git worktree list`로 확인한 뒤 새 `--branch`/`--path`를 선택하거나 기존 worktree를 명시적으로 재사용한다
 
 ## Cleanup Rules
 
@@ -27,6 +29,7 @@ git worktree list
 - `git -C <path> status --short`가 비어 있지 않으면 즉시 삭제하지 않는다
 - `git worktree remove` 전에 현재 브랜치와 변경 상태를 다시 확인한다
 - 브랜치 삭제는 worktree 제거와 분리해서 다룬다
+- focused regression의 runtime-created `/tmp/tmp.*` root만은 primary worktree 하나와 canonical-root 일치가 확인된 뒤 `rm -rf -- <temp-root>`로 정리할 수 있다. 이 test-only 예외는 project/worktree 경로에는 적용하지 않는다
 
 ## Never Do This By Default
 
