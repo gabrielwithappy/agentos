@@ -2,7 +2,7 @@
 name: humanizer
 description: Rewrite stiff AI-like prose into clear, natural human language.
 license: MIT
-source: Hermes humanizer reference, adapted for AHA catalog use.
+source: Hermes humanizer reference, adapted for AgentOS catalog use.
 ---
 
 # Humanizer

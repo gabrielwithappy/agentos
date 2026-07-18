@@ -2,7 +2,7 @@
 name: architecture-diagram
 description: Create dark, self-contained HTML/SVG architecture diagrams.
 license: MIT
-source: Hermes architecture-diagram reference, adapted for AHA catalog use.
+source: Hermes architecture-diagram reference, adapted for AgentOS catalog use.
 ---
 
 # Architecture Diagram

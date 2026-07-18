@@ -2,7 +2,7 @@
 name: sketch
 description: Produce quick disposable HTML mockup variants for comparison.
 license: MIT
-source: Hermes sketch reference, adapted for AHA catalog use.
+source: Hermes sketch reference, adapted for AgentOS catalog use.
 ---
 
 # Sketch

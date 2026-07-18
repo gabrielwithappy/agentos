@@ -2,7 +2,7 @@
 name: ascii-art
 description: Create text banners, boxes, and small ASCII/Unicode art.
 license: MIT
-source: Hermes ascii-art reference, adapted for AHA catalog use.
+source: Hermes ascii-art reference, adapted for AgentOS catalog use.
 ---
 
 # ASCII Art

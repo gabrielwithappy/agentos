@@ -6,12 +6,12 @@ and runtime data are not created by the initial install.
 Canonical slug: `agentos`.
 Display name: `agentOS`.
 
-Prerequisites: `bash`, `git`, and `python3`.
+Prerequisites: `bash`, `git`, `python3`, and `uv`.
 
 ```bash
 git clone https://github.com/gabrielwithappy/agentos.git
 cd agentos
-bash setup.sh
+uv run agentos setup
 bash scripts/verify-public-test-suite.sh
 ```
 

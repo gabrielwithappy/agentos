@@ -44,7 +44,7 @@
         "commit": "76a3874ed8669062490d41b768c19901839353b6"
       },
       "verification": {
-        "install_smoke": "aha skills install future-slide --project <target> --yes",
+        "install_smoke": "agentos skill install future-slide --project <target> --yes",
         "use_smoke": "test -f .agents/skills/future-slide/SKILL.md"
       },
       "skill_tree_sha256": "f62205ef7317f81cb20de1e299b80858b87a65f3fb5b1755500562cb0fa0bdb0"
@@ -86,7 +86,7 @@
         "profile": "agentharnessdevel"
       },
       "verification": {
-        "install_smoke": "aha skills install systematic-debugging --project <target> --yes",
+        "install_smoke": "agentos skill install systematic-debugging --project <target> --yes",
         "use_smoke": "test -f .agents/skills/systematic-debugging/SKILL.md"
       },
       "skill_tree_sha256": "54075764cc1b24063d81a4a7ca87f64fc2b79419812b09795d2cf5f27c2a6594"
@@ -128,7 +128,7 @@
         "profile": "agentharnessdevel"
       },
       "verification": {
-        "install_smoke": "aha skills install requesting-code-review --project <target> --yes",
+        "install_smoke": "agentos skill install requesting-code-review --project <target> --yes",
         "use_smoke": "test -f .agents/skills/requesting-code-review/SKILL.md"
       },
       "skill_tree_sha256": "d3a4a000b571ca5ce174dd97c8aeb1affad7769da6c53939765a1730123379de"
@@ -170,7 +170,7 @@
         "profile": "agentharnessdevel"
       },
       "verification": {
-        "install_smoke": "aha skills install codebase-inspection --project <target> --yes",
+        "install_smoke": "agentos skill install codebase-inspection --project <target> --yes",
         "use_smoke": "test -f .agents/skills/codebase-inspection/SKILL.md"
       },
       "skill_tree_sha256": "2beb5f559097a9dd1a7023f78fef1b87514599ac2a1258bc4255ffcd9ab3c299"
@@ -207,12 +207,12 @@
       "install_path": ".agents/skills/architecture-diagram",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: architecture-diagram",
+        "source": "Hermes profile skill adapted for AgentOS catalog: architecture-diagram",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install architecture-diagram --project <target> --yes",
+        "install_smoke": "agentos skill install architecture-diagram --project <target> --yes",
         "use_smoke": "test -f .agents/skills/architecture-diagram/SKILL.md"
       },
       "skill_tree_sha256": "cd14f0f9a8e6e858059853af2c75893ba98e0e118278782b34d728a7102bde7a"
@@ -247,12 +247,12 @@
       "install_path": ".agents/skills/ascii-art",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: ascii-art",
+        "source": "Hermes profile skill adapted for AgentOS catalog: ascii-art",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install ascii-art --project <target> --yes",
+        "install_smoke": "agentos skill install ascii-art --project <target> --yes",
         "use_smoke": "test -f .agents/skills/ascii-art/SKILL.md"
       },
       "skill_tree_sha256": "92c8e18180eae6aa546df6795b428b69ee798347b1a3c9d7a21f67146b6dc037"
@@ -287,12 +287,12 @@
       "install_path": ".agents/skills/baoyu-comic",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: baoyu-comic",
+        "source": "Hermes profile skill adapted for AgentOS catalog: baoyu-comic",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install baoyu-comic --project <target> --yes",
+        "install_smoke": "agentos skill install baoyu-comic --project <target> --yes",
         "use_smoke": "test -f .agents/skills/baoyu-comic/SKILL.md"
       },
       "skill_tree_sha256": "5becf5571876439b5e2c30d1ab47f2726641b56e19387c95f4edfb627d09317d"
@@ -327,12 +327,12 @@
       "install_path": ".agents/skills/baoyu-infographic",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: baoyu-infographic",
+        "source": "Hermes profile skill adapted for AgentOS catalog: baoyu-infographic",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install baoyu-infographic --project <target> --yes",
+        "install_smoke": "agentos skill install baoyu-infographic --project <target> --yes",
         "use_smoke": "test -f .agents/skills/baoyu-infographic/SKILL.md"
       },
       "skill_tree_sha256": "96a51e3136b4ead9e3e839a7f497f03e32396ba6d27cc0b6e170dd84d6ffa223"
@@ -367,12 +367,12 @@
       "install_path": ".agents/skills/claude-design",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: claude-design",
+        "source": "Hermes profile skill adapted for AgentOS catalog: claude-design",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install claude-design --project <target> --yes",
+        "install_smoke": "agentos skill install claude-design --project <target> --yes",
         "use_smoke": "test -f .agents/skills/claude-design/SKILL.md"
       },
       "skill_tree_sha256": "efb78c5cd5060517041a1d12b741162b945864f549196cbec05fcb670d0307b8"
@@ -407,12 +407,12 @@
       "install_path": ".agents/skills/design-md",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: design-md",
+        "source": "Hermes profile skill adapted for AgentOS catalog: design-md",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install design-md --project <target> --yes",
+        "install_smoke": "agentos skill install design-md --project <target> --yes",
         "use_smoke": "test -f .agents/skills/design-md/SKILL.md"
       },
       "skill_tree_sha256": "9a323fe664da07b941e26d4c3f7fdd887d4488fb6cf7003b17beac7ec705db5b"
@@ -451,12 +451,12 @@
       "install_path": ".agents/skills/humanizer",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: humanizer",
+        "source": "Hermes profile skill adapted for AgentOS catalog: humanizer",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install humanizer --project <target> --yes",
+        "install_smoke": "agentos skill install humanizer --project <target> --yes",
         "use_smoke": "test -f .agents/skills/humanizer/SKILL.md"
       },
       "skill_tree_sha256": "77c957053290cf793ffdf1fe4d99f7334e0d47dd5afe70ad2dd3bb97a27949ab"
@@ -491,12 +491,12 @@
       "install_path": ".agents/skills/p5js",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: p5js",
+        "source": "Hermes profile skill adapted for AgentOS catalog: p5js",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install p5js --project <target> --yes",
+        "install_smoke": "agentos skill install p5js --project <target> --yes",
         "use_smoke": "test -f .agents/skills/p5js/SKILL.md"
       },
       "skill_tree_sha256": "2100fa3a4d5e0c48dcc120b691547471cd20df8b82273d41e8e5c9f5ee58158d"
@@ -531,12 +531,12 @@
       "install_path": ".agents/skills/popular-web-designs",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: popular-web-designs",
+        "source": "Hermes profile skill adapted for AgentOS catalog: popular-web-designs",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install popular-web-designs --project <target> --yes",
+        "install_smoke": "agentos skill install popular-web-designs --project <target> --yes",
         "use_smoke": "test -f .agents/skills/popular-web-designs/SKILL.md"
       },
       "skill_tree_sha256": "89bf41e5f2c15b2f066abcd90fba62b0f59c8e7c80018087e947bac719cd8e0d"
@@ -571,12 +571,12 @@
       "install_path": ".agents/skills/pretext",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: pretext",
+        "source": "Hermes profile skill adapted for AgentOS catalog: pretext",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install pretext --project <target> --yes",
+        "install_smoke": "agentos skill install pretext --project <target> --yes",
         "use_smoke": "test -f .agents/skills/pretext/SKILL.md"
       },
       "skill_tree_sha256": "21e46fe73637afd3f4a45d0f8b9e33d50bce3bfd18e8232a878846e677c335da"
@@ -611,12 +611,12 @@
       "install_path": ".agents/skills/sketch",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: sketch",
+        "source": "Hermes profile skill adapted for AgentOS catalog: sketch",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install sketch --project <target> --yes",
+        "install_smoke": "agentos skill install sketch --project <target> --yes",
         "use_smoke": "test -f .agents/skills/sketch/SKILL.md"
       },
       "skill_tree_sha256": "e652e84548c90bc0551e3d51f5cdefa0f2b637010557bd45544133dc4e0da418"
@@ -651,12 +651,12 @@
       "install_path": ".agents/skills/spike",
       "license": "MIT",
       "upstream": {
-        "source": "Hermes profile skill adapted for AHA catalog: spike",
+        "source": "Hermes profile skill adapted for AgentOS catalog: spike",
         "profile": "myprofile",
         "copied": "adapted-summary-only"
       },
       "verification": {
-        "install_smoke": "aha skills install spike --project <target> --yes",
+        "install_smoke": "agentos skill install spike --project <target> --yes",
         "use_smoke": "test -f .agents/skills/spike/SKILL.md"
       },
       "skill_tree_sha256": "fa389f3d217ee32e36e0c2c5fbfa775e51c8a5429b784583040d91f2563fd39b"
@@ -698,7 +698,7 @@
         "source": "Agent Harness repo-local skill migrated to optional catalog"
       },
       "verification": {
-        "install_smoke": "aha skills install frontend-design --project <target> --yes",
+        "install_smoke": "agentos skill install frontend-design --project <target> --yes",
         "use_smoke": "test -f .agents/skills/frontend-design/SKILL.md"
       },
       "skill_tree_sha256": "f17fb91c8c226a1a7c448b9dfd1d4b95d87f1dc9eaed3a4c90f51e2f97802ce9"
@@ -740,7 +740,7 @@
         "source": "Agent Harness repo-local skill migrated to optional catalog"
       },
       "verification": {
-        "install_smoke": "aha skills install xlsx --project <target> --yes",
+        "install_smoke": "agentos skill install xlsx --project <target> --yes",
         "use_smoke": "test -f .agents/skills/xlsx/SKILL.md && test -f .agents/skills/xlsx/scripts/recalc.py"
       },
       "skill_tree_sha256": "51d85101d96802cc764e67ed835f05152b52d612148543b723394e9177792758"

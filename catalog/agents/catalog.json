@@ -32,7 +32,7 @@
       "role_source_path": "catalog/agents/backend-engineer/AGENT.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install backend-engineer --project <target> --yes",
+        "install_smoke": "agentos agent install backend-engineer --project <target> --yes",
         "use_smoke": "test -f .agents/agents/backend-engineer/AGENT.md"
       },
       "agent_tree_sha256": "fb9f2f67ff1eae52accd7dc8f9df950bd5ddfe4b247ea9c0c9bf358b5067b249"
@@ -68,7 +68,7 @@
       "role_source_path": "catalog/agents/codebase-explorer/AGENT.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install codebase-explorer --project <target> --yes",
+        "install_smoke": "agentos agent install codebase-explorer --project <target> --yes",
         "use_smoke": "test -f .agents/agents/codebase-explorer/AGENT.md"
       },
       "agent_tree_sha256": "6c39c6f2d6925510a6aeb15994c24ee8f452873a238f66031fb69fcc0052d695"
@@ -103,7 +103,7 @@
       "role_source_path": ".agents/agents/harness/contrarian.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install contrarian --project <target> --yes",
+        "install_smoke": "agentos agent install contrarian --project <target> --yes",
         "use_smoke": "test -f .agents/agents/contrarian/AGENT.md"
       },
       "agent_tree_sha256": "72a289eedfc232118aa03f641b93514d81e69b63c3661320dff106f607506b70"
@@ -139,7 +139,7 @@
       "role_source_path": "catalog/agents/debug-investigator/AGENT.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install debug-investigator --project <target> --yes",
+        "install_smoke": "agentos agent install debug-investigator --project <target> --yes",
         "use_smoke": "test -f .agents/agents/debug-investigator/AGENT.md"
       },
       "agent_tree_sha256": "c2706cc78a66fedf55b8cb355221ba6c2252693317aa34c4d234ec8e123f413e"
@@ -175,7 +175,7 @@
       "role_source_path": "catalog/agents/designer-agent/AGENT.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install designer-agent --project <target> --yes",
+        "install_smoke": "agentos agent install designer-agent --project <target> --yes",
         "use_smoke": "test -f .agents/agents/designer-agent/AGENT.md"
       },
       "agent_tree_sha256": "5ca606d933eea5f7ea1691475ca420daf84723805266bb5ccd68acf9ec2d5046"
@@ -211,7 +211,7 @@
       "role_source_path": "catalog/agents/document-delivery-lead/AGENT.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install document-delivery-lead --project <target> --yes",
+        "install_smoke": "agentos agent install document-delivery-lead --project <target> --yes",
         "use_smoke": "test -f .agents/agents/document-delivery-lead/AGENT.md"
       },
       "agent_tree_sha256": "24251ae7030b0fb560d0ac6ce32dd2dd5b96dcac0e80b3314f034a4a62969837"
@@ -248,7 +248,7 @@
       "role_source_path": "catalog/agents/frontend-engineer/AGENT.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install frontend-engineer --project <target> --yes",
+        "install_smoke": "agentos agent install frontend-engineer --project <target> --yes",
         "use_smoke": "test -f .agents/agents/frontend-engineer/AGENT.md"
       },
       "agent_tree_sha256": "ff880e86cf77d05414fe2350841f6c7e5c4a1ea2aeb7ba8ebd4e203a9413ccd1"
@@ -283,7 +283,7 @@
       "role_source_path": ".agents/agents/harness/goal-alignment-reviewer.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install goal-alignment-reviewer --project <target> --yes",
+        "install_smoke": "agentos agent install goal-alignment-reviewer --project <target> --yes",
         "use_smoke": "test -f .agents/agents/goal-alignment-reviewer/AGENT.md"
       },
       "agent_tree_sha256": "56139886add3d5237ba446f1c71f01403aae79704741f068e1550c407cafbaa9"
@@ -318,7 +318,7 @@
       "role_source_path": ".agents/agents/harness/harness-architect.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install harness-architect --project <target> --yes",
+        "install_smoke": "agentos agent install harness-architect --project <target> --yes",
         "use_smoke": "test -f .agents/agents/harness-architect/AGENT.md"
       },
       "agent_tree_sha256": "fbd4ba9f54d2228b30c4212d37c82d5a32cbd0405b411078d3e023776b4577f1"
@@ -361,7 +361,7 @@
       "role_source_path": ".agents/agents/harness/plan-reviewer.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install plan-reviewer --project <target> --yes",
+        "install_smoke": "agentos agent install plan-reviewer --project <target> --yes",
         "use_smoke": "test -f .agents/agents/plan-reviewer/AGENT.md"
       },
       "agent_tree_sha256": "df0e26005e64d4cd436a8eb76ca7625e2256d87363b017b1e1cffd1b1b4a1df9"
@@ -405,7 +405,7 @@
       "role_source_path": ".agents/agents/harness/principle-auditor.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install principle-auditor --project <target> --yes",
+        "install_smoke": "agentos agent install principle-auditor --project <target> --yes",
         "use_smoke": "test -f .agents/agents/principle-auditor/AGENT.md"
       },
       "agent_tree_sha256": "076d5d9a4d3514c4a56849b22e6d67ae0cd79c917e67aa64280c3e16df3d9b9c"
@@ -446,7 +446,7 @@
       "role_source_path": "catalog/agents/qa-reviewer/AGENT.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install qa-reviewer --project <target> --yes",
+        "install_smoke": "agentos agent install qa-reviewer --project <target> --yes",
         "use_smoke": "test -f .agents/agents/qa-reviewer/AGENT.md"
       },
       "agent_tree_sha256": "91e5a6e69be0e9414304d8d02c75b70ab17688f7332d981f35ac728eb31d7ce3"
@@ -481,7 +481,7 @@
       "role_source_path": ".agents/agents/harness/simplifier.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install simplifier --project <target> --yes",
+        "install_smoke": "agentos agent install simplifier --project <target> --yes",
         "use_smoke": "test -f .agents/agents/simplifier/AGENT.md"
       },
       "agent_tree_sha256": "7a85ca0c855eb127923b22bb6dfcf73b223a40c39aa8349fac10fc95c1a51d51"
@@ -528,7 +528,7 @@
       "role_source_path": ".agents/agents/harness/usability-reviewer.md",
       "license": "Agent Harness project license",
       "verification": {
-        "install_smoke": "aha agents install usability-reviewer --project <target> --yes",
+        "install_smoke": "agentos agent install usability-reviewer --project <target> --yes",
         "use_smoke": "test -f .agents/agents/usability-reviewer/AGENT.md"
       },
       "agent_tree_sha256": "9bc443f0768f2895b317f19173989b96d648ca91e2316c8d1add2df5e00083cc"

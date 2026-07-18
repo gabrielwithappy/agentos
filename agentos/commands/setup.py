@@ -43,6 +43,14 @@ def main():
         with open(manifest_path, "w") as f:
             json.dump(manifest_data, f, indent=2)
             
+        # 4. Verify installation
+        console.print("[bold blue]Verifying installation...[/bold blue]")
+        if not dest_agents.exists() or not dest_agents.is_dir():
+            raise RuntimeError(f"Verification failed: {dest_agents} is missing or not a directory.")
+        if not manifest_path.exists() or not manifest_path.is_file():
+            raise RuntimeError(f"Verification failed: {manifest_path} is missing or not a file.")
+            
+        console.print("[bold green]Verification successful![/bold green] All required files and directories are present.")
         console.print(f"[bold green]PASS[/bold green] agentos-setup destination={dest} selection=agentcore-only")
     except Exception as e:
         console.print(f"[bold red]Setup failed: {e}[/bold red]")

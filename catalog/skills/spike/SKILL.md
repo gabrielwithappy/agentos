@@ -2,7 +2,7 @@
 name: spike
 description: Run short throwaway experiments to validate technical uncertainty.
 license: MIT
-source: Hermes spike reference, adapted for AHA catalog use.
+source: Hermes spike reference, adapted for AgentOS catalog use.
 ---
 
 # Spike

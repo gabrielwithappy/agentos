@@ -2,7 +2,7 @@
 name: baoyu-infographic
 description: Plan dense infographics, information cards, and visual summaries.
 license: MIT
-source: Baoyu/JimLiu infographic workflow via Hermes, adapted for AHA catalog use.
+source: Baoyu/JimLiu infographic workflow via Hermes, adapted for AgentOS catalog use.
 ---
 
 # Infographic

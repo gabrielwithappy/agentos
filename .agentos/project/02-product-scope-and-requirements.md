@@ -1,10 +1,10 @@
 # 제품 범위 및 요구사항
 
-목적: Define user outcomes, requirement scope, acceptance, 추적성, 비목표, and visual intent.
+목적: Define user outcomes, requirement scope, acceptance, 추적성, and 비목표.
 주요 독자: 프로젝트 오너, 계획 에이전트, 구현 에이전트, 리뷰어/운영자.
 가능하게 하는 결정: requirement inclusion, scope-change decision, acceptance 준비 상태, supporting-doc trigger.
-에이전트 핵심 정보: requirement IDs, user outcomes, acceptance criteria, 추적성, 비목표, visual intent, unresolved questions.
-현재 증거 / 최신성: update whenever requirement, acceptance, visual direction, or user priority changes.
+에이전트 핵심 정보: requirement IDs, user outcomes, acceptance criteria, 추적성, 비목표, unresolved questions.
+현재 증거 / 최신성: update whenever requirement, acceptance, or user priority changes.
 
 ## 사용자 결과
 
@@ -17,9 +17,9 @@
 
 | ID | requirement | Priority | acceptance | 추적성 | Evidence link / 검증 근거 | status |
 |---|---|---|---|---|---|---|
-| REQ-001 | `docs/getting-started.md`에서 agent-harness 관련 혼란 문구 완전 제거 | must | 해당 문서에 `aha` CLI 및 agent-harness의 즉시 사용을 지시하는 가이드가 없음 | | | 현재 |
-| REQ-002 | AgentOS 설치 후 기본 확인 가이드 제공 | must | `setup.sh` 및 `verify-public-test-suite.sh` 통과 후의 명확한 상태 안내 제공 | | | 현재 |
-| REQ-003 | agent-harness 기능의 점진적 마이그레이션 안내 | must | 향후 agent-harness 기능들이 AgentOS로 통합될 예정임이 가이드에 명시됨 | | | 현재 |
+| REQ-001 | AgentOS 설치 후 기본 확인 가이드 제공 | must | `setup.sh` 및 `verify-public-test-suite.sh` 통과 후의 명확한 상태 안내 제공 | | | 현재 |
+| REQ-002 | agent-harness 기능의 점진적 마이그레이션 안내 | must | 향후 agent-harness 기능들이 AgentOS로 통합될 예정임이 가이드에 명시됨 | | | 현재 |
+| REQ-003 | AHA CLI 쉘 스크립트 파이썬 이관 및 카탈로그 통일 | must | `aha` 명령어가 `agentos` 서브 커맨드로 100% 이관되고 카탈로그에서 잔재가 제거됨 | 2026-07-17-aha-cli-refactoring.md | `verify-public-test-suite.sh` 통과 | 완료 |
 
 추적성 규칙:
 
@@ -32,27 +32,17 @@
 
 - `docs/getting-started.md` 전면 개편
 - `README.md` 문맥 교정 (필요시)
+- `aha` 잔재 제거를 위한 `catalog/` 마크다운 및 JSON 수정
+- `agentos` CLI 서브 커맨드 구현 (agent, skill, harness) 및 쉘 스크립트 폐기
 
 제외:
 
-- 실제 코드나 스크립트 수정
-- agent-harness 기능 자체의 실제 마이그레이션 (이번 태스크에서는 안내 문구만 포함)
+- 코어 엔진(`harness_loop.py`) 내부의 추론 로직 자체 수정
+- 일반적인 대화형 채팅 REPL(챗봇 UI)의 자체 구현 및 고도화 (외부 전문 채널에 위임)
 
 범위 변경 트리거:
 
 - 추가적인 문서(예: SECURITY.md)에서도 혼동을 주는 문구가 발견될 경우
-
-## 시각적 의도
-
-프로젝트에 user-facing UI 또는 content direction이 있을 때만 사용한다.
-
-- 좋아하는 레퍼런스:
-- 피해야 하는 레퍼런스:
-- information density:
-- visual hierarchy:
-- tone:
-- failure screen characteristics:
-- 현재 wireframe/design supporting doc:
 
 ## 미해결 질문
 

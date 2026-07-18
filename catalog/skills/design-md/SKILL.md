@@ -2,7 +2,7 @@
 name: design-md
 description: Author, review, and export DESIGN.md design-token specifications.
 license: MIT
-source: Hermes design-md reference, adapted for AHA catalog use.
+source: Hermes design-md reference, adapted for AgentOS catalog use.
 ---
 
 # DESIGN.md

@@ -4,7 +4,7 @@
 
 ## 사용할 때
 
-- decision 맥락, 검토한 옵션, 결과가 `06-decisions-progress-change-log.md`를 너무 길게 만들 때.
+- decision 맥락, 검토한 옵션, 결과가 `06-decisions-change-log.md`를 너무 길게 만들 때.
 - architecture rationale나 review/audit 결과를 장기 보존해야 할 때.
 - future reviewer나 agent를 위해 결정의 영속적인 evidence가 필요할 때.
 - 승인된 tradeoff나 closeout/handoff context를 requirements, risks, verification과 연결해야 할 때.

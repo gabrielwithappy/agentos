@@ -2,7 +2,7 @@
 name: p5js
 description: Create p5.js generative art, interactive sketches, and canvas demos.
 license: MIT
-source: Hermes p5js reference, adapted for AHA catalog use.
+source: Hermes p5js reference, adapted for AgentOS catalog use.
 ---
 
 # p5.js
