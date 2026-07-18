@@ -44,7 +44,7 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 - current wireframe pair는 구조 SSOT이고 current `DESIGN.md`는 visual system SSOT다.
 - current `DESIGN.md`가 구현 요구를 따라가지 못하면 먼저 update route를 제안하고, design owner 책임을 `frontend-engineer`에게 넘기지 않는다.
 - support layer로 `.agents/skills/frontend-design/SKILL.md`를 사용할 수 있지만, `frontend-design` skill 자체가 owner는 아니다.
-- 결과는 existing `agentos-plans/docs/project` 흐름 안에 남기고 별도 runtime registry를 만들지 않는다.
+- 결과는 existing `.agentos/project` 흐름 안에 남기고 별도 runtime registry를 만들지 않는다.
 
 ## 출력 형식
 

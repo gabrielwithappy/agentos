@@ -2,7 +2,7 @@
 name: popular-web-designs
 description: Use known product design vocabularies for HTML/CSS visual direction.
 license: MIT
-source: Hermes popular-web-designs reference, adapted for AHA catalog use.
+source: Hermes popular-web-designs reference, adapted for AgentOS catalog use.
 ---
 
 # Popular Web Designs

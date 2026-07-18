@@ -2,7 +2,7 @@
 name: pretext
 description: Build browser demos with text layout, typography, and ASCII-like motion.
 license: MIT
-source: Hermes pretext reference, adapted for AHA catalog use.
+source: Hermes pretext reference, adapted for AgentOS catalog use.
 ---
 
 # Pretext Creative Demos

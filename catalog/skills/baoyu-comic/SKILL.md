@@ -2,14 +2,14 @@
 name: baoyu-comic
 description: Plan educational comics, biography comics, and tutorial comic prompts.
 license: MIT
-source: Baoyu/JimLiu comic workflow via Hermes, adapted for AHA catalog use.
+source: Baoyu/JimLiu comic workflow via Hermes, adapted for AgentOS catalog use.
 ---
 
 # Knowledge Comic
 
 Use this skill when the user asks for an educational comic, biography comic, tutorial comic, storyboard, or panel-by-panel visual explanation.
 
-This AHA catalog version is planning and prompt oriented. It does not assume a specific image-generation service. If image generation is needed, use the image tool available in the current runtime and keep generated assets under the user's requested path.
+This AgentOS catalog version is planning and prompt oriented. It does not assume a specific image-generation service. If image generation is needed, use the image tool available in the current runtime and keep generated assets under the user's requested path.
 
 ## Workflow
 

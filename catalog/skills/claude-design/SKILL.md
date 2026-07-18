@@ -2,7 +2,7 @@
 name: claude-design
 description: Design one-off HTML artifacts, prototypes, decks, and component studies.
 license: MIT
-source: Hermes claude-design reference, adapted for AHA catalog use.
+source: Hermes claude-design reference, adapted for AgentOS catalog use.
 ---
 
 # Claude Design

@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-07-17T23:17:37Z",
+  "current_plan": null,
+  "active_plans": [
+    {
+      "path": ".agentos/project/exec-plans/active/2026-07-18-project-docs-refactoring.md",
+      "status": "리뷰 대기",
+      "title": "프로젝트 문서 구조 리팩토링 구현 계획",
+      "reviewed_header": false,
+      "review_evidence_status": "missing",
+      "user_outcome": "DDL 에이전트 및 Designer 에이전트가 올바른 docs 디렉터리를 참조하게 되며, ADR 문서가 개별화되어 결정 사항의 장기 보존 및 추적이 용이해진다.",
+      "progress": "리뷰 대기"
+    }
+  ],
+  "reference_plans": [],
+  "archived_plans": [
+    {
+      "path": ".agentos/project/exec-plans/archive/2026-07-17-aha-cli-refactoring.md",
+      "status": "완료",
+      "title": "AgentOS CLI 구조 개편 및 AHA 잔재 제거 구현 계획",
+      "reviewed_header": true,
+      "review_evidence_status": "missing",
+      "user_outcome": "오래된 aha 기반 쉘 스크립트 참조를 모두 제거하고, Python CLI 구조(agentos skill, agentos agent 등)에 맞게 일관된 사용자 경험을 제공한다. 또한 불필요한 상태 확인용 레거시 기능을 제거하여 CLI를 단순화한다.",
+      "progress": "구현 완료"
+    },
+    {
+      "path": ".agentos/project/exec-plans/archive/2026-07-17-guide-enhancement.md",
+      "status": "완료",
+      "title": "가이드 문서 최신화 및 강화 구현 계획",
+      "reviewed_header": true,
+      "review_evidence_status": "missing",
+      "user_outcome": "신규 사용자 및 기여자가 낡은 쉘 스크립트(`setup.sh`) 대신 최신 Python CLI 명령어로 AgentOS를 직관적으로 셋업하고 구동할 수 있다.",
+      "progress": "리뷰 대기"
+    }
+  ],
+  "archived_summary": {
+    "completed": 2,
+    "parked": 0
+  }
+}
