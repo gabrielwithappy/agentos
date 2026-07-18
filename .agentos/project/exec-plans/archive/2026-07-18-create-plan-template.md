@@ -1,8 +1,11 @@
 # 계획 문서 템플릿 생성 및 리뷰 강제화 구현 계획
 
-> **상태:** 리뷰 대기
+> **상태:** 완료
 > **작성일:** 2026-07-18<br>
-> reviewed: false<br>
+> reviewed: true<br>
+> implementation_started_at: 2026-07-18T09:06:00+09:00<br>
+> implementation_completed_at: 2026-07-18T09:07:00+09:00<br>
+> implementation_duration: 1m<br>
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
@@ -51,10 +54,15 @@
 - (초안 작성됨)
 
 ## 구현 결과
-(구현 후 작성 예정)
+1. `.agentos/project/exec-plans/TEMPLATE.md` 마스터 양식 생성 완료.
+2. `AGENTS.md` 파일 Rule 6을 업데이트하여 TEMPLATE 복사 및 `traces` 폴더 내 리뷰 증거 의무 생성 조항 추가 완료.
 
 ## 사용 방법
 새로운 계획을 작성할 때 `cp .agentos/project/exec-plans/TEMPLATE.md .agentos/project/exec-plans/active/YYYY-MM-DD-plan-name.md` 명령어로 복사하여 시작합니다.
 
 ## 완료 증거
-(구현 후 작성 예정)
+- `TEMPLATE.md` 생성됨
+- `AGENTS.md` 수정됨
+
+## 아카이브 결정
+모든 구현 작업과 검증이 완료되었으므로, 이 계획 문서는 `.agentos/project/exec-plans/archive/` 로 이동하여 아카이브합니다.

@@ -91,8 +91,9 @@
 
 다음 조건이 모두 충족되기 전에 exec-plan을 실행하지 마라:
 
+0. **[필수]** 모든 신규 실행 계획은 반드시 `.agentos/project/exec-plans/TEMPLATE.md`를 기반으로 동일한 구조로 작성되어야 한다. (포맷 미준수 시 즉시 FAIL)
 1. writing-plans Gate 2 서브에이전트 리뷰(`plan-reviewer` + `principle-auditor`) 완료
-2. 두 에이전트 모두 PASS/CLEAN 합의
+2. 두 에이전트 모두 PASS/CLEAN 합의. 리뷰가 완료되면 반드시 `.agents/traces/audit-plan-review.md` 및 `audit-principle.md` 등 물리적 리뷰 증거 파일(Artifact)을 생성해야 하며, 이 파일들이 없으면 `reviewed: true` 상태로 전이될 수 없다.
 3. 계획이 user-facing interaction, CLI prompts, setup/install flows, 사용자 안내 docs, error messages, onboarding, Discord interactions, 또는 command output을 바꾸면 `usability-reviewer` PASS 완료
 4. **루프 모드로 실행하는 경우에만** `loop-state.md`에 `execution_locked: false` 확인
 
