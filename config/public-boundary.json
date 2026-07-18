@@ -111,6 +111,7 @@
     ".agents/skills/harness/git-worktree-parallel/SKILL.md",
     ".agents/skills/harness/git-worktree-parallel/references/worktree-safety.md",
     ".agents/skills/harness/git-worktree-parallel/scripts/create-worktree.sh",
+    ".agents/skills/harness/git-worktree-parallel/tests/test_create_worktree.sh",
     ".agents/skills/harness/harness-loop.sh",
     ".agents/skills/harness/harness-loop/SKILL.md",
     ".agents/skills/harness/intent-clarification/SKILL.md",
