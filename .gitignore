@@ -2,11 +2,13 @@
 __pycache__/
 *.pyc
 .env
-.agentos/traces/
+.agents/traces/
+.agentos/project/exec-plans/active/
+.agentos/project/exec-plans/archive/
+HISTORY.md
 profiles/
 runtime/
 knowledge/
 *.tar
-docs/exec-plans
 CLAUDE.md
 GEMINI.md

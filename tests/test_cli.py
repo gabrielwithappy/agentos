@@ -47,7 +47,7 @@ def test_run_command():
 @mock.patch("agentos.commands.harness.os.execv")
 def test_harness_command(mock_execv):
     result = runner.invoke(app, ["harness", "--flag", "value"])
-    assert "Running harness loop" in result.stdout
+    assert "Starting Python harness engine" in result.stdout
     assert result.exit_code == 0
     mock_execv.assert_called_once()
 
@@ -72,5 +72,5 @@ def test_skill_add_success(tmp_path):
     with mock.patch.dict(os.environ, {"AGENTOS_HOME": str(tmp_path)}):
         result = runner.invoke(app, ["skill", "add", str(source_skill)])
         assert result.exit_code == 0
-        assert "Successfully added skill" in result.stdout
+        assert "Successfully installed skill" in result.stdout
         assert (skills_dir / "mock_skill").is_dir()
