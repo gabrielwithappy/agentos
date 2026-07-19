@@ -1,7 +1,7 @@
 import typer
 from rich.console import Console
 
-from agentos.commands import setup, run, harness, doctor, skill, agent
+from agentos.commands import setup, run, harness, doctor, skill, agent, llm
 
 app = typer.Typer(
     help="AgentOS CLI - Manage and run your AI agents",
@@ -24,6 +24,7 @@ app.command(name="doctor", help="Check system dependencies and state")(doctor.ma
 # Add subcommands that have their own subcommands as Typer groups
 app.add_typer(skill.app, name="skill", help="Manage agent skills")
 app.add_typer(agent.app, name="agent", help="Manage agents")
+app.add_typer(llm.app, name="llm", help="Inspect LLM provider status")
 
 @app.command()
 def version():
