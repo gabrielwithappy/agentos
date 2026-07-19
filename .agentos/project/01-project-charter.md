@@ -8,11 +8,11 @@
 
 ## 가치
 
-- 가치:
-- 사용자/비즈니스 문제:
-- 아무것도 하지 않을 때의 비용:
-- 기대 프로젝트 결과:
-- 완료 신호:
+- 가치: 개발자가 별도 프론트엔드 없이도 AgentOS를 설치, 대화, 자동화, 진단할 수 있는 독립 터미널 경험을 제공한다.
+- 사용자/비즈니스 문제: 현재 CLI는 최소 명령군은 있으나 source checkout/CWD에 의존하고 대화형 입력과 hook lifecycle의 계약이 없어 일관된 사용자 워크플로우를 제공하지 못한다.
+- 아무것도 하지 않을 때의 비용: 사용자는 command semantics와 상태 복구를 추측해야 하며, harness 개선에 유용한 입력·hook 관측을 안전하게 축적할 수 없다.
+- 기대 프로젝트 결과: TTY 대화형 CLI, 명시적 command family, JSONL automation mode, 안전한 hook/input lifecycle, session·diagnostic UX를 갖춘 AgentOS CLI.
+- 완료 신호: reviewed implementation plan의 focused tests, isolated-install smoke, pseudo-TTY interaction checks, secret-redaction regression, public suite가 모두 통과한다.
 
 ## 이해관계자 맵
 
@@ -34,13 +34,14 @@
 
 ## 승인과 완료
 
-- 현재 승인 상태: LLM credential strategy approved. `0004-agentos-llm-credential-strategy.md`가 승인 근거다.
-- 승인 근거: `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md`
-- 완료 이해: provider, billing owner, subscription entitlement, official document URL/check date, grant/scope/redirect policy, and allowed model policy가 승인되었으므로 후속 real provider implementation plan을 작성할 수 있다.
-- 남은 소유자 질문: 없음. 실제 provider 구현 범위와 테스트 명령은 별도 계획에서 확정한다.
+- 현재 승인 상태: 독립 대화형 CLI와 hook/input lifecycle 방향이 승인됨. provider credential boundary는 기존 승인 상태를 유지한다.
+- 승인 근거: `.agentos/project/reference/decisions/0005-agentos-independent-interactive-cli.md`, `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md`
+- 완료 이해: 새 CLI 구현 계획이 command/event/hook/session/test 계약을 확정하고 Gate 2를 통과하면 구현을 시작할 수 있다.
+- 남은 소유자 질문: hook의 첫 MVP에서 사용자 설정 hook을 어떤 선언형 형식으로 제공할지와 session 보존 기간은 실행 계획에서 안전한 기본값과 함께 확정한다.
 
 ## 지원 문서
 
 value, stakeholder context, approval evidence, completion criteria를 분명히 할 때만 supporting doc을 여기에 등록한다.
 
 - `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md` - approved LLM credential strategy owner approval record.
+- `.agentos/project/reference/decisions/0005-agentos-independent-interactive-cli.md` - approved independent interactive CLI and hook/input direction.

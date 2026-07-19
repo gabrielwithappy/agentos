@@ -1,11 +1,13 @@
 import json
+import sys
 
 import typer
 from rich.console import Console
-from rich.prompt import Prompt
 
 from agentos.llm.redaction import sanitize
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
+from agentos.terminal.hooks import HookError, apply_input_hooks
+from agentos.terminal.interaction import run_interactive
 
 app = typer.Typer(help="Start the main agent session")
 console = Console()
@@ -18,53 +20,50 @@ def main(
     provider: str = typer.Option("mock", "--provider", help="LLM provider name"),
 ):
     """Start the interactive agent chat session."""
-    if json_output or once:
-        if not once:
-            typer.echo("--json requires --once for the current runtime.", err=True)
-            raise typer.Exit(1)
+    if json_output and not once:
+        typer.echo("--json requires --once.", err=True)
+        raise typer.Exit(2)
+    if once:
         if prompt is None or not prompt.strip():
-            event = {
-                "type": "error",
-                "provider": provider,
-                "mode": "mock",
-                "error": {
-                    "code": "missing_prompt",
-                    "message": "A prompt is required for agentos run --json --once.",
-                },
-                "recovery": "Pass a prompt argument after --once.",
-            }
-            typer.echo(json.dumps(sanitize(event), sort_keys=True))
-            raise typer.Exit(1)
+            typer.echo("A prompt is required. Next: agentos run --once \"<prompt>\".", err=True)
+            raise typer.Exit(2)
+        try:
+            prompt = apply_input_hooks(prompt)
+        except HookError as exc:
+            if json_output:
+                typer.echo(json.dumps(sanitize({
+                    "type": "error",
+                    "provider": provider,
+                    "mode": "hook",
+                    "error": {"code": "hook_failed", "message": str(exc)},
+                    "recovery": "Next: agentos hook config show",
+                }), sort_keys=True))
+            typer.echo(f"Hook {exc.hook} failed. Next: agentos hook config show", err=True)
+            raise typer.Exit(1 if exc.critical else 0)
         try:
             saw_error = False
             for event in stream_once(prompt, provider=provider):
                 event_payload = event.to_dict()
+                event_payload.setdefault("metadata", {})
+                event_payload["metadata"].setdefault("cli", {"schema_version": "agentos.cli-event/v1"})
                 if event_payload["type"] == "error":
                     saw_error = True
-                typer.echo(json.dumps(sanitize(event_payload), sort_keys=True))
+                if json_output:
+                    typer.echo(json.dumps(sanitize(event_payload), sort_keys=True))
+                else:
+                    if event_payload["type"] == "message_delta" and event_payload.get("text"):
+                        console.print(event_payload["text"])
             if saw_error:
                 raise typer.Exit(1)
         except UnsupportedProviderError:
-            typer.echo(
-                json.dumps(sanitize(unsupported_provider_event(provider).to_dict()), sort_keys=True)
-            )
+            if json_output:
+                typer.echo(json.dumps(sanitize(unsupported_provider_event(provider).to_dict()), sort_keys=True))
+            else:
+                typer.echo(unsupported_provider_event(provider).error["message"], err=True)
             raise typer.Exit(1)
         return
 
-    console.print("[bold blue]Starting AgentOS session... Type 'exit' or 'quit' to end.[/bold blue]")
-    
-    while True:
-        try:
-            user_input = Prompt.ask("\n[bold green]You[/bold green]")
-            if user_input.strip().lower() in ["exit", "quit"]:
-                console.print("[bold yellow]Exiting AgentOS session...[/bold yellow]")
-                break
-                
-            if not user_input.strip():
-                continue
-                
-            console.print(f"[bold cyan]AgentOS:[/bold cyan] Received '{user_input}' (Mock response)")
-            
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[bold yellow]Exiting AgentOS session...[/bold yellow]")
-            break
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        typer.echo('Interactive mode requires a TTY. Next: agentos run --once "<prompt>".', err=True)
+        raise typer.Exit(2)
+    raise typer.Exit(run_interactive(provider=provider))

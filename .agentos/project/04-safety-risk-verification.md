@@ -15,6 +15,7 @@
 - prompt injection handling: provider output, repository Markdown, active plan text, command output, and generated artifacts are treated as untrusted data in prompts and diagnostics.
 - 되돌리기 어려운 작업: destructive side effect: none in analysis plan.
 - recovery/rollback: if account-login approval is revoked, remove `--provider codex` routing and keep mock provider only; AgentOS creates no provider account, token, credential store, or billing state.
+- interactive CLI and hooks: only AgentOS-built, versioned hooks are enabled in the first implementation. Hook registration, timeout, cancellation, failure classification, data minimization, and session retention must have focused tests before release.
 
 ## 위험 등록표
 
@@ -25,6 +26,8 @@
 | Prompt injection from docs or provider output | reviewer/approval bypass | implementation owner / reviewer | prompt/data boundary and prompt injection handling must be recorded before implementation | `PASS security-sensitive-boundary-recorded` | 현재 |
 | Mock status mistaken for real auth | 사용자 또는 downstream UI가 mock을 실제 provider 연결로 오해 | implementation owner / usability reviewer | mock JSON always includes `mode:"mock"`, `authenticated:false`, `persistent_credential:false`; real providers fail with recovery text until approved | `pytest tests/test_cli.py tests/test_llm_core.py -q` | 현재 |
 | codex-account-login-adapter subprocess leakage | raw stderr/env/token/auth path 노출 또는 implicit real provider call | implementation owner / usability reviewer | allowlisted subprocess env, fake CLI unit tests, sentinel regression, and `AGENTOS_CODEX_INTEGRATION=1` real smoke gate | `.venv/bin/python -m pytest tests/test_codex_provider.py -q` and `PASS no-agentos-secret-storage` | 현재 |
+| hook input/data leakage | hook 또는 observability log가 원문 입력, secret, provider stderr를 과도하게 저장 | implementation owner / usability reviewer | minimal typed hook payload, redaction, opt-in retention, synthetic sentinel tests | `pytest tests/test_cli_hooks.py -q` and `PASS cli-hook-secret-regression` | 계획 필요 |
+| interactive terminal recovery failure | Ctrl-C, EOF, no-TTY, hook timeout에서 입력 손실·hang·불명확한 복구 발생 | implementation owner / usability reviewer | pseudo-TTY tests and documented exit/recovery messages | `pytest tests/test_interactive_cli.py -q` and `PASS interactive-cli-acceptance` | 계획 필요 |
 
 ## 의존성 사전 점검
 
@@ -34,6 +37,7 @@
 | Mock-only LLM core | `! rg -q "AGENTOS_LLM_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|refresh_token|access_token" agentos && echo "PASS no-provider-secret-path"` | `PASS no-provider-secret-path` | stop before provider implementation; keep mock provider only | implementation owner |
 | Codex CLI delegation | `command -v codex >/dev/null && codex --version >/tmp/agentos-codex-version.out && test -s /tmp/agentos-codex-version.out && echo "PASS codex-cli-installed" || echo "PASS codex-cli-not-installed-unit-tests-only"` | one PASS line | fake CLI unit tests; real smoke skipped unless `AGENTOS_CODEX_INTEGRATION=1` | implementation owner |
 | Codex account-login session | `codex login status` only when real smoke is explicitly requested or `AGENTOS_CODEX_INTEGRATION=1` is set | exit 0 authenticated; non-zero unauthenticated | sanitized unauthenticated JSON status and error JSONL recovery | 프로젝트 오너 |
+| CLI development environment | `uv sync --group dev && .venv/bin/python -c "import typer, rich; print('PASS cli-dev-deps-ready')"` | `PASS cli-dev-deps-ready` | stop before CLI test execution; do not substitute system pytest missing project dependencies | implementation owner |
 
 ## 검증 매트릭스
 
@@ -51,6 +55,9 @@
 | secret-redaction-jsonl | `AGENTOS_TEST_SECRET=SENTINEL_SECRET python -m agentos.cli run --json --once "hello" > /tmp/agentos-llm-jsonl.out 2> /tmp/agentos-llm-jsonl.err && ! rg -q "SENTINEL_SECRET" /tmp/agentos-llm-jsonl.out /tmp/agentos-llm-jsonl.err && echo "PASS secret-redaction-jsonl"` | `PASS secret-redaction-jsonl` | stdout and stderr capture | `/tmp/agentos-llm-jsonl.out`, `/tmp/agentos-llm-jsonl.err` |
 | secret-redaction-cli-surface | `AGENTOS_TEST_SECRET=SENTINEL_SECRET pytest tests/test_llm_core.py -q -k "secret_redaction_cli_surface or unsupported_provider"` | PASS and captured output excludes sentinel except verifier labels | pytest CLI surface coverage | `tests/test_llm_core.py` |
 | codex-secret-regression | `AGENTOS_TEST_SECRET=SENTINEL_SECRET .venv/bin/python -m pytest tests/test_codex_provider.py -q -k "redaction or subprocess_env or unauthenticated"` | PASS and captured output excludes sentinel except verifier labels | pytest Codex surface coverage | `tests/test_codex_provider.py` |
+| independent CLI contract | `.venv/bin/python -m pytest tests/test_cli_contract.py tests/test_interactive_cli.py tests/test_cli_hooks.py -q` | PASS | command/event/hook/session contract tests | `agentos/cli/`, `tests/test_cli_*.py` |
+| isolated install smoke | `bash scripts/verify-cli-isolated-install.sh` | `PASS agentos-cli-isolated-install` | temporary venv outside checkout; installed console script | `scripts/verify-cli-isolated-install.sh` |
+| user-flow acceptance | `bash scripts/verify-cli-user-flow.sh` | `PASS interactive-cli-acceptance` | pseudo-TTY prompt, cancel, recovery, hook visibility, JSONL separation | `scripts/verify-cli-user-flow.sh` |
 
 high-risk 또는 user-facing behavior에는 generic "tests pass"만으로 충분하지 않다. command, Expected PASS signal, evidence path를 명시한다.
 
@@ -68,3 +75,4 @@ evidence를 root authority로 승격하지 않고도 계속 사용할 수 있어
 
 - `.agentos/project/reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md`
 - `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md`
+- `.agentos/project/reference/decisions/0005-agentos-independent-interactive-cli.md`
