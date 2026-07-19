@@ -18,17 +18,20 @@
 
 | Surface | Owner | Safe to edit? | Coordination rule |
 |---|---|---|---|
-|  |  |  |  |
+| `agentos/cli.py`, `agentos/commands/`, future CLI runtime modules | implementation owner | reviewed plan after Gate 2 | preserve provider and secret contracts; add focused contract tests in the same plan |
+| `agentos/llm/` | implementation owner | reviewed provider-scoped plan | `0004` credential boundary and synthetic secret regression are mandatory |
+| `docs/`, README, project root docs | documentation/implementation owner | yes when command UX changes | update command examples, recovery guidance, requirements and verification traceability together |
+| `.agents/` protected harness assets | authorized architect | only with required approval | CLI may invoke existing harness entry points but must not modify harness governance without a separate protected-path plan |
 
 ## 허용되는 가정
 
-- safe assumption:
-- assumption requiring confirmation:
-- assumption that must not be made:
+- safe assumption: existing Python/Typer package and `agentos`/`aos` console entries are the migration base; pi/Hermes are design evidence, not source to copy.
+- assumption requiring confirmation: project-local hook code 또는 packaged `.agents` asset을 후속 범위에 넣을지 여부. 첫 MVP는 built-in TOML hook config와 명시적 session cleanup으로 고정한다.
+- assumption that must not be made: provider credentials, raw environment, provider stderr, or arbitrary local scripts are safe hook inputs; a pseudo-TTY test alone proves provider correctness.
 
 ## 중지 및 에스컬레이션 규칙
 
-conflicting docs, missing approval, 오래됨 root authority, unregistered supporting doc, unresolved scope question, unverifiable acceptance가 있으면 멈춘다.
+conflicting docs, missing approval, 오래됨 root authority, unregistered supporting doc, unresolved scope question, unverifiable acceptance가 있으면 멈춘다. CLI 작업에서는 command grammar, event schema, hook failure behavior, session retention 중 하나라도 미정이면 implementation 전 계획 단계에서 멈춘다.
 
 에스컬레이션 형식:
 

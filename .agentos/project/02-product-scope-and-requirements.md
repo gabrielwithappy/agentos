@@ -9,9 +9,9 @@
 ## 사용자 결과
 
 - 주요 사용자: AgentOS를 처음 접하는 개발자 및 기여자
-- 사용자 워크플로우: 프로젝트 클론 -> setup.sh 실행 -> 시작 가이드 문서를 통한 환경 이해
-- 원하는 결과: `agent-harness`에 대한 혼란 없이, 최소한의 AgentOS(portable agentcore) 실행 환경을 셋업하고 agent-harness 기능들이 점진적으로 도입될 것임을 인지하는 것
-- 피해야 할 실패 상태: `aha` 등 아직 AgentOS에 완전히 편입되지 않은 명령어를 시도하다 실패하여 이탈하는 것
+- 사용자 워크플로우: 독립 설치 -> `agentos setup` -> `agentos` 대화형 세션 또는 `agentos run --once` 자동화 -> `agentos doctor`로 복구/진단
+- 원하는 결과: source checkout이나 별도 프론트엔드 없이 일관된 AgentOS command, 대화형 입력, session, hook 관리와 복구 안내를 사용한다.
+- 피해야 할 실패 상태: 현재 디렉터리에 따라 명령이 달라지거나, hook 실패·입력 취소·provider 오류에서 사용자가 다음 행동을 알 수 없는 상태.
 
 ## 요구사항과 acceptance
 
@@ -23,6 +23,8 @@
 | REQ-LLM-001 | LLM credential strategy 승인 입력 고정 | must | provider, credential type, subscription entitlement, billing owner, official document URL/check date, grant/scope/redirect policy, allowed model policy가 ADR에 승인 근거와 함께 기록됨 | `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md` | `PASS owner-subscription-auth-input-recorded` | 현재 |
 | REQ-LLM-002 | API key adapter를 1차 구현 경로에서 제외 | must | ADR과 후속 handoff가 API key 입력, import, 저장, API-key adapter 구현 제외를 명시함 | `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md` | `PASS subscription-implementation-scope-separated` | 현재 |
 | REQ-LLM-003 | Mock-only LLM runtime contract 추가 | must | 실제 provider 호출, OAuth, API key, persistent credential store, billing 없이 mock provider와 sanitized JSONL event contract가 CLI에서 검증됨 | `.agentos/project/exec-plans/active/2026-07-18-agentos-llm-core-mvp.md` | `pytest tests/test_cli.py tests/test_llm_core.py -q`; `PASS secret-redaction-jsonl`; `PASS llm-core-docs-aligned` | 현재 |
+| REQ-CLI-001 | 독립 대화형 AgentOS CLI | must | isolated install 후 source checkout 밖에서도 `agentos --help`, `agentos setup`, `agentos doctor`, TTY 대화형 세션, `run --once`가 명시된 exit/output contract로 동작 | `0005-agentos-independent-interactive-cli.md` | `PASS cli-focused-suite`; `PASS agentos-cli-isolated-install`; `PASS interactive-cli-acceptance`; `PASS agentos-independent-cli-suite` | 완료 |
+| REQ-CLI-002 | 안전하고 관측 가능한 hook/input lifecycle | must | hook ordering/timeout/failure/cancel/redaction이 typed event와 tests로 검증되고, hook이 JSONL stdout과 credential boundary를 침범하지 않음 | `0005-agentos-independent-interactive-cli.md` | `PASS cli-hook-registry-contract`; `PASS cli-hook-secret-regression`; `PASS interactive-cli-acceptance` | 완료 |
 
 추적성 규칙:
 
@@ -36,12 +38,15 @@
 - `docs/getting-started.md` 전면 개편
 - `README.md` 문맥 교정 (필요시)
 - `aha` 잔재 제거를 위한 `catalog/` 마크다운 및 JSON 수정
-- `agentos` CLI 서브 커맨드 구현 (agent, skill, harness) 및 쉘 스크립트 폐기
+- 독립 설치 가능한 `agentos` CLI command family와 대화형 session surface
+- typed event stream, user input normalization, opt-in hook lifecycle, session/history UX
+- `README`와 `docs/getting-started.md`의 설치·대화·자동화·복구 안내
 
 제외:
 
 - 코어 엔진(`harness_loop.py`) 내부의 추론 로직 자체 수정
-- 일반적인 대화형 채팅 REPL(챗봇 UI)의 자체 구현 및 고도화 (외부 전문 채널에 위임)
+- pi의 TypeScript/Bun/TUI runtime 직접 이식, Hermes gateway/메신저/백업 등 대규모 운영 command 복제
+- arbitrary third-party code hook 또는 승인 없는 project-local hook 실행
 - LLM API key 입력, import, 저장, API-key adapter 구현
 - provider session 호출, OAuth client 등록, credential persistence, or billing-affecting actions before a separate reviewed implementation plan
 
@@ -58,6 +63,7 @@
 | Question | Owner | Impact | Blocking? |
 |---|---|---|---|
 | 실제 Codex account-login provider adapter의 구현 파일, runtime command surface, and verification sequence는 무엇인가? | implementation owner | 후속 구현 계획 범위 결정 | Yes, for real provider implementation |
+| 첫 CLI MVP의 hook 선언 형식과 session 보존 기간은 무엇인가? | implementation owner | REQ-CLI-002 API 및 migration 범위 | Yes, for CLI implementation plan |
 
 ## 지원 문서
 
@@ -65,3 +71,4 @@
 
 - `.agentos/project/reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md` - LLM auth_strategy_evidence and current credential gap.
 - `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md` - approved LLM credential strategy approval record.
+- `.agentos/project/reference/decisions/0005-agentos-independent-interactive-cli.md` - independent interactive CLI and hook/input direction.

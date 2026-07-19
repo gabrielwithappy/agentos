@@ -17,13 +17,14 @@ def test_setup_command(tmp_path):
         assert result.exit_code == 0
         assert "Setting up AgentOS..." in result.stdout
         assert "PASS agentos-setup" in result.stdout
-        assert (tmp_path / "core").is_dir()
-        assert (tmp_path / "manifest.json").is_file()
+        assert (tmp_path / "sessions").is_dir()
+        assert (tmp_path / "context").is_dir()
+        assert (tmp_path / "state-manifest.json").is_file()
+        assert not (tmp_path / "core" / ".agents").exists()
 
 def test_doctor_command_success(tmp_path):
     # Set up a healthy environment
-    (tmp_path / "core" / ".agents").mkdir(parents=True)
-    (tmp_path / "manifest.json").touch()
+    runner.invoke(app, ["setup"], env={"AGENTOS_HOME": str(tmp_path)})
     
     with mock.patch.dict(os.environ, {"AGENTOS_HOME": str(tmp_path)}):
         result = runner.invoke(app, ["doctor"])
@@ -34,19 +35,17 @@ def test_doctor_command_missing_env(tmp_path):
     with mock.patch.dict(os.environ, {"AGENTOS_HOME": str(tmp_path)}):
         result = runner.invoke(app, ["doctor"])
         assert result.exit_code == 1
-        assert "not found at" in result.stdout
+        assert "not configured at" in result.stdout
         assert "Diagnosis completed with errors" in result.stdout
 
 def test_run_command():
-    # Simulate user typing "exit"
-    result = runner.invoke(app, ["run"], input="exit\n")
+    result = runner.invoke(app, ["run", "--once", "hello"])
     assert result.exit_code == 0
-    assert "Starting AgentOS session" in result.stdout
-    assert "Exiting AgentOS session" in result.stdout
+    assert "Mock response" in result.stdout
 
 @mock.patch("agentos.commands.harness.os.execv")
 def test_harness_command(mock_execv):
-    result = runner.invoke(app, ["harness", "--flag", "value"])
+    result = runner.invoke(app, ["harness", "--project-root", ".", "--flag", "value"])
     assert "Starting Python harness engine" in result.stdout
     assert result.exit_code == 0
     mock_execv.assert_called_once()
