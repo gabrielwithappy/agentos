@@ -4,7 +4,7 @@ import typer
 from rich.console import Console
 
 from agentos.commands import setup, run, harness, doctor, skill, agent, llm, session, hook
-from agentos.terminal.interaction import run_interactive
+from agentos.terminal.tui import run_tui
 
 app = typer.Typer(
     help="AgentOS CLI - Manage and run your AI agents",
@@ -32,7 +32,7 @@ def main(
             err=True,
         )
         raise typer.Exit(2)
-    raise typer.Exit(run_interactive(provider=provider))
+    raise typer.Exit(run_tui(provider=provider))
 
 
 # Add subcommands as commands if they are single actions

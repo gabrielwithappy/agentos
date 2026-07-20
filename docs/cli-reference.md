@@ -27,6 +27,41 @@ Running bare `agentos` starts an interactive session only when stdin and stdout
 are TTYs. In pipes or redirects it exits with code `2` and points to
 `agentos run --once "<prompt>"`.
 
+## AgentOS TUI
+
+Bare `agentos` and `agentos run` open the AgentOS TUI in a real terminal. The
+first screen shows `AgentOS`, a transcript, the composer placeholder
+`Type a message or / for commands`, and a footer with `cwd`, `provider`,
+`model`, `session`, `hooks`, `mode`, and `last turn`.
+
+Type `/` or `/help` to show the command palette. The MVP commands are:
+
+- `/help`
+- `/status`
+- `/session`
+- `/session list`
+- `/session resume`
+- `/hooks`
+- `/clear`
+- `/exit`
+
+Unknown commands show `Unknown command. Next: /help` and return focus to the
+composer. `/session resume` opens the session resume flow; with no sessions it
+shows `No sessions found. Esc to return.` and with an unavailable session it
+shows `Session unavailable. Next: /session list`.
+
+Keyboard behavior:
+
+- `Ctrl-C` cancels an active turn and returns to the composer.
+- `Esc` closes overlays such as command or session picker views.
+- `EOF` exits without a traceback or hang.
+- `Shift+Enter` (`ShiftEnter` in grep-safe verification text) is reserved for newline input in the multiline composer.
+- `/exit` exits the TUI cleanly.
+
+When stdin or stdout is not a TTY, the TUI is not initialized. The command exits
+`2`, stdout stays empty, and stderr contains
+`Interactive mode requires a TTY. Next: agentos run --once "<prompt>".`
+
 ## JSONL
 
 `agentos run --once --json` writes one sanitized JSON object per stdout line.

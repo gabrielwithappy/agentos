@@ -76,6 +76,42 @@ def list_sessions(home: str | Path | None = None) -> list[dict]:
     return rows
 
 
+def session_summaries(home: str | Path | None = None) -> list[dict]:
+    summaries = []
+    for meta_path in sessions_dir(home).glob("*.meta.json"):
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            summaries.append(
+                {
+                    "session_id": meta_path.name.removesuffix(".meta.json"),
+                    "short_id": meta_path.name.removesuffix(".meta.json")[:8],
+                    "provider": "?",
+                    "mode": "?",
+                    "updated_at": "",
+                    "label": "",
+                    "available": False,
+                    "status": "unavailable",
+                }
+            )
+            continue
+        session_id = str(meta.get("session_id", meta_path.name.removesuffix(".meta.json")))
+        available = meta.get("schema_version") == SESSION_SCHEMA_VERSION
+        summaries.append(
+            {
+                "session_id": session_id,
+                "short_id": session_id[:8],
+                "provider": str(meta.get("provider", "?")),
+                "mode": str(meta.get("mode", "?")),
+                "updated_at": str(meta.get("updated_at", "")),
+                "label": str(meta.get("label", "")),
+                "available": available,
+                "status": "available" if available else "unavailable",
+            }
+        )
+    return sorted(summaries, key=lambda row: row.get("updated_at", ""), reverse=True)
+
+
 def read_session(session_id: str, home: str | Path | None = None) -> tuple[dict, list[dict]]:
     sid = validate_session_id(session_id)
     root = sessions_dir(home)

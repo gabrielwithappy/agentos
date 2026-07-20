@@ -19,13 +19,14 @@
 | Surface | Owner | Safe to edit? | Coordination rule |
 |---|---|---|---|
 | `agentos/cli.py`, `agentos/commands/`, future CLI runtime modules | implementation owner | reviewed plan after Gate 2 | preserve provider and secret contracts; add focused contract tests in the same plan |
+| `agentos/terminal/tui/` | implementation owner | reviewed TUI plan after Gate 2 | terminal-only Textual shell; TUI does not change session retention, delete/prune confirmation remains unchanged, and screens may show only existing AgentOS-built hooks with sanitized events |
 | `agentos/llm/` | implementation owner | reviewed provider-scoped plan | `0004` credential boundary and synthetic secret regression are mandatory |
 | `docs/`, README, project root docs | documentation/implementation owner | yes when command UX changes | update command examples, recovery guidance, requirements and verification traceability together |
 | `.agents/` protected harness assets | authorized architect | only with required approval | CLI may invoke existing harness entry points but must not modify harness governance without a separate protected-path plan |
 
 ## 허용되는 가정
 
-- safe assumption: existing Python/Typer package and `agentos`/`aos` console entries are the migration base; pi/Hermes are design evidence, not source to copy.
+- safe assumption: existing Python/Typer package and `agentos`/`aos` console entries are the migration base; pi/Hermes are design evidence, not source to copy. Textual may be added only for the reviewed terminal-only TUI plan.
 - assumption requiring confirmation: project-local hook code 또는 packaged `.agents` asset을 후속 범위에 넣을지 여부. 첫 MVP는 built-in TOML hook config와 명시적 session cleanup으로 고정한다.
 - assumption that must not be made: provider credentials, raw environment, provider stderr, or arbitrary local scripts are safe hook inputs; a pseudo-TTY test alone proves provider correctness.
 

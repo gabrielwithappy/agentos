@@ -25,6 +25,7 @@
 | REQ-LLM-003 | Mock-only LLM runtime contract 추가 | must | 실제 provider 호출, OAuth, API key, persistent credential store, billing 없이 mock provider와 sanitized JSONL event contract가 CLI에서 검증됨 | `.agentos/project/exec-plans/active/2026-07-18-agentos-llm-core-mvp.md` | `pytest tests/test_cli.py tests/test_llm_core.py -q`; `PASS secret-redaction-jsonl`; `PASS llm-core-docs-aligned` | 현재 |
 | REQ-CLI-001 | 독립 대화형 AgentOS CLI | must | isolated install 후 source checkout 밖에서도 `agentos --help`, `agentos setup`, `agentos doctor`, TTY 대화형 세션, `run --once`가 명시된 exit/output contract로 동작 | `0005-agentos-independent-interactive-cli.md` | `PASS cli-focused-suite`; `PASS agentos-cli-isolated-install`; `PASS interactive-cli-acceptance`; `PASS agentos-independent-cli-suite` | 완료 |
 | REQ-CLI-002 | 안전하고 관측 가능한 hook/input lifecycle | must | hook ordering/timeout/failure/cancel/redaction이 typed event와 tests로 검증되고, hook이 JSONL stdout과 credential boundary를 침범하지 않음 | `0005-agentos-independent-interactive-cli.md` | `PASS cli-hook-registry-contract`; `PASS cli-hook-secret-regression`; `PASS interactive-cli-acceptance` | 완료 |
+| REQ-CLI-003 | 시각적으로 이해 가능한 AgentOS TUI | must | TTY에서 transcript, composer, footer, command palette, session picker, recovery가 검증되고, no-TTY JSONL contract, credential boundary, existing session retention/delete/prune confirmation, and only existing AgentOS-built hooks boundary가 유지됨 | `.agentos/project/exec-plans/active/2026-07-19-agentos-tui-ux-architecture.md` | `PASS agentos-tui-focused-suite`; `PASS agentos-tui-secret-recovery-suite`; `PASS interactive-cli-acceptance`; `PASS agentos-cli-isolated-install`; `PASS installed-tui-smoke`; `PASS agentos-public-suite`; `PASS agentos-tui-docs-aligned` | 완료 |
 
 추적성 규칙:
 
@@ -40,6 +41,7 @@
 - `aha` 잔재 제거를 위한 `catalog/` 마크다운 및 JSON 수정
 - 독립 설치 가능한 `agentos` CLI command family와 대화형 session surface
 - typed event stream, user input normalization, opt-in hook lifecycle, session/history UX
+- TUI transcript, composer, footer, command palette, and session picker UX for `REQ-CLI-003`
 - `README`와 `docs/getting-started.md`의 설치·대화·자동화·복구 안내
 
 제외:
@@ -49,6 +51,7 @@
 - arbitrary third-party code hook 또는 승인 없는 project-local hook 실행
 - LLM API key 입력, import, 저장, API-key adapter 구현
 - provider session 호출, OAuth client 등록, credential persistence, or billing-affecting actions before a separate reviewed implementation plan
+- TUI does not change session retention, session auto-delete behavior, delete/prune confirmation remains unchanged, or hook trust policy; it may show only existing AgentOS-built hooks and sanitized hook events.
 
 허용된 예외:
 
