@@ -3,15 +3,16 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-20T13:12:25Z
+> Generated at: 2026-07-20T14:37:03Z
 
 ## Active Plans
 - 현재 실행 중인 계획 없음
 - older active plans omitted=0
 
 ## Archived Plans
-- archive summary: completed=9, parked=3
+- archive summary: completed=10, parked=3
 - older archived plans omitted=0
+- `완료` [AgentOS TUI 개선 1차 반복: 스트리밍 응답 및 기본 메뉴 구현](.agentos/project/exec-plans/archive/2026-07-20-tui-improvement.md) | progress: 구현 완료 및 fresh verification PASS
 - `완료` [AgentOS TUI UX Architecture 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-tui-ux-architecture.md) | reviewed_evidence=invalid | progress: 구현 완료 및 fresh verification PASS
 - `완료` [AgentOS 독립 대화형 CLI 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-independent-interactive-cli.md) | reviewed_evidence=invalid | outcome: 사용자는 설치한 `agentos` 한 명령으로 대화형 세션을 시작하거나 단발 자동화를 실행하고, hook과 입력 처리 결과를 이해 가능한 상태·복구 안내와 함께 사용할 수 있다. | progress: ADR-0005와 root project 문서는 갱신되었고, Gate 2 reviewer evidence가 PASS/CLEAN으로 확보되었다. 구현과 fresh verification이 완료되었다.
 - `완료` [프로젝트 문서 구조 리팩토링 구현 계획](.agentos/project/exec-plans/archive/2026-07-18-project-docs-refactoring.md) | reviewed_evidence=missing | progress: 진행 요약, 완료됨, 현재 위치, 다음 단계, 완료 신호를 간단히 보여줌

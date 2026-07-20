@@ -34,6 +34,27 @@ def command_palette_text() -> str:
     )
 
 
+def matching_commands(prefix: str) -> tuple[SlashCommand, ...]:
+    normalized = prefix.strip()
+    if normalized.startswith("/"):
+        normalized = normalized[1:]
+    normalized = normalized.lower()
+    if not normalized:
+        return COMMANDS
+    name_matches = [
+        command
+        for command in COMMANDS
+        if normalized in command.name[1:].lower()
+    ]
+    description_matches = [
+        command
+        for command in COMMANDS
+        if command not in name_matches
+        and normalized in command.description.lower()
+    ]
+    return tuple(name_matches + description_matches)
+
+
 def find_command(raw: str) -> SlashCommand | None:
     text = raw.strip()
     return next((command for command in COMMANDS if command.name == text), None)

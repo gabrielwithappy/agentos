@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from agentos.terminal.tui.app import AgentOSTui
-from agentos.terminal.tui.commands import all_commands, command_palette_text
+from agentos.terminal.tui.commands import all_commands, command_palette_text, matching_commands
 from agentos.terminal.tui.renderers import render_event, render_session_summary
 from agentos.terminal.tui.state import TuiStatus
 from agentos.terminal import sessions
@@ -151,6 +151,14 @@ def test_command_palette_lists_commands_with_descriptions():
     assert "Open the session resume picker" in palette
 
 
+def test_matching_commands_filters_by_name_and_description():
+    by_name = matching_commands("/sess")
+    by_description = matching_commands("hook")
+
+    assert {command.name for command in by_name} >= {"/session", "/session list", "/session resume"}
+    assert {command.name for command in by_description} >= {"/hooks", "/status"}
+
+
 def test_palette_and_unknown_command_recovery_restore_focus(tmp_path, monkeypatch):
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
@@ -168,6 +176,26 @@ def test_palette_and_unknown_command_recovery_restore_focus(tmp_path, monkeypatc
             composer.value = "/wat"
             await pilot.press("enter")
             assert str(pilot.app.query_one("#transcript").render()) == "Unknown command. Next: /help"
+            assert pilot.app.focused is composer
+
+    asyncio.run(run())
+
+
+def test_tab_opens_filtered_command_palette_and_fills_composer(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/sess"
+            await pilot.press("tab")
+            await pilot.pause()
+            command_names = {command.name for command in pilot.app.screen.commands}
+            assert "/session" in command_names
+            assert "/hooks" not in command_names
+            await pilot.press("enter")
+            await pilot.pause()
+            assert composer.value.startswith("/session")
             assert pilot.app.focused is composer
 
     asyncio.run(run())

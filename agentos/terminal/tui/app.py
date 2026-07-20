@@ -18,7 +18,7 @@ from agentos.terminal.sessions import SessionError, append_event, create_session
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import render_event, render_session_summary
 from agentos.terminal.tui.state import TuiStatus
-from agentos.terminal.tui.widgets import Composer, SessionPicker, StatusFooter, Transcript
+from agentos.terminal.tui.widgets import CommandPaletteScreen, Composer, SessionPicker, StatusFooter, Transcript
 
 
 class AgentOSTui(App[None]):
@@ -56,6 +56,19 @@ class AgentOSTui(App[None]):
         text = event.value.strip()
         event.input.text = ""
         self.process_input(text)
+
+    def on_composer_completion_requested(self, event: Composer.CompletionRequested) -> None:
+        self._open_command_palette(event.value)
+
+    def _open_command_palette(self, prefix: str = "") -> None:
+        composer = self.query_one("#composer", Composer)
+
+        def palette_callback(command: str) -> None:
+            if command:
+                composer.text = f"{command} "
+            composer.focus()
+
+        self.push_screen(CommandPaletteScreen(prefix), palette_callback)
 
     def process_input(self, text: str) -> None:
         transcript = self.query_one("#transcript", Transcript)

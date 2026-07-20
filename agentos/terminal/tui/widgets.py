@@ -7,6 +7,8 @@ from textual.containers import Vertical
 from textual.app import ComposeResult
 from textual.events import Key
 
+from agentos.terminal.tui.commands import SlashCommand, matching_commands
+
 
 class MenuScreen(ModalScreen[str]):
     DEFAULT_CSS = """
@@ -51,6 +53,53 @@ class MenuScreen(ModalScreen[str]):
             event.stop()
 
 
+class CommandPaletteScreen(ModalScreen[str]):
+    DEFAULT_CSS = """
+    CommandPaletteScreen {
+        align: center middle;
+    }
+    #palette-container {
+        width: 72;
+        max-width: 90%;
+        height: auto;
+        max-height: 14;
+        border: solid $accent;
+        background: $surface;
+        padding: 1 2;
+    }
+    #palette-title {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 1;
+        text-style: bold;
+    }
+    """
+
+    def __init__(self, prefix: str = "") -> None:
+        super().__init__()
+        self.prefix = prefix
+        self.commands: tuple[SlashCommand, ...] = matching_commands(prefix)
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="palette-container"):
+            yield Label("AgentOS Commands", id="palette-title")
+            yield OptionList(*self._labels(), id="palette-options")
+
+    def _labels(self) -> list[str]:
+        if not self.commands:
+            return [f"No command matches {self.prefix!r}"]
+        return [f"{command.name:<16} {command.description}" for command in self.commands]
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if 0 <= event.option_index < len(self.commands):
+            self.dismiss(self.commands[event.option_index].name)
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            self.dismiss("")
+            event.stop()
+
+
 class Transcript(Static):
     DEFAULT_CSS = """
     Transcript {
@@ -86,9 +135,18 @@ class Composer(TextArea):
             self.value = value
             self.input = input
 
+    class CompletionRequested(Message):
+        def __init__(self, value: str, input: Composer) -> None:
+            super().__init__()
+            self.value = value
+            self.input = input
+
     def on_key(self, event: Key) -> None:
         if event.key == "enter":
             self.post_message(self.Submitted(self.text, self))
+            event.stop()
+        elif event.key == "tab" and self.text.lstrip().startswith("/"):
+            self.post_message(self.CompletionRequested(self.text, self))
             event.stop()
 
 
