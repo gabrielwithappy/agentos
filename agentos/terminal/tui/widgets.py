@@ -196,8 +196,11 @@ class Composer(TextArea):
     Composer {
         dock: bottom;
         height: auto;
-        max-height: 10;
+        max-height: 15;
         min-height: 3;
+        border: round $accent;
+        padding: 0 1;
+        margin: 1 2;
     }
     """
 
@@ -210,6 +213,9 @@ class Composer(TextArea):
         self._last_action: str | None = None
         self._pastes: dict[int, str] = {}
         self._paste_counter = 0
+        self.prompt_history: list[str] = []
+        self.history_index: int = 0
+        self.temp_buffer: str = ""
 
     @property
     def value(self) -> str:
@@ -241,10 +247,44 @@ class Composer(TextArea):
             self.value = value
             self.input = input
 
+    def save_to_history(self, text: str) -> None:
+        if not text.strip():
+            return
+        if not self.prompt_history or self.prompt_history[-1] != text:
+            self.prompt_history.append(text)
+        self.history_index = len(self.prompt_history)
+        self.temp_buffer = ""
+
     def on_key(self, event: Key) -> None:
         if event.key == "enter":
-            self.post_message(self.Submitted(self.submission_text, self))
             event.stop()
+            self.post_message(self.Submitted(self.submission_text, self))
+            try:
+                self.save_to_history(self.submission_text)
+            except Exception:
+                pass
+        elif event.key == "shift+enter":
+            self.insert("\n")
+            event.stop()
+        elif event.key == "up" and self.cursor_location == (0, 0):
+            if self.history_index > 0:
+                if self.history_index == len(self.prompt_history):
+                    self.temp_buffer = self.text
+                self.history_index -= 1
+                self.text = self.prompt_history[self.history_index]
+                self.action_cursor_line_end()
+            event.stop()
+        elif event.key == "down":
+            last_line = self.document.line_count - 1
+            if self.cursor_location == (last_line, len(self.document.get_line(last_line))):
+                if self.history_index < len(self.prompt_history):
+                    self.history_index += 1
+                    if self.history_index == len(self.prompt_history):
+                        self.text = self.temp_buffer
+                    else:
+                        self.text = self.prompt_history[self.history_index]
+                    self.action_cursor_line_end()
+                event.stop()
         elif event.key == "ctrl+z":
             self.action_undo()
             self._last_action = None
