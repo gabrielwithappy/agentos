@@ -3,16 +3,17 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-19T22:48:18Z
+> Generated at: 2026-07-20T13:12:25Z
 
 ## Active Plans
+- 현재 실행 중인 계획 없음
 - older active plans omitted=0
-- `완료` [AgentOS TUI UX Architecture 구현 계획](.agentos/project/exec-plans/active/2026-07-19-agentos-tui-ux-architecture.md) | reviewed | progress: 구현 완료 및 fresh verification PASS
-- `완료` [AgentOS 독립 대화형 CLI 구현 계획](.agentos/project/exec-plans/active/2026-07-19-agentos-independent-interactive-cli.md) | reviewed | outcome: 사용자는 설치한 `agentos` 한 명령으로 대화형 세션을 시작하거나 단발 자동화를 실행하고, hook과 입력 처리 결과를 이해 가능한 상태·복구 안내와 함께 사용할 수 있다. | progress: ADR-0005와 root project 문서는 갱신되었고, Gate 2 reviewer evidence가 PASS/CLEAN으로 확보되었다. 구현과 fresh verification이 완료되었다.
 
 ## Archived Plans
-- archive summary: completed=7, parked=3
+- archive summary: completed=9, parked=3
 - older archived plans omitted=0
+- `완료` [AgentOS TUI UX Architecture 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-tui-ux-architecture.md) | reviewed_evidence=invalid | progress: 구현 완료 및 fresh verification PASS
+- `완료` [AgentOS 독립 대화형 CLI 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-independent-interactive-cli.md) | reviewed_evidence=invalid | outcome: 사용자는 설치한 `agentos` 한 명령으로 대화형 세션을 시작하거나 단발 자동화를 실행하고, hook과 입력 처리 결과를 이해 가능한 상태·복구 안내와 함께 사용할 수 있다. | progress: ADR-0005와 root project 문서는 갱신되었고, Gate 2 reviewer evidence가 PASS/CLEAN으로 확보되었다. 구현과 fresh verification이 완료되었다.
 - `완료` [프로젝트 문서 구조 리팩토링 구현 계획](.agentos/project/exec-plans/archive/2026-07-18-project-docs-refactoring.md) | reviewed_evidence=missing | progress: 진행 요약, 완료됨, 현재 위치, 다음 단계, 완료 신호를 간단히 보여줌
 - `NEEDS_CONTEXT (분석 handoff 완료)` [AgentOS LLM 구독 로그인·연결 전략 수립 계획](.agentos/project/exec-plans/archive/2026-07-18-llm-auth-api-adoption-analysis.md) | reviewed_evidence=invalid | outcome: 프로젝트 오너는 구독 account-login, OAuth 브라우저 로그인, device-code 로그인, 기존 CLI 위임의 특징·장단점과 권장 적용 순서를 한 문서에서 검토하고, 다음 구현 계획의 범위를 승인할 수 있다. API key 방식은 비… | progress: 참조 프로젝트와 현재 CLI/VS Code 경계를 조사했고, 구현 전 전략 선택과 보안 게이트를 root docs/ADR로 handoff했다. 실제 provider approval은 `NEEDS_CONTEXT`로 남아 있으며, provider 승인…
 - `구현 완료` [CI/CD 실패 복구 계획: 유닛 테스트 및 보안 검증 통과](.agentos/project/exec-plans/archive/2026-07-18-fix-ci-tests-and-boundary.md) | reviewed_evidence=missing | progress: 계획 작성 완료, 리뷰 진행 예정
