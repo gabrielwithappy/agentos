@@ -6,6 +6,7 @@ from agentos.terminal.tui.app import AgentOSTui
 from agentos.terminal.tui.commands import all_commands, command_palette_text, matching_commands
 from agentos.terminal.tui.renderers import render_event, render_session_summary
 from agentos.terminal.tui.state import TuiStatus
+from agentos.terminal.tui.widgets import ChatMessage
 from agentos.terminal import sessions
 
 
@@ -87,6 +88,48 @@ def test_composer_submits_multiline_prompt(tmp_path, monkeypatch):
             assert "You: hello\nworld" in transcript
             assert composer.value == ""
             assert pilot.app.focused is composer
+
+    asyncio.run(run())
+
+
+def test_transcript_accumulates_multiple_turns(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "first"
+            await pilot.press("enter")
+            await pilot.pause()
+            composer.value = "second"
+            await pilot.press("enter")
+            await pilot.pause()
+
+            transcript = str(pilot.app.query_one("#transcript").render())
+            assert "You: first" in transcript
+            assert "You: second" in transcript
+            assert transcript.count("Mock response from AgentOS") == 2
+
+    asyncio.run(run())
+
+
+def test_assistant_message_finalizes_as_markdown(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "markdown"
+            await pilot.press("enter")
+            await pilot.pause()
+
+            assistant_messages = [
+                message
+                for message in pilot.app.query(ChatMessage)
+                if message.role == "assistant"
+            ]
+            assert assistant_messages
+            assert assistant_messages[-1].rendered_as_markdown is True
 
     asyncio.run(run())
 

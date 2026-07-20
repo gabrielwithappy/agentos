@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from rich.markdown import Markdown
 from textual.widgets import ListView, Static, OptionList, Label, TextArea
 from textual.message import Message
 from textual.screen import ModalScreen
-from textual.containers import Vertical
+from textual.containers import Vertical, VerticalScroll
 from textual.app import ComposeResult
 from textual.events import Key
 
@@ -100,13 +101,92 @@ class CommandPaletteScreen(ModalScreen[str]):
             event.stop()
 
 
-class Transcript(Static):
+class ChatMessage(Static):
+    DEFAULT_CSS = """
+    ChatMessage {
+        width: 100%;
+        margin-bottom: 1;
+    }
+    ChatMessage.user {
+        padding: 0 1;
+        border-left: tall $accent;
+    }
+    ChatMessage.assistant {
+        padding: 0 1;
+        border-left: tall $success;
+    }
+    ChatMessage.system {
+        color: $text-muted;
+    }
+    """
+
+    def __init__(self, role: str, text: str = "") -> None:
+        super().__init__(text)
+        self.role = role
+        self.text = text
+        self.rendered_as_markdown = False
+        self.add_class(role)
+
+    def update_text(self, text: str, *, markdown: bool = False) -> None:
+        self.text = text
+        if markdown and text.strip():
+            self.rendered_as_markdown = True
+            self.update(Markdown(text))
+            return
+        self.rendered_as_markdown = False
+        self.update(text)
+
+
+class Transcript(VerticalScroll):
     DEFAULT_CSS = """
     Transcript {
         height: 1fr;
         padding: 1 2;
     }
     """
+
+    def __init__(self, initial_text: str = "", **kwargs: object) -> None:
+        children = [ChatMessage("system", initial_text)] if initial_text else []
+        self._messages: list[ChatMessage] = children.copy()
+        kwargs.setdefault("can_focus", False)
+        super().__init__(*children, **kwargs)
+
+    def render(self) -> str:
+        return "\n".join(
+            self._format_message(message.role, message.text)
+            for message in self._messages
+            if message.text
+        )
+
+    def update(self, text: object = "") -> None:
+        rendered = str(text)
+        self._messages = [ChatMessage("system", rendered)] if rendered else []
+        self.remove_children()
+        for message in self._messages:
+            self.mount(message)
+        self._scroll_to_end()
+
+    def add_message(self, role: str, text: str = "") -> ChatMessage:
+        message = ChatMessage(role, text)
+        self._messages.append(message)
+        self.mount(message)
+        self._scroll_to_end()
+        return message
+
+    def update_message(self, message: ChatMessage, text: str, *, markdown: bool = False) -> None:
+        message.update_text(text, markdown=markdown)
+        self._scroll_to_end()
+
+    def _format_message(self, role: str, text: str) -> str:
+        if role == "user":
+            return f"You: {text}"
+        if role == "assistant":
+            return text
+        return text
+
+    def _scroll_to_end(self) -> None:
+        if self.is_mounted:
+            self.scroll_end(animate=False)
 
 
 class Composer(TextArea):

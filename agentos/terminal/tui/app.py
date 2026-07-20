@@ -18,7 +18,7 @@ from agentos.terminal.sessions import SessionError, append_event, create_session
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import render_event, render_session_summary
 from agentos.terminal.tui.state import TuiStatus
-from agentos.terminal.tui.widgets import CommandPaletteScreen, Composer, SessionPicker, StatusFooter, Transcript
+from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, SessionPicker, StatusFooter, Transcript
 
 
 class AgentOSTui(App[None]):
@@ -48,6 +48,9 @@ class AgentOSTui(App[None]):
         yield SessionPicker(id="session-picker")
         yield StatusFooter(self.status.footer_text(), id="status")
         yield Footer()
+
+    def on_mount(self) -> None:
+        self._focus_composer()
 
     def _focus_composer(self) -> None:
         self.query_one("#composer", Composer).focus()
@@ -149,11 +152,11 @@ class AgentOSTui(App[None]):
             self.session_id,
             CliEvent("input_received", self.session_id, turn_id, self.provider, "tui", {"length": len(prompt)}).to_dict(),
         )
-        lines = [f"You: {text}"]
         self.status = TuiStatus.initial(provider=self.provider, session_id=self.session_id).with_last_turn("running")
         self.query_one("#status", StatusFooter).update(self.status.footer_text())
-        transcript.update("\n".join(lines))
-        self.run_stream(prompt, lines, turn_id, self.session_id, self.provider)
+        transcript.add_message("user", text)
+        assistant_message = transcript.add_message("assistant", "")
+        self.run_stream(prompt, assistant_message, turn_id, self.session_id, self.provider)
         self._focus_composer()
 
     def _update_status(self, status: TuiStatus) -> None:
@@ -161,11 +164,16 @@ class AgentOSTui(App[None]):
         self.query_one("#status", StatusFooter).update(status.footer_text())
 
     @work(thread=True)
-    def run_stream(self, prompt: str, lines: list[str], turn_id: str, session_id: str, provider: str) -> None:
+    def run_stream(self, prompt: str, assistant_message: ChatMessage, turn_id: str, session_id: str, provider: str) -> None:
         has_error = False
+        response_text = ""
 
-        def update_transcript(text_content: str) -> None:
-            self.query_one("#transcript", Transcript).update(text_content)
+        def update_assistant(text_content: str, *, markdown: bool = False) -> None:
+            self.query_one("#transcript", Transcript).update_message(
+                assistant_message,
+                text_content,
+                markdown=markdown,
+            )
 
         try:
             for provider_event in stream_once(prompt, provider=provider):
@@ -182,8 +190,8 @@ class AgentOSTui(App[None]):
                 )
                 rendered = render_event(payload)
                 if rendered:
-                    lines.append(rendered)
-                    self.call_from_thread(update_transcript, "\n".join(lines))
+                    response_text += rendered
+                    self.call_from_thread(update_assistant, response_text)
                 if payload["type"] == "error":
                     has_error = True
                     self.call_from_thread(
@@ -191,6 +199,7 @@ class AgentOSTui(App[None]):
                         TuiStatus.initial(provider=provider, session_id=session_id).with_last_turn("error"),
                     )
             if not has_error:
+                self.call_from_thread(update_assistant, response_text, markdown=True)
                 self.call_from_thread(
                     self._update_status,
                     TuiStatus.initial(provider=provider, session_id=session_id).with_last_turn("done"),
@@ -198,8 +207,8 @@ class AgentOSTui(App[None]):
         except UnsupportedProviderError:
             payload = unsupported_provider_event(provider).to_dict()
             append_event(session_id, payload)
-            lines.append(payload["error"]["message"])
-            self.call_from_thread(update_transcript, "\n".join(lines))
+            response_text += payload["error"]["message"]
+            self.call_from_thread(update_assistant, response_text)
             self.call_from_thread(
                 self._update_status,
                 TuiStatus.initial(provider=provider, session_id=session_id).with_last_turn("error"),
