@@ -175,6 +175,9 @@ class AgentOSTui(App[None]):
                 markdown=markdown,
             )
 
+        import time
+        last_update_time = 0.0
+
         try:
             for provider_event in stream_once(prompt, provider=provider):
                 payload = provider_event.to_dict()
@@ -191,7 +194,10 @@ class AgentOSTui(App[None]):
                 rendered = render_event(payload)
                 if rendered:
                     response_text += rendered
-                    self.call_from_thread(update_assistant, response_text)
+                    now = time.monotonic()
+                    if now - last_update_time > 0.05:
+                        self.call_from_thread(update_assistant, response_text)
+                        last_update_time = now
                 if payload["type"] == "error":
                     has_error = True
                     self.call_from_thread(

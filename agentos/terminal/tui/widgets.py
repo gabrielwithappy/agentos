@@ -108,17 +108,25 @@ class ChatMessage(Static):
     ChatMessage {
         width: 100%;
         margin-bottom: 1;
+        padding: 1 2;
+        border: round $accent;
+        background: $boost;
     }
     ChatMessage.user {
-        padding: 0 1;
-        border-left: tall $accent;
+        border: round $success;
+        background: $panel;
+        margin-left: 10;
+        content-align: right middle;
     }
     ChatMessage.assistant {
-        padding: 0 1;
-        border-left: tall $success;
+        border: round $accent;
+        background: $boost;
+        margin-right: 10;
     }
     ChatMessage.system {
         color: $text-muted;
+        border: none;
+        background: transparent;
     }
     """
 
@@ -153,12 +161,7 @@ class Transcript(VerticalScroll):
         kwargs.setdefault("can_focus", False)
         super().__init__(*children, **kwargs)
 
-    def render(self) -> str:
-        return "\n".join(
-            self._format_message(message.role, message.text)
-            for message in self._messages
-            if message.text
-        )
+
 
     def update(self, text: object = "") -> None:
         rendered = str(text)
