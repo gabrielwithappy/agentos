@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 from rich.console import Console
+from textual import work
 from textual.app import App, ComposeResult
 from textual.events import Key
 from textual.widgets import Footer, Header, ListItem, Label
@@ -21,7 +22,7 @@ from agentos.terminal.tui.widgets import Composer, SessionPicker, StatusFooter, 
 
 
 class AgentOSTui(App[None]):
-    BINDINGS = [("escape", "cancel", "Cancel")]
+    BINDINGS = [("escape", "cancel", "Cancel"), ("ctrl+b", "open_menu", "Menu")]
 
     CSS = """
     Screen {
@@ -43,14 +44,20 @@ class AgentOSTui(App[None]):
             "AgentOS\nType a message or / for commands",
             id="transcript",
         )
-        yield Composer(placeholder="Type a message or / for commands", id="composer")
+        yield Composer(id="composer")
         yield SessionPicker(id="session-picker")
         yield StatusFooter(self.status.footer_text(), id="status")
         yield Footer()
 
-    def on_input_submitted(self, event: Composer.Submitted) -> None:
+    def _focus_composer(self) -> None:
+        self.query_one("#composer", Composer).focus()
+
+    def on_composer_submitted(self, event: Composer.Submitted) -> None:
         text = event.value.strip()
-        event.input.value = ""
+        event.input.text = ""
+        self.process_input(text)
+
+    def process_input(self, text: str) -> None:
         transcript = self.query_one("#transcript", Transcript)
         command = find_command(text)
         if text in {"/exit", "exit", "quit"} or (command and command.handler_id == "exit"):
@@ -64,16 +71,16 @@ class AgentOSTui(App[None]):
             return
         if command and command.handler_id == "status":
             transcript.update(self.status.footer_text())
-            event.input.focus()
+            self._focus_composer()
             return
         if command and command.handler_id == "session":
             transcript.update("/session list - List recent sessions\n/session resume - Open the session resume picker")
-            event.input.focus()
+            self._focus_composer()
             return
         if command and command.handler_id == "session_list":
             rows = session_summaries()
             transcript.update("\n".join(render_session_summary(row) for row in rows) if rows else "No sessions found. Esc to return.")
-            event.input.focus()
+            self._focus_composer()
             return
         if command and command.handler_id == "session_resume":
             rows = session_summaries()
@@ -82,7 +89,7 @@ class AgentOSTui(App[None]):
             self.picker_rows = []
             if not rows:
                 transcript.update("No sessions found. Esc to return.")
-                event.input.focus()
+                self._focus_composer()
                 return
             available_rows = [row for row in rows if row.get("available", False)]
             for row in rows:
@@ -95,22 +102,22 @@ class AgentOSTui(App[None]):
             first = available_rows[0] if available_rows else rows[0]
             if not first.get("available", False):
                 transcript.update("Session unavailable. Next: /session list")
-                event.input.focus()
+                self._focus_composer()
                 return
             self._resume_session(str(first["session_id"]))
-            event.input.focus()
+            self._focus_composer()
             return
         if command and command.handler_id == "hooks":
             transcript.update("Hooks: only existing AgentOS-built hooks are shown.")
-            event.input.focus()
+            self._focus_composer()
             return
         if command and command.handler_id == "clear":
             transcript.update("")
-            event.input.focus()
+            self._focus_composer()
             return
         if text.startswith("/"):
             transcript.update("Unknown command. Next: /help")
-            event.input.focus()
+            self._focus_composer()
             return
         if not self.session_id:
             self.session_id = create_session(provider=self.provider, mode="tui")
@@ -123,7 +130,7 @@ class AgentOSTui(App[None]):
             self.status = TuiStatus.initial(provider=self.provider, session_id=self.session_id).with_last_turn("error")
             self.query_one("#status", StatusFooter).update(self.status.footer_text())
             transcript.update("Hook failed. Next: /hooks")
-            event.input.focus()
+            self._focus_composer()
             return
         append_event(
             self.session_id,
@@ -132,34 +139,58 @@ class AgentOSTui(App[None]):
         lines = [f"You: {text}"]
         self.status = TuiStatus.initial(provider=self.provider, session_id=self.session_id).with_last_turn("running")
         self.query_one("#status", StatusFooter).update(self.status.footer_text())
+        transcript.update("\n".join(lines))
+        self.run_stream(prompt, lines, turn_id, self.session_id, self.provider)
+        self._focus_composer()
+
+    def _update_status(self, status: TuiStatus) -> None:
+        self.status = status
+        self.query_one("#status", StatusFooter).update(status.footer_text())
+
+    @work(thread=True)
+    def run_stream(self, prompt: str, lines: list[str], turn_id: str, session_id: str, provider: str) -> None:
+        has_error = False
+
+        def update_transcript(text_content: str) -> None:
+            self.query_one("#transcript", Transcript).update(text_content)
+
         try:
-            for provider_event in stream_once(prompt, provider=self.provider):
+            for provider_event in stream_once(prompt, provider=provider):
                 payload = provider_event.to_dict()
                 append_event(
-                    self.session_id,
+                    session_id,
                     wrap_provider_event(
                         payload,
-                        session_id=self.session_id,
+                        session_id=session_id,
                         turn_id=turn_id,
-                        provider=self.provider,
+                        provider=provider,
                         mode="tui",
                     ),
                 )
                 rendered = render_event(payload)
                 if rendered:
                     lines.append(rendered)
+                    self.call_from_thread(update_transcript, "\n".join(lines))
                 if payload["type"] == "error":
-                    self.status = TuiStatus.initial(provider=self.provider, session_id=self.session_id).with_last_turn("error")
-            if self.status.last_turn != "error":
-                self.status = TuiStatus.initial(provider=self.provider, session_id=self.session_id).with_last_turn("done")
+                    has_error = True
+                    self.call_from_thread(
+                        self._update_status,
+                        TuiStatus.initial(provider=provider, session_id=session_id).with_last_turn("error"),
+                    )
+            if not has_error:
+                self.call_from_thread(
+                    self._update_status,
+                    TuiStatus.initial(provider=provider, session_id=session_id).with_last_turn("done"),
+                )
         except UnsupportedProviderError:
-            payload = unsupported_provider_event(self.provider).to_dict()
-            append_event(self.session_id, payload)
+            payload = unsupported_provider_event(provider).to_dict()
+            append_event(session_id, payload)
             lines.append(payload["error"]["message"])
-            self.status = TuiStatus.initial(provider=self.provider, session_id=self.session_id).with_last_turn("error")
-        self.query_one("#status", StatusFooter).update(self.status.footer_text())
-        transcript.update("\n".join(lines))
-        event.input.focus()
+            self.call_from_thread(update_transcript, "\n".join(lines))
+            self.call_from_thread(
+                self._update_status,
+                TuiStatus.initial(provider=provider, session_id=session_id).with_last_turn("error"),
+            )
 
     def on_session_picker_selected(self, event: SessionPicker.Selected) -> None:
         index = event.list_view.index or 0
@@ -203,6 +234,17 @@ class AgentOSTui(App[None]):
         self.status = TuiStatus.initial(provider=self.provider, session_id=self.session_id)
         self.query_one("#status", StatusFooter).update(self.status.footer_text())
         transcript.update(f"Resumed session {self.session_id[:8]}.\nSession summary updated.")
+
+    def action_open_menu(self) -> None:
+        def menu_callback(command: str) -> None:
+            if command:
+                self.process_input(command)
+            else:
+                self.query_one("#composer", Composer).focus()
+
+        from agentos.terminal.tui.widgets import MenuScreen
+
+        self.push_screen(MenuScreen(), menu_callback)
 
 
 def run_tui(provider: str = "mock") -> int:

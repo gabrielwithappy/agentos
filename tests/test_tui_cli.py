@@ -75,6 +75,22 @@ def test_composer_submit_updates_transcript_and_restores_focus(tmp_path, monkeyp
     asyncio.run(run())
 
 
+def test_composer_submits_multiline_prompt(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello\nworld"
+            await pilot.press("enter")
+            transcript = str(pilot.app.query_one("#transcript").render())
+            assert "You: hello\nworld" in transcript
+            assert composer.value == ""
+            assert pilot.app.focused is composer
+
+    asyncio.run(run())
+
+
 def test_composer_newline_contract_is_deferred_to_multiline_widget(tmp_path, monkeypatch):
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
@@ -82,6 +98,22 @@ def test_composer_newline_contract_is_deferred_to_multiline_widget(tmp_path, mon
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
             assert composer.placeholder == "Type a message or / for commands"
+            assert pilot.app.focused is composer
+
+    asyncio.run(run())
+
+
+def test_ctrl_b_menu_opens_and_escape_restores_composer(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            await pilot.press("ctrl+b")
+            await pilot.pause()
+            assert "AgentOS Menu" in str(pilot.app.screen.query_one("#menu-title").render())
+            await pilot.press("escape")
+            await pilot.pause()
             assert pilot.app.focused is composer
 
     asyncio.run(run())

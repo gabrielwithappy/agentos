@@ -150,23 +150,29 @@ class CodexCliProvider:
 
         result = self._run_codex(["exec", "--json", prompt], executable=executable)
         if result.returncode != 0:
+            code = "codex_cli_timeout" if result.returncode == 124 else "codex_cli_failed"
+            message = (
+                "Codex CLI timed out."
+                if result.returncode == 124
+                else "Codex CLI one-shot run did not complete successfully."
+            )
             yield self._error_event(
-                code="codex_cli_failed",
-                message="Codex CLI one-shot run did not complete successfully.",
+                code=code,
+                message=message,
                 recovery=CODEX_RECOVERY_LOGIN,
                 retryable=True,
             )
             return
 
-        output_events = self._parse_output_events(result.stdout)
         yield LLMEvent(
             type="start",
             provider=self.name,
             mode=self.mode,
             metadata={"transport": "codex-cli"},
         )
+
         output_chars = 0
-        for text in output_events:
+        for text in self._parse_output_events(result.stdout):
             output_chars += len(text)
             yield LLMEvent(
                 type="message_delta",
