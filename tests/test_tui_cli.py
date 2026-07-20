@@ -134,6 +134,52 @@ def test_assistant_message_finalizes_as_markdown(tmp_path, monkeypatch):
     asyncio.run(run())
 
 
+def test_composer_kill_yank_and_undo_shortcuts(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello world"
+            composer.move_cursor((0, 6))
+            await pilot.press("ctrl+k")
+            assert composer.value == "hello "
+            assert composer.kill_ring[-1] == "world"
+            await pilot.press("ctrl+y")
+            assert composer.value == "hello world"
+            await pilot.press("ctrl+z")
+            assert composer.value == "hello "
+
+            composer.value = "hello world"
+            composer.move_cursor((0, 6))
+            await pilot.press("ctrl+u")
+            assert composer.value == "world"
+            assert composer.kill_ring[-1] == "hello "
+
+    asyncio.run(run())
+
+
+def test_composer_large_paste_marker_expands_on_submit(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            pasted = "\n".join(f"line {index}" for index in range(12))
+            composer.insert_paste(pasted)
+            assert composer.value == "[paste #1 +12 lines]"
+            assert composer.submission_text == pasted
+            await pilot.press("enter")
+            await pilot.pause()
+            transcript = str(pilot.app.query_one("#transcript").render())
+            assert "You: line 0" in transcript
+            assert "line 11" in transcript
+            assert composer.value == ""
+            assert composer.submission_text == ""
+
+    asyncio.run(run())
+
+
 def test_composer_newline_contract_is_deferred_to_multiline_widget(tmp_path, monkeypatch):
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))

@@ -57,7 +57,7 @@ class AgentOSTui(App[None]):
 
     def on_composer_submitted(self, event: Composer.Submitted) -> None:
         text = event.value.strip()
-        event.input.text = ""
+        event.input.reset_editor_state()
         self.process_input(text)
 
     def on_composer_completion_requested(self, event: Composer.CompletionRequested) -> None:

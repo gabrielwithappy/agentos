@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import re
+
 from rich.markdown import Markdown
 from textual.widgets import ListView, Static, OptionList, Label, TextArea
 from textual.message import Message
 from textual.screen import ModalScreen
 from textual.containers import Vertical, VerticalScroll
 from textual.app import ComposeResult
-from textual.events import Key
+from textual.events import Key, Paste
 
 from agentos.terminal.tui.commands import SlashCommand, matching_commands
 
@@ -200,6 +202,14 @@ class Composer(TextArea):
     """
 
     placeholder = "Type a message or / for commands"
+    _paste_marker_pattern = re.compile(r"\[paste #(\d+)(?: (?:\+\d+ lines|\d+ chars))?\]")
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.kill_ring: list[str] = []
+        self._last_action: str | None = None
+        self._pastes: dict[int, str] = {}
+        self._paste_counter = 0
 
     @property
     def value(self) -> str:
@@ -208,6 +218,16 @@ class Composer(TextArea):
     @value.setter
     def value(self, text: str) -> None:
         self.text = text
+
+    @property
+    def submission_text(self) -> str:
+        return self.expand_paste_markers(self.text)
+
+    def reset_editor_state(self) -> None:
+        self.text = ""
+        self._pastes.clear()
+        self._paste_counter = 0
+        self._last_action = None
 
     class Submitted(Message):
         def __init__(self, value: str, input: Composer) -> None:
@@ -223,11 +243,106 @@ class Composer(TextArea):
 
     def on_key(self, event: Key) -> None:
         if event.key == "enter":
-            self.post_message(self.Submitted(self.text, self))
+            self.post_message(self.Submitted(self.submission_text, self))
+            event.stop()
+        elif event.key == "ctrl+z":
+            self.action_undo()
+            self._last_action = None
+            event.stop()
+        elif event.key == "ctrl+k":
+            self.kill_to_end_of_line()
+            event.stop()
+        elif event.key == "ctrl+u":
+            self.kill_to_start_of_line()
+            event.stop()
+        elif event.key in {"alt+backspace", "ctrl+w"}:
+            self.kill_word_left()
+            event.stop()
+        elif event.key == "ctrl+y":
+            self.yank()
             event.stop()
         elif event.key == "tab" and self.text.lstrip().startswith("/"):
             self.post_message(self.CompletionRequested(self.text, self))
             event.stop()
+
+    def on_paste(self, event: Paste) -> None:
+        self.insert_paste(event.text)
+        event.stop()
+
+    def insert_paste(self, pasted_text: str) -> None:
+        normalized = self._normalize_paste(pasted_text)
+        if not normalized:
+            return
+        lines = normalized.split("\n")
+        marker = ""
+        if len(lines) > 10:
+            marker = self._store_paste(normalized, f"+{len(lines)} lines")
+        elif len(normalized) > 1000:
+            marker = self._store_paste(normalized, f"{len(normalized)} chars")
+        self.insert(marker or normalized)
+        self._last_action = None
+
+    def expand_paste_markers(self, text: str) -> str:
+        def replacement(match: re.Match[str]) -> str:
+            paste_id = int(match.group(1))
+            return self._pastes.get(paste_id, match.group(0))
+
+        return self._paste_marker_pattern.sub(replacement, text)
+
+    def kill_to_end_of_line(self) -> None:
+        start = self.selection.end
+        end = self.get_cursor_line_end_location()
+        deleted = self.get_text_range(start, end)
+        if not deleted and not self.cursor_at_end_of_text:
+            end = self.get_cursor_right_location()
+            deleted = self.get_text_range(start, end)
+        self._kill_range(start, end, deleted, prepend=False)
+
+    def kill_to_start_of_line(self) -> None:
+        start = self.get_cursor_line_start_location()
+        end = self.selection.end
+        deleted = self.get_text_range(start, end)
+        if not deleted and not self.cursor_at_start_of_text:
+            start = self.get_cursor_left_location()
+            deleted = self.get_text_range(start, end)
+        self._kill_range(start, end, deleted, prepend=True)
+
+    def kill_word_left(self) -> None:
+        if self.cursor_at_start_of_text:
+            return
+        start = self.get_cursor_word_left_location()
+        end = self.selection.end
+        deleted = self.get_text_range(start, end)
+        self._kill_range(start, end, deleted, prepend=True)
+
+    def yank(self) -> None:
+        if not self.kill_ring:
+            return
+        self.insert(self.kill_ring[-1])
+        self._last_action = "yank"
+
+    def _kill_range(self, start: tuple[int, int], end: tuple[int, int], deleted: str, *, prepend: bool) -> None:
+        if not deleted:
+            return
+        if self._last_action == "kill" and self.kill_ring:
+            if prepend:
+                self.kill_ring[-1] = deleted + self.kill_ring[-1]
+            else:
+                self.kill_ring[-1] += deleted
+        else:
+            self.kill_ring.append(deleted)
+        self.delete(start, end, maintain_selection_offset=False)
+        self._last_action = "kill"
+
+    def _store_paste(self, text: str, suffix: str) -> str:
+        self._paste_counter += 1
+        paste_id = self._paste_counter
+        self._pastes[paste_id] = text
+        return f"[paste #{paste_id} {suffix}]"
+
+    def _normalize_paste(self, text: str) -> str:
+        normalized = text.replace("\r\n", "\n").replace("\r", "\n").replace("\t", "    ")
+        return "".join(char for char in normalized if char == "\n" or ord(char) >= 32)
 
 
 class StatusFooter(Static):
