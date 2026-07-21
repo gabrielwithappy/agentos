@@ -1,6 +1,7 @@
 ---
 name: writing-plans
 description: Use when you have a spec or requirements for a multi-step task. Creates an implementation plan before touching code.
+model: sonnet
 ---
 
 # Writing Plans

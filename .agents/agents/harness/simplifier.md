@@ -4,6 +4,7 @@ description: Scope-reduction review agent focused on removing unnecessary compon
 skills:
   - pm
   - qa
+model: sonnet
 ---
 
 ## Harness Principles (MANDATORY)

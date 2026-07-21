@@ -1,6 +1,7 @@
 ---
 name: principle-auditor
 description: Use when .agents/ directory structure changes (new files, folders, skills, agents added or removed). Audits for duplicates, legacy artifacts, and P4 simplicity violations. Triggered automatically by AGENT.md self-improvement protocol on structural changes.
+model: sonnet
 ---
 
 # principle-auditor

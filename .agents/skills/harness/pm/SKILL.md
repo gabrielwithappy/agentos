@@ -1,6 +1,7 @@
 ---
 name: pm
 description: Product manager that decomposes requirements into actionable tasks with priorities and dependencies. Use for planning, requirements, specification, scope, prioritization, task breakdown, and ISO 21500, ISO 31000, or ISO 38500-aligned planning recommendations.
+model: sonnet
 ---
 
 # PM Agent - Product Manager

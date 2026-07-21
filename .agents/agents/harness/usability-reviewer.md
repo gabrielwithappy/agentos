@@ -4,6 +4,7 @@ description: User-facing flow, prompt comprehension, first-time user, and recove
 skills:
   - qa
   - pm
+model: sonnet
 ---
 
 ## Harness Principles (MANDATORY)

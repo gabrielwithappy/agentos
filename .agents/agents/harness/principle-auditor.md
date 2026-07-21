@@ -4,6 +4,7 @@ description: Harness core principles (P1-P4) architecture audit agent
 skills:
   - pm
   - qa
+model: sonnet
 ---
 
 ## Harness Principles (MANDATORY)

@@ -4,6 +4,7 @@ description: >
   Use when the agent needs to create, reuse, inspect, or clean up a git worktree for isolated work that
   should not touch the current checkout. Treat this as an exception workflow for checkout protection,
   review branches, hotfixes, or bounded experiments, not as the default execution model.
+model: sonnet
 ---
 
 # git-worktree-parallel

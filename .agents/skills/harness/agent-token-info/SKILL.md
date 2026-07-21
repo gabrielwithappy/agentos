@@ -3,6 +3,7 @@ name: agent-token-info
 description: >
   Use when the user wants to check agent token readiness, API usage quotas, or usage limits without exposing raw secrets. 
   Typical prompts: "토큰정보 확인", "토큰 상태 봐줘", "token ready?", "현재 루틴의 token info 확인", "실행 usage 확인", "주간 리셋시간 알려줘".
+model: sonnet
 ---
 
 # agent-token-info — 에이전트 토큰 및 한도 정보 확인

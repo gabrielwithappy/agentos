@@ -1,6 +1,7 @@
 ---
 name: sync-manifest
 description: Synchronize the harness asset manifests (agents, skills) to ensure integrity (P1). Use after adding/removing harness components.
+model: sonnet
 ---
 
 # Sync Manifest Skill

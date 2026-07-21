@@ -1,6 +1,7 @@
 ---
 name: debug
 description: Bug diagnosis and fixing specialist - analyzes errors, identifies root causes, provides fixes, and writes regression tests. Use for bug, debug, error, crash, traceback, exception, and regression work.
+model: sonnet
 ---
 
 # Debug Agent - Bug Fixing Specialist
