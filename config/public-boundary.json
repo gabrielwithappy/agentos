@@ -38,6 +38,7 @@
     ".agentos/project/reference/decisions/0005-agentos-independent-interactive-cli.md",
     ".agentos/project/reference/decisions/README.md",
     ".agentos/project/reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md",
+    ".agentos/project/reference/implementation/2026-07-21-pi-tui-architecture-and-code-analysis.md",
     ".agentos/project/reference/implementation/README.md",
     ".agentos/project/reference/implementation/python-cli-implementation.md",
     ".agentos/project/reference/operations/README.md",
