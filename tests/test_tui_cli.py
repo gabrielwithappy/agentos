@@ -14,6 +14,15 @@ def _transcript_text(pilot) -> str:
     return "\n".join(message.text for message in pilot.app.query(ChatMessage))
 
 
+async def await_transcript(pilot, expected_text: str, timeout: float = 1.0) -> None:
+    import time
+    start = time.monotonic()
+    while time.monotonic() - start < timeout:
+        if expected_text in _transcript_text(pilot):
+            return
+        await pilot.pause(0.05)
+    assert expected_text in _transcript_text(pilot)
+
 def test_footer_includes_stable_labels_and_mock_model(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
     monkeypatch.chdir(tmp_path)
@@ -68,8 +77,8 @@ def test_composer_submit_updates_transcript_and_restores_focus(tmp_path, monkeyp
             composer = pilot.app.query_one("#composer")
             composer.value = "hello"
             await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
             assert "You: hello" in _transcript_text(pilot)
-            assert "Mock response from AgentOS" in _transcript_text(pilot)
             assert "last turn done" in str(pilot.app.query_one("#status").render())
             session_files = list((tmp_path / "home" / "sessions").glob("*.jsonl"))
             assert session_files
@@ -103,10 +112,10 @@ def test_transcript_accumulates_multiple_turns(tmp_path, monkeypatch):
             composer = pilot.app.query_one("#composer")
             composer.value = "first"
             await pilot.press("enter")
-            await pilot.pause()
+            await await_transcript(pilot, "Mock response from AgentOS")
             composer.value = "second"
             await pilot.press("enter")
-            await pilot.pause()
+            await await_transcript(pilot, "Mock response from AgentOS")
 
             transcript = _transcript_text(pilot)
             assert "You: first" in transcript
