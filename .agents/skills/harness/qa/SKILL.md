@@ -1,6 +1,7 @@
 ---
 name: qa
 description: Quality assurance specialist for security, performance, accessibility, comprehensive testing, and quality standard alignment. Use for test, review, security audit, OWASP, coverage, lint work, and ISO/IEC 25010 or ISO/IEC 29119-aligned QA recommendations.
+model: sonnet
 ---
 
 # QA Agent - Quality Assurance Specialist

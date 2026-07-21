@@ -16,6 +16,7 @@
 - 되돌리기 어려운 작업: destructive side effect: none in analysis plan.
 - recovery/rollback: if account-login approval is revoked, remove `--provider codex` routing and keep mock provider only; AgentOS creates no provider account, token, credential store, or billing state.
 - interactive CLI and hooks: only AgentOS-built, versioned hooks are enabled in the first implementation. Hook registration, timeout, cancellation, failure classification, data minimization, and session retention must have focused tests before release.
+- TUI boundary: Textual is approved only for terminal-only AgentOS TUI rendering. Browser serving, public URL, port binding, provider credential handling, and external runtime copying are outside this plan. If `PASS textual-package-resolvable` fails, implementation stops for a separate reviewed plan.
 
 ## 위험 등록표
 
@@ -28,6 +29,7 @@
 | codex-account-login-adapter subprocess leakage | raw stderr/env/token/auth path 노출 또는 implicit real provider call | implementation owner / usability reviewer | allowlisted subprocess env, fake CLI unit tests, sentinel regression, and `AGENTOS_CODEX_INTEGRATION=1` real smoke gate | `.venv/bin/python -m pytest tests/test_codex_provider.py -q` and `PASS no-agentos-secret-storage` | 현재 |
 | hook input/data leakage | hook 또는 observability log가 원문 입력, secret, provider stderr를 과도하게 저장 | implementation owner / usability reviewer | minimal typed hook payload, redaction, opt-in retention, synthetic sentinel tests | `pytest tests/test_cli_hooks.py -q` and `PASS cli-hook-secret-regression` | 계획 필요 |
 | interactive terminal recovery failure | Ctrl-C, EOF, no-TTY, hook timeout에서 입력 손실·hang·불명확한 복구 발생 | implementation owner / usability reviewer | pseudo-TTY tests and documented exit/recovery messages | `pytest tests/test_interactive_cli.py -q` and `PASS interactive-cli-acceptance` | 계획 필요 |
+| TUI rendering or dependency regression | visual state, command discovery, session picker, or no-TTY automation boundary regresses | implementation owner / usability reviewer | terminal-only Textual shell, focused TUI tests, pseudo-TTY user-flow, isolated installed smoke, and public suite | `PASS agentos-tui-focused-suite`; `PASS installed-tui-smoke`; `PASS agentos-public-suite` | 완료 |
 
 ## 의존성 사전 점검
 
@@ -38,6 +40,7 @@
 | Codex CLI delegation | `command -v codex >/dev/null && codex --version >/tmp/agentos-codex-version.out && test -s /tmp/agentos-codex-version.out && echo "PASS codex-cli-installed" || echo "PASS codex-cli-not-installed-unit-tests-only"` | one PASS line | fake CLI unit tests; real smoke skipped unless `AGENTOS_CODEX_INTEGRATION=1` | implementation owner |
 | Codex account-login session | `codex login status` only when real smoke is explicitly requested or `AGENTOS_CODEX_INTEGRATION=1` is set | exit 0 authenticated; non-zero unauthenticated | sanitized unauthenticated JSON status and error JSONL recovery | 프로젝트 오너 |
 | CLI development environment | `uv sync --group dev && .venv/bin/python -c "import typer, rich; print('PASS cli-dev-deps-ready')"` | `PASS cli-dev-deps-ready` | stop before CLI test execution; do not substitute system pytest missing project dependencies | implementation owner |
+| Textual TUI dependency | `uv sync --group dev && uv pip install --dry-run --python .venv/bin/python textual >/tmp/agentos-textual-dry-run.out 2>&1 && echo "PASS textual-package-resolvable"` | `PASS textual-package-resolvable` | stop and create a separate reviewed plan; do not silently fall back to prompt_toolkit or a plain prompt loop | implementation owner |
 
 ## 검증 매트릭스
 
@@ -56,6 +59,8 @@
 | secret-redaction-cli-surface | `AGENTOS_TEST_SECRET=SENTINEL_SECRET pytest tests/test_llm_core.py -q -k "secret_redaction_cli_surface or unsupported_provider"` | PASS and captured output excludes sentinel except verifier labels | pytest CLI surface coverage | `tests/test_llm_core.py` |
 | codex-secret-regression | `AGENTOS_TEST_SECRET=SENTINEL_SECRET .venv/bin/python -m pytest tests/test_codex_provider.py -q -k "redaction or subprocess_env or unauthenticated"` | PASS and captured output excludes sentinel except verifier labels | pytest Codex surface coverage | `tests/test_codex_provider.py` |
 | independent CLI contract | `.venv/bin/python -m pytest tests/test_cli_contract.py tests/test_interactive_cli.py tests/test_cli_hooks.py -q` | PASS | command/event/hook/session contract tests | `agentos/cli/`, `tests/test_cli_*.py` |
+| AgentOS TUI focused suite | `.venv/bin/python -m pytest tests/test_cli_contract.py tests/test_interactive_cli.py tests/test_cli_hooks.py tests/test_tui_cli.py -q && bash scripts/verify-tui-reference-boundary.sh && echo "PASS agentos-tui-focused-suite"` | `PASS agentos-tui-focused-suite` | TUI shell, command palette, footer, session picker, hook recovery, and reference boundary | `agentos/terminal/tui/`, `tests/test_tui_cli.py`, `scripts/verify-tui-reference-boundary.sh` |
+| AgentOS TUI secret/recovery suite | generated sentinel with isolated `AGENTOS_HOME` and `AGENTOS_TUI_CAPTURE_DIR`, focused recovery tests, and recursive sentinel scan | `PASS agentos-tui-secret-recovery-suite` | screen/transcript/stdout/stderr/session JSONL/pytest output captures | `tests/test_tui_cli.py`, `tests/test_interactive_cli.py`, `tests/test_cli_hooks.py` |
 | isolated install smoke | `bash scripts/verify-cli-isolated-install.sh` | `PASS agentos-cli-isolated-install` | temporary venv outside checkout; installed console script | `scripts/verify-cli-isolated-install.sh` |
 | user-flow acceptance | `bash scripts/verify-cli-user-flow.sh` | `PASS interactive-cli-acceptance` | pseudo-TTY prompt, cancel, recovery, hook visibility, JSONL separation | `scripts/verify-cli-user-flow.sh` |
 

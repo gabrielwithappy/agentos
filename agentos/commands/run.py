@@ -7,7 +7,7 @@ from rich.console import Console
 from agentos.llm.redaction import sanitize
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
 from agentos.terminal.hooks import HookError, apply_input_hooks
-from agentos.terminal.interaction import run_interactive
+from agentos.terminal.tui import run_tui
 
 app = typer.Typer(help="Start the main agent session")
 console = Console()
@@ -66,4 +66,4 @@ def main(
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         typer.echo('Interactive mode requires a TTY. Next: agentos run --once "<prompt>".', err=True)
         raise typer.Exit(2)
-    raise typer.Exit(run_interactive(provider=provider))
+    raise typer.Exit(run_tui(provider=provider))

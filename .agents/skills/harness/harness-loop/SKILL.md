@@ -1,6 +1,7 @@
 ---
 name: harness-loop
 description: 자연어 프롬프트로 하네스 루프를 백그라운드 실행하는 스킬
+model: sonnet
 ---
 
 # harness-loop

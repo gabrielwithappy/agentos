@@ -1,6 +1,7 @@
 ---
 name: brain
 description: Shared harness context guidance for difficulty assessment, context loading, verification, routing, reasoning, and file-first coordination. Load progressively by task need.
+model: sonnet
 ---
 
 # Brain - Shared Agent Context

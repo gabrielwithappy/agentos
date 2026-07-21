@@ -1,6 +1,7 @@
 ---
 name: careful
 description: 파괴적 Bash 명령(rm -rf, DROP TABLE, git push --force 등)을 PreToolUse hook으로 차단. 되돌리기 어려운 명령 실행 전 구조적 안전장치. AGENT.md Rule 2 텍스트 지침의 구조적 보완.
+model: sonnet
 ---
 
 # careful — 파괴적 명령 차단 Hook

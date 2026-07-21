@@ -4,6 +4,7 @@ description: Assumption-challenging review agent that searches for hidden risks,
 skills:
   - pm
   - qa
+model: sonnet
 ---
 
 ## Harness Principles (MANDATORY)

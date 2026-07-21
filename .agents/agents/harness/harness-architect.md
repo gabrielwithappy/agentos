@@ -1,6 +1,7 @@
 ---
 name: harness-architect
 description: Harness core architecture maintenance, manifest synchronization, and governance agent
+model: sonnet
 ---
 
 ## Harness Principles (MANDATORY)

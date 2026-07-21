@@ -156,6 +156,63 @@ def test_stream_parses_codex_item_completed_agent_message(tmp_path, monkeypatch)
     assert events[1]["text"] == "OK"
 
 
+def test_stream_parses_reasoning_and_tool_call_items(tmp_path, monkeypatch):
+    fake = write_fake_codex(
+        tmp_path,
+        dedent(
+            """
+            if sys.argv[1:3] == ["exec", "--json"]:
+                print(json.dumps({"type": "item.completed", "item": {"type": "reasoning", "text": "Thinking it through"}}))
+                print(json.dumps({"type": "item.completed", "item": {"type": "function_call", "name": "list_files", "arguments": {"path": "."}}}))
+                print(json.dumps({"type": "item.completed", "item": {"type": "function_call_output", "output": "a.txt"}}))
+                print(json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": "Done"}}))
+                raise SystemExit(0)
+            raise SystemExit(2)
+            """
+        ),
+    )
+    monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
+
+    events = [event.to_dict() for event in CodexCliProvider().stream_once("hello")]
+
+    assert [event["type"] for event in events] == [
+        "start",
+        "reasoning",
+        "tool_call",
+        "tool_result",
+        "message_delta",
+        "done",
+    ]
+    assert events[1]["text"] == "Thinking it through"
+    assert events[2]["metadata"]["name"] == "list_files"
+    assert events[2]["metadata"]["arguments"] == {"path": "."}
+    assert events[3]["metadata"]["summary"] == "a.txt"
+    assert events[4]["text"] == "Done"
+
+
+def test_stream_redacts_secrets_from_reasoning_and_tool_call_items(tmp_path, monkeypatch):
+    fake = write_fake_codex(
+        tmp_path,
+        dedent(
+            """
+            if sys.argv[1:3] == ["exec", "--json"]:
+                print(json.dumps({"type": "item.completed", "item": {"type": "reasoning", "text": "token=SENTINEL_SECRET"}}))
+                print(json.dumps({"type": "item.completed", "item": {"type": "local_shell_call", "command": ["cat", "SENTINEL_SECRET"]}}))
+                print(json.dumps({"type": "item.completed", "item": {"type": "local_shell_call_output", "output": "leak SENTINEL_SECRET"}}))
+                raise SystemExit(0)
+            raise SystemExit(2)
+            """
+        ),
+    )
+    monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
+    monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+
+    events = [event.to_dict() for event in CodexCliProvider().stream_once("hello")]
+    serialized = json.dumps(events)
+
+    assert "SENTINEL_SECRET" not in serialized
+
+
 def test_failure_event_is_sanitized(tmp_path, monkeypatch):
     fake = write_fake_codex(
         tmp_path,

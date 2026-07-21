@@ -7,6 +7,7 @@ description: >
   brainstorm(발산)과 달리 이미 방향이 정해진 요청에서 전제·제약·완료 기준만 빠르게 수렴하여
   Plan Quality Gate를 통과할 수 있는 Intent Sheet를 생성한다.
   사용자가 "계획을 세우자", "구현하자", "만들어줘"처럼 다단계 구현을 요청할 때 반드시 이 스킬을 먼저 발동하라.
+model: sonnet
 ---
 
 # Intent Clarification

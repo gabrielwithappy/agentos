@@ -14,6 +14,7 @@
 | 2026-07-18 | AgentOS 일반 대화형 REPL(채팅) 인터페이스 개발 중단 결정. 2026-07-19에 취소됨 | [0002-agentos-repl-deprecation.md](reference/decisions/0002-agentos-repl-deprecation.md) |
 | 2026-07-19 | AgentOS 독립 대화형 CLI와 안전한 hook/input lifecycle을 구현 방향으로 승인 | [0005-agentos-independent-interactive-cli.md](reference/decisions/0005-agentos-independent-interactive-cli.md) |
 | 2026-07-18 | LLM credential strategy approved: Codex account-login 후보를 후속 실제 provider 구현 계획의 입력으로 승인하고 API-key adapter를 1차 구현 경로에서 제외. Provider 호출, OAuth client 등록, credential persistence, 비용 발생 작업은 별도 구현 계획과 Gate 2 전까지 금지 | [0004-agentos-llm-credential-strategy.md](reference/decisions/0004-agentos-llm-credential-strategy.md) |
+| 2026-07-19 | AgentOS TUI UX Architecture: `REQ-CLI-003`을 구현하기 위해 terminal-only Textual TUI shell을 추가하고, pi/Hermes는 read-only design evidence로만 사용하며, no-TTY JSONL, credential, session retention, delete/prune confirmation, and existing AgentOS-built hook boundaries를 유지하기로 결정 | `.agentos/project/exec-plans/active/2026-07-19-agentos-tui-ux-architecture.md` |
 
 ## 변경 관리
 

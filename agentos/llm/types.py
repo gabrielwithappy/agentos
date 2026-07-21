@@ -4,7 +4,9 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 
-EventType = Literal["start", "message_delta", "done", "error"]
+EventType = Literal[
+    "start", "message_delta", "reasoning", "tool_call", "tool_result", "done", "error"
+]
 
 
 @dataclass(frozen=True)

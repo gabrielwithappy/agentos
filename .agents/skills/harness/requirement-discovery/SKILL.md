@@ -4,6 +4,7 @@ description: >
   사용자가 자신이 원하는 구현 요구사항을 명확히 설명하지 못할 때,
   단계적 대화로 목표·문제·예시·비목표를 끌어내고 Requirement Brief와 개발 입력 문서 패키지로 문서화한다.
   intent-clarification 전에 호출하라.
+model: sonnet
 ---
 
 # Requirement Discovery

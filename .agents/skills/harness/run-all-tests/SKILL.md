@@ -1,6 +1,7 @@
 ---
 name: run-all-tests
 description: Run the full harness test suite (integrity check, loop tests, state logic) to ensure the Cognitive OS is stable. Use before pushing harness changes.
+model: sonnet
 ---
 
 # Run All Tests Skill

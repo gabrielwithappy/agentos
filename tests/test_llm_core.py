@@ -29,11 +29,18 @@ def test_mock_provider_status_contract():
 def test_mock_provider_stream_events_are_deterministic():
     events = [event.to_dict() for event in MockProvider().stream_once("hello")]
 
-    assert [event["type"] for event in events] == ["start", "message_delta", "done"]
+    assert [event["type"] for event in events] == [
+        "start",
+        "reasoning",
+        "tool_call",
+        "tool_result",
+        "message_delta",
+        "done",
+    ]
     assert all(event["provider"] == "mock" for event in events)
     assert all(event["mode"] == "mock" for event in events)
-    assert MOCK_MESSAGE in events[1]["text"]
-    assert events[2]["usage"]["input_chars"] == 5
+    assert MOCK_MESSAGE in events[4]["text"]
+    assert events[5]["usage"]["input_chars"] == 5
 
 
 def test_redaction_replaces_sentinel_secret():
@@ -73,7 +80,14 @@ def test_run_json_once_stream_events():
 
     assert result.exit_code == 0
     events = json_lines(result.stdout)
-    assert [event["type"] for event in events] == ["start", "message_delta", "done"]
+    assert [event["type"] for event in events] == [
+        "start",
+        "reasoning",
+        "tool_call",
+        "tool_result",
+        "message_delta",
+        "done",
+    ]
     assert all(event["provider"] == "mock" for event in events)
     assert all(event["mode"] == "mock" for event in events)
 

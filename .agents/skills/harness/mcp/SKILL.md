@@ -7,6 +7,7 @@ description: >
   - "list MCPs": Show currently installed/configured servers
   - "remove MCP <name>": Uninstall or delete a server configuration
   Handles settings.json updates, credential collection, and catalog lookups.
+model: sonnet
 ---
 
 # MCP Management - Unified Toolset

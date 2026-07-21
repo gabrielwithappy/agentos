@@ -4,6 +4,7 @@ description: 장기지식의 inbox, publish, update, reject, deprecate 흐름과
 skills:
   - qa
   - pm
+model: sonnet
 ---
 
 ## Harness Principles (MANDATORY)
