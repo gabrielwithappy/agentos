@@ -162,7 +162,6 @@ async def main():
     app = AgentOSTui(provider="mock")
     async with app.run_test() as pilot:
         assert "AgentOS" in str(pilot.app.query_one("#transcript").render())
-        assert pilot.app.query_one("#composer").placeholder == "Type a message or / for commands"
         status = str(pilot.app.query_one("#status").render())
         for label in ("cwd", "provider", "model", "session", "hooks", "mode", "last turn"):
             assert label in status

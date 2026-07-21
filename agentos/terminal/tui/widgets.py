@@ -103,30 +103,71 @@ class CommandPaletteScreen(ModalScreen[str]):
             event.stop()
 
 
+class ThemeScreen(ModalScreen[str]):
+    DEFAULT_CSS = """
+    ThemeScreen {
+        align: center middle;
+    }
+    #theme-container {
+        width: 50;
+        height: auto;
+        max-height: 24;
+        border: solid $accent;
+        background: $surface;
+        padding: 1 2;
+    }
+    #theme-title {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 1;
+        text-style: bold;
+    }
+    """
+
+    def __init__(self, themes: list[str]) -> None:
+        super().__init__()
+        self._themes = themes
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="theme-container"):
+            yield Label("Select Theme (Esc to cancel)", id="theme-title")
+            yield OptionList(*self._themes, id="theme-options")
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if 0 <= event.option_index < len(self._themes):
+            self.dismiss(self._themes[event.option_index])
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            self.dismiss("")
+            event.stop()
+
+
 class ChatMessage(Static):
     DEFAULT_CSS = """
     ChatMessage {
         width: 100%;
         margin-bottom: 1;
-        padding: 1 2;
-        border: round $accent;
-        background: $boost;
+        padding: 0;
     }
     ChatMessage.user {
-        border: round $success;
-        background: $panel;
-        margin-left: 10;
-        content-align: right middle;
+        color: $success;
     }
     ChatMessage.assistant {
-        border: round $accent;
-        background: $boost;
-        margin-right: 10;
     }
     ChatMessage.system {
         color: $text-muted;
-        border: none;
-        background: transparent;
+    }
+    ChatMessage.reasoning {
+        color: $text-muted;
+        padding-left: 1;
+        margin-bottom: 0;
+    }
+    ChatMessage.tool {
+        color: $warning;
+        padding-left: 1;
+        margin-bottom: 0;
+        border: round $warning;
     }
     """
 
@@ -172,7 +213,7 @@ class Transcript(VerticalScroll):
         self._scroll_to_end()
 
     def add_message(self, role: str, text: str = "") -> ChatMessage:
-        message = ChatMessage(role, text)
+        message = ChatMessage(role, self._format_message(role, text))
         self._messages.append(message)
         self.mount(message)
         self._scroll_to_end()
@@ -207,7 +248,6 @@ class Composer(TextArea):
     }
     """
 
-    placeholder = "Type a message or / for commands"
     _paste_marker_pattern = re.compile(r"\[paste #(\d+)(?: (?:\+\d+ lines|\d+ chars))?\]")
 
     def __init__(self, *args: object, **kwargs: object) -> None:

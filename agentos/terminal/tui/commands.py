@@ -14,10 +14,14 @@ class SlashCommand:
 COMMANDS: tuple[SlashCommand, ...] = (
     SlashCommand("/help", "Show commands and keyboard help", "", "help"),
     SlashCommand("/status", "Show provider, session, hooks, and last turn state", "", "status"),
+    SlashCommand("/hotkeys", "Show all keyboard shortcuts", "", "hotkeys"),
+    SlashCommand("/theme", "Switch the TUI colour theme", "[theme-name]", "theme"),
     SlashCommand("/session", "Show session command help", "[list|resume]", "session"),
     SlashCommand("/session list", "List recent sessions", "", "session_list"),
     SlashCommand("/session resume", "Open the session resume picker", "[session]", "session_resume"),
     SlashCommand("/hooks", "Show AgentOS-built hook status", "", "hooks"),
+    SlashCommand("/tools", "Show tool calls from the last turn", "", "tools"),
+    SlashCommand("/usage", "Show input/output usage from the last turn", "", "usage"),
     SlashCommand("/clear", "Clear the visible transcript", "", "clear"),
     SlashCommand("/exit", "Exit the TUI", "", "exit"),
 )

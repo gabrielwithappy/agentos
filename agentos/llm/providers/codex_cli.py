@@ -172,13 +172,15 @@ class CodexCliProvider:
         )
 
         output_chars = 0
-        for text in self._parse_output_events(result.stdout):
-            output_chars += len(text)
+        for kind, text, metadata in self._parse_output_items(result.stdout):
+            if kind == "message_delta":
+                output_chars += len(text or "")
             yield LLMEvent(
-                type="message_delta",
+                type=kind,
                 provider=self.name,
                 mode=self.mode,
                 text=text,
+                metadata=metadata or {},
             )
         yield LLMEvent(
             type="done",
@@ -252,27 +254,69 @@ class CodexCliProvider:
             metadata={"retryable": retryable},
         )
 
-    def _parse_output_events(self, stdout: str) -> list[str]:
-        texts: list[str] = []
+    def _parse_output_items(
+        self, stdout: str
+    ) -> list[tuple[str, str | None, dict[str, Any] | None]]:
+        items: list[tuple[str, str | None, dict[str, Any] | None]] = []
         for raw_line in stdout.splitlines():
             line = redact_text(raw_line.strip())
             if not line:
                 continue
-            text = self._text_from_json_line(line)
-            if text:
-                texts.append(text)
-            elif not line.startswith("{") and not self._is_diagnostic_line(line):
-                texts.append(line)
-        return [str(sanitize(text)) for text in texts]
+            if line.startswith("{"):
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    payload = None
+                if payload is not None:
+                    classified = [
+                        entry
+                        for entry in (self._classify_item(item) for item in self._iter_items(payload))
+                        if entry
+                    ]
+                    if classified:
+                        items.extend(classified)
+                    else:
+                        text = self._find_text(payload)
+                        if text:
+                            items.append(("message_delta", redact_text(text), None))
+                    continue
+            if not self._is_diagnostic_line(line):
+                items.append(("message_delta", line, None))
+        return [
+            (kind, str(sanitize(text)) if text is not None else None, sanitize(metadata) if metadata is not None else None)
+            for kind, text, metadata in items
+        ]
 
-    def _text_from_json_line(self, line: str) -> str | None:
-        try:
-            payload = json.loads(line)
-        except json.JSONDecodeError:
-            return None
-        text = self._find_text(payload)
-        if text:
-            return redact_text(text)
+    def _iter_items(self, value: Any) -> Iterator[dict[str, Any]]:
+        if isinstance(value, dict):
+            item = value.get("item")
+            if isinstance(item, dict):
+                yield item
+            for nested in value.values():
+                yield from self._iter_items(nested)
+        elif isinstance(value, list):
+            for entry in value:
+                yield from self._iter_items(entry)
+
+    def _classify_item(
+        self, item: dict[str, Any]
+    ) -> tuple[str, str | None, dict[str, Any] | None] | None:
+        item_type = item.get("type")
+        if item_type == "agent_message":
+            text = self._find_text(item.get("text"))
+            return ("message_delta", text, None) if text else None
+        if item_type == "reasoning":
+            text = self._find_text(item.get("text")) or self._find_text(item.get("summary"))
+            return ("reasoning", text, None) if text else None
+        if item_type in ("function_call", "local_shell_call", "custom_tool_call"):
+            name = item.get("name") or item_type
+            arguments = item.get("arguments")
+            if arguments is None and item_type == "local_shell_call":
+                arguments = item.get("command")
+            return ("tool_call", None, {"name": name, "arguments": arguments})
+        if item_type in ("function_call_output", "local_shell_call_output", "custom_tool_call_output"):
+            summary = self._find_text(item.get("output")) or self._find_text(item.get("result"))
+            return ("tool_result", None, {"summary": summary or ""})
         return None
 
     def _find_text(self, value: Any) -> str | None:

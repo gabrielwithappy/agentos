@@ -42,6 +42,24 @@ class MockProvider:
             metadata={"mock": True},
         )
         yield LLMEvent(
+            type="reasoning",
+            provider=self.name,
+            mode=self.mode,
+            text="Considering how to respond to the prompt.",
+        )
+        yield LLMEvent(
+            type="tool_call",
+            provider=self.name,
+            mode=self.mode,
+            metadata={"name": "mock_tool", "arguments": {"input": sanitized_prompt}},
+        )
+        yield LLMEvent(
+            type="tool_result",
+            provider=self.name,
+            mode=self.mode,
+            metadata={"summary": "Mock tool executed successfully."},
+        )
+        yield LLMEvent(
             type="message_delta",
             provider=self.name,
             mode=self.mode,

@@ -18,7 +18,14 @@ def test_run_once_json_preserves_provider_event_names():
     result = runner.invoke(app, ["run", "--once", "hello", "--json"])
     assert result.exit_code == 0
     events = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [event["type"] for event in events] == ["start", "message_delta", "done"]
+    assert [event["type"] for event in events] == [
+        "start",
+        "reasoning",
+        "tool_call",
+        "tool_result",
+        "message_delta",
+        "done",
+    ]
     assert all("cli" in event.get("metadata", {}) for event in events)
 
 

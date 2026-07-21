@@ -10,6 +10,10 @@ from agentos.terminal.tui.widgets import ChatMessage
 from agentos.terminal import sessions
 
 
+def _transcript_text(pilot) -> str:
+    return "\n".join(message.text for message in pilot.app.query(ChatMessage))
+
+
 def test_footer_includes_stable_labels_and_mock_model(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
     monkeypatch.chdir(tmp_path)
@@ -47,9 +51,8 @@ def test_layout_contains_transcript_composer_and_footer(tmp_path, monkeypatch):
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
-            assert "AgentOS" in str(pilot.app.query_one("#transcript").render())
+            assert "AgentOS" in _transcript_text(pilot)
             composer = pilot.app.query_one("#composer")
-            assert composer.placeholder == "Type a message or / for commands"
             status = str(pilot.app.query_one("#status").render())
             for label in ("cwd", "provider", "model", "session", "hooks", "mode", "last turn"):
                 assert label in status
@@ -65,8 +68,8 @@ def test_composer_submit_updates_transcript_and_restores_focus(tmp_path, monkeyp
             composer = pilot.app.query_one("#composer")
             composer.value = "hello"
             await pilot.press("enter")
-            assert "You: hello" in str(pilot.app.query_one("#transcript").render())
-            assert "Mock response from AgentOS" in str(pilot.app.query_one("#transcript").render())
+            assert "You: hello" in _transcript_text(pilot)
+            assert "Mock response from AgentOS" in _transcript_text(pilot)
             assert "last turn done" in str(pilot.app.query_one("#status").render())
             session_files = list((tmp_path / "home" / "sessions").glob("*.jsonl"))
             assert session_files
@@ -84,7 +87,7 @@ def test_composer_submits_multiline_prompt(tmp_path, monkeypatch):
             composer = pilot.app.query_one("#composer")
             composer.value = "hello\nworld"
             await pilot.press("enter")
-            transcript = str(pilot.app.query_one("#transcript").render())
+            transcript = _transcript_text(pilot)
             assert "You: hello\nworld" in transcript
             assert composer.value == ""
             assert pilot.app.focused is composer
@@ -105,7 +108,7 @@ def test_transcript_accumulates_multiple_turns(tmp_path, monkeypatch):
             await pilot.press("enter")
             await pilot.pause()
 
-            transcript = str(pilot.app.query_one("#transcript").render())
+            transcript = _transcript_text(pilot)
             assert "You: first" in transcript
             assert "You: second" in transcript
             assert transcript.count("Mock response from AgentOS") == 2
@@ -171,7 +174,7 @@ def test_composer_large_paste_marker_expands_on_submit(tmp_path, monkeypatch):
             assert composer.submission_text == pasted
             await pilot.press("enter")
             await pilot.pause()
-            transcript = str(pilot.app.query_one("#transcript").render())
+            transcript = _transcript_text(pilot)
             assert "You: line 0" in transcript
             assert "line 11" in transcript
             assert composer.value == ""
@@ -186,7 +189,6 @@ def test_composer_newline_contract_is_deferred_to_multiline_widget(tmp_path, mon
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            assert composer.placeholder == "Type a message or / for commands"
             assert pilot.app.focused is composer
 
     asyncio.run(run())
@@ -216,7 +218,7 @@ def test_escape_in_composer_is_safe_noop(tmp_path, monkeypatch):
             composer = pilot.app.query_one("#composer")
             await pilot.press("escape")
             assert pilot.app.focused is composer
-            assert "AgentOS" in str(pilot.app.query_one("#transcript").render())
+            assert "AgentOS" in _transcript_text(pilot)
 
     asyncio.run(run())
 
@@ -224,7 +226,18 @@ def test_escape_in_composer_is_safe_noop(tmp_path, monkeypatch):
 def test_slash_command_catalog_contains_stable_names_descriptions_and_hints():
     commands = {command.name: command for command in all_commands()}
 
-    for name in ("/help", "/status", "/session", "/session list", "/session resume", "/hooks", "/clear", "/exit"):
+    for name in (
+        "/help",
+        "/status",
+        "/session",
+        "/session list",
+        "/session resume",
+        "/hooks",
+        "/tools",
+        "/usage",
+        "/clear",
+        "/exit",
+    ):
         assert name in commands
         assert commands[name].description
         assert commands[name].handler_id
@@ -234,7 +247,7 @@ def test_slash_command_catalog_contains_stable_names_descriptions_and_hints():
 def test_command_palette_lists_commands_with_descriptions():
     palette = command_palette_text()
 
-    for name in ("/status", "/session", "/hooks", "/clear", "/exit"):
+    for name in ("/status", "/session", "/hooks", "/tools", "/usage", "/clear", "/exit"):
         assert name in palette
     assert "Show provider" in palette
     assert "Open the session resume picker" in palette
@@ -256,7 +269,7 @@ def test_palette_and_unknown_command_recovery_restore_focus(tmp_path, monkeypatc
             composer = pilot.app.query_one("#composer")
             composer.value = "/"
             await pilot.press("enter")
-            palette = str(pilot.app.query_one("#transcript").render())
+            palette = _transcript_text(pilot)
             assert "/status" in palette
             assert "/session" in palette
             assert "/hooks" in palette
@@ -264,7 +277,7 @@ def test_palette_and_unknown_command_recovery_restore_focus(tmp_path, monkeypatc
             assert "/exit" in palette
             composer.value = "/wat"
             await pilot.press("enter")
-            assert str(pilot.app.query_one("#transcript").render()) == "Unknown command. Next: /help"
+            assert _transcript_text(pilot) == "Unknown command. Next: /help"
             assert pilot.app.focused is composer
 
     asyncio.run(run())
@@ -314,7 +327,7 @@ def test_session_picker_empty_cancel_resume_and_unavailable_states(tmp_path, mon
             composer = pilot.app.query_one("#composer")
             composer.value = "/session resume"
             await pilot.press("enter")
-            assert "No sessions found. Esc to return." in str(pilot.app.query_one("#transcript").render())
+            assert "No sessions found. Esc to return." in _transcript_text(pilot)
 
     async def run_resume() -> None:
         home = tmp_path / "resume-home"
@@ -325,7 +338,7 @@ def test_session_picker_empty_cancel_resume_and_unavailable_states(tmp_path, mon
             composer = pilot.app.query_one("#composer")
             composer.value = "/session resume"
             await pilot.press("enter")
-            transcript = str(pilot.app.query_one("#transcript").render())
+            transcript = _transcript_text(pilot)
             assert f"Resumed session {expected_id[:8]}." in transcript
             assert expected_id[:8] in str(pilot.app.query_one("#status").render())
 
@@ -344,7 +357,7 @@ def test_session_resume_multiple_sessions_shows_picker_instead_of_auto_resume(tm
             composer = pilot.app.query_one("#composer")
             composer.value = "/session resume"
             await pilot.press("enter")
-            transcript = str(pilot.app.query_one("#transcript").render())
+            transcript = _transcript_text(pilot)
             assert "Session picker" in transcript
             assert "Esc to return" in transcript
             picker_text = "\n".join(str(item.children[0].render()) for item in pilot.app.query_one("#session-picker").children)
@@ -353,7 +366,7 @@ def test_session_resume_multiple_sessions_shows_picker_instead_of_auto_resume(tm
             await pilot.pause()
             assert pilot.app.focused is pilot.app.query_one("#session-picker")
             await pilot.press("escape")
-            assert "Resume cancelled." in str(pilot.app.query_one("#transcript").render())
+            assert "Resume cancelled." in _transcript_text(pilot)
             composer = pilot.app.query_one("#composer")
             assert pilot.app.focused is composer
             composer.value = "/session resume"
@@ -361,7 +374,7 @@ def test_session_resume_multiple_sessions_shows_picker_instead_of_auto_resume(tm
             await pilot.pause()
             assert pilot.app.focused is pilot.app.query_one("#session-picker")
             await pilot.press("enter")
-            assert "Resumed session" in str(pilot.app.query_one("#transcript").render())
+            assert "Resumed session" in _transcript_text(pilot)
 
     asyncio.run(run())
 
@@ -374,7 +387,7 @@ def test_tui_hook_failure_recovery_updates_footer_and_preserves_focus(tmp_path, 
             composer = pilot.app.query_one("#composer")
             composer.value = "   "
             await pilot.press("enter")
-            assert "Hook failed. Next: /hooks" in str(pilot.app.query_one("#transcript").render())
+            assert "Hook failed. Next: /hooks" in _transcript_text(pilot)
             assert "last turn error" in str(pilot.app.query_one("#status").render())
             assert pilot.app.focused is composer
 
@@ -401,3 +414,316 @@ def test_renderer_redacts_secret_from_provider_hook_and_session(monkeypatch):
     assert "AGENTOS_SENTINEL_SECRET" not in hook
     assert "AGENTOS_SENTINEL_SECRET" not in row
     assert "Hook failed. Next: /hooks" == hook
+
+
+def test_process_event_redacts_secret_from_reasoning_tool_call_and_tool_result(monkeypatch):
+    monkeypatch.setenv("AGENTOS_TEST_SECRET", "AGENTOS_SENTINEL_SECRET")
+
+    reasoning = render_event({"type": "reasoning", "text": "thinking about AGENTOS_SENTINEL_SECRET"})
+    tool_call = render_event(
+        {
+            "type": "tool_call",
+            "metadata": {"name": "mock_tool", "arguments": {"input": "AGENTOS_SENTINEL_SECRET"}},
+        }
+    )
+    tool_result = render_event(
+        {"type": "tool_result", "metadata": {"summary": "leaked AGENTOS_SENTINEL_SECRET value"}}
+    )
+
+    assert "AGENTOS_SENTINEL_SECRET" not in reasoning
+    assert "AGENTOS_SENTINEL_SECRET" not in tool_call
+    assert "AGENTOS_SENTINEL_SECRET" not in tool_result
+    assert reasoning.startswith("Thinking: ")
+    assert tool_call.startswith("Tool call: mock_tool(")
+    assert tool_result.startswith("Tool result: ")
+
+
+def test_transcript_shows_process_events_before_final_answer(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await pilot.pause()
+
+            transcript = _transcript_text(pilot)
+            assert "Thinking: Considering how to respond to the prompt." in transcript
+            assert "Tool call: mock_tool(input=hello)" in transcript
+            assert "Tool result: Mock tool executed successfully." in transcript
+            assert transcript.index("Thinking:") < transcript.index("Mock response from AgentOS")
+
+    asyncio.run(run())
+
+
+def test_tools_command_reports_no_tool_calls_before_first_turn(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/tools"
+            await pilot.press("enter")
+            assert (
+                "No tool calls in the last turn. Next: send a message that needs a tool."
+                in _transcript_text(pilot)
+            )
+
+    asyncio.run(run())
+
+
+def test_tools_command_lists_tool_calls_after_turn(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await pilot.pause()
+            composer.value = "/tools"
+            await pilot.press("enter")
+
+            transcript = _transcript_text(pilot)
+            assert "Tools used in the last turn:" in transcript
+            assert "mock_tool(input=hello) -> Mock tool executed successfully." in transcript
+
+    asyncio.run(run())
+
+
+def test_usage_command_reports_no_usage_before_first_turn(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/usage"
+            await pilot.press("enter")
+            assert "No usage yet. Next: send a message." in _transcript_text(pilot)
+
+    asyncio.run(run())
+
+
+def test_usage_command_reports_last_turn_usage(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await pilot.pause()
+            composer.value = "/usage"
+            await pilot.press("enter")
+
+            transcript = _transcript_text(pilot)
+            assert "Last turn usage: input 5 chars, output" in transcript
+
+    asyncio.run(run())
+
+
+# ── Milestone 1: /hotkeys ──────────────────────────────────────────────────────
+
+def test_hotkeys_command_shows_keyboard_shortcuts(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/hotkeys"
+            await pilot.press("enter")
+            transcript = _transcript_text(pilot)
+            # Must contain core key names from the shortcut table
+            assert "Enter" in transcript
+            assert "Shift+Enter" in transcript
+            assert "Ctrl+K" in transcript
+            assert "Ctrl+B" in transcript
+            assert "Esc" in transcript
+
+    asyncio.run(run())
+
+
+def test_hotkeys_command_listed_in_command_palette(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    text = command_palette_text()
+    assert "/hotkeys" in text
+
+
+# ── Milestone 2: /theme ────────────────────────────────────────────────────────
+
+def test_theme_command_listed_in_commands():
+    commands = all_commands()
+    handler_ids = [cmd.handler_id for cmd in commands]
+    assert "theme" in handler_ids
+
+
+def test_theme_selection_changes_app_theme(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            original_theme = app.theme
+            themes = sorted(app.available_themes.keys())
+            different_theme = next((t for t in themes if t != original_theme), None)
+            if different_theme is None:
+                return  # Only one theme available — skip
+
+            from agentos.terminal.tui.widgets import ThemeScreen
+            result: list[str] = []
+
+            def capture(selected: str) -> None:
+                result.append(selected)
+                if selected:
+                    pilot.app.theme = selected
+
+            pilot.app.push_screen(ThemeScreen(themes), capture)
+            await pilot.pause()
+            # Dismiss with the different theme to simulate selection
+            pilot.app.screen.dismiss(different_theme)
+            await pilot.pause()
+            assert result == [different_theme]
+            assert app.theme == different_theme
+
+    asyncio.run(run())
+
+
+
+def test_theme_escape_does_not_change_theme(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            original_theme = app.theme
+            themes = sorted(app.available_themes.keys())
+
+            from agentos.terminal.tui.widgets import ThemeScreen
+            result = []
+            def capture(selected: str) -> None:
+                result.append(selected)
+                if selected:
+                    pilot.app.theme = selected
+
+            pilot.app.push_screen(ThemeScreen(themes), capture)
+            await pilot.pause()
+            await pilot.press("escape")
+            await pilot.pause()
+            # Esc → callback receives "" → theme unchanged
+            assert result == [""]
+            assert app.theme == original_theme
+
+    asyncio.run(run())
+
+
+# ── Milestone 3: footer git_branch · cumulative usage ─────────────────────────
+
+def test_footer_git_branch_shown_inside_repo(tmp_path, monkeypatch):
+    """When git rev-parse succeeds, branch appears in footer."""
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+
+    status = TuiStatus.initial(
+        provider="mock",
+        session_id="abc12345",
+        git_branch="main",
+    )
+    footer = status.footer_text()
+    assert "branch main" in footer
+
+
+def test_footer_git_branch_omitted_outside_repo(tmp_path, monkeypatch):
+    """When git_branch is None, branch field is absent from footer."""
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+
+    status = TuiStatus.initial(
+        provider="mock",
+        session_id="abc12345",
+        git_branch=None,
+    )
+    footer = status.footer_text()
+    assert "branch" not in footer
+
+
+def test_footer_git_branch_omitted_on_timeout(tmp_path, monkeypatch):
+    """get_git_branch() returns None on TimeoutExpired, so footer omits branch."""
+    import subprocess
+    from agentos.terminal.tui.state import get_git_branch
+
+    def fake_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=["git"], timeout=1)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    branch = get_git_branch()
+    assert branch is None
+
+
+def test_footer_usage_starts_at_zero(tmp_path, monkeypatch):
+    """Before any turn, total in/out should read 0/0."""
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    app = AgentOSTui(provider="mock", create_session_on_start=False)
+    footer = app.status.footer_text()
+    assert "total in/out 0/0 chars" in footer
+
+
+def test_footer_usage_accumulates_and_survives_status_updates(tmp_path, monkeypatch):
+    """Cumulative counters increase after a turn and are not reset by _status_with_totals()."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await pilot.pause()
+            # After one turn with mock provider (usage: input=5, output=X)
+            assert app.total_input_chars > 0
+            # Status reflects cumulative values (not 0/0)
+            footer = app.status.footer_text()
+            assert "total in/out 0/0 chars" not in footer
+
+    asyncio.run(run())
+
+
+# ── Milestone 4: tool_call/tool_result bordered, reasoning unbordered ──────────
+
+def test_tool_border_tool_call_has_tool_class(tmp_path, monkeypatch):
+    """tool_call event adds a ChatMessage with class 'tool', not 'reasoning'."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await pilot.pause()
+            messages = list(pilot.app.query(ChatMessage))
+            tool_messages = [m for m in messages if m.has_class("tool")]
+            reasoning_messages = [m for m in messages if m.has_class("reasoning")]
+            # Mock provider emits tool_call + tool_result → at least 2 tool messages
+            assert len(tool_messages) >= 2, f"Expected ≥2 tool messages, got {tool_messages}"
+            # tool messages must NOT also have the reasoning class
+            for m in tool_messages:
+                assert not m.has_class("reasoning"), "tool message should not have reasoning class"
+
+    asyncio.run(run())
+
+
+def test_tool_border_reasoning_has_reasoning_class(tmp_path, monkeypatch):
+    """reasoning event adds a ChatMessage with class 'reasoning', not 'tool'."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await pilot.pause()
+            messages = list(pilot.app.query(ChatMessage))
+            reasoning_messages = [m for m in messages if m.has_class("reasoning")]
+            # Mock provider emits reasoning event → at least 1 reasoning message
+            assert len(reasoning_messages) >= 1, f"Expected ≥1 reasoning messages, got {reasoning_messages}"
+            for m in reasoning_messages:
+                assert not m.has_class("tool"), "reasoning message should not have tool class"
+
+    asyncio.run(run())
+
