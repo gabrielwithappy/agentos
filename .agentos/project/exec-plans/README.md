@@ -3,15 +3,17 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-20T14:37:03Z
+> Generated at: 2026-07-21T23:18:06Z
 
 ## Active Plans
-- 현재 실행 중인 계획 없음
 - older active plans omitted=0
+- `완료` [AgentOS TUI — pi TUI 격차 해소 (Phase 2) 구현 계획](.agentos/project/exec-plans/active/2026-07-22-tui-pi-clone-phase2.md) | reviewed_evidence=invalid | progress: 완료 — 마일스톤 1~6 구현 및 검증 완료
+- `완료` [AgentOS TUI (Pi TUI Parity) 개선 구현 계획](.agentos/project/exec-plans/active/2026-07-21-tui-ux-improvement.md) | progress: Gate 2 3차 리뷰까지 완료 — `plan-reviewer`/`principle-auditor`/`usability-reviewer` 모두 PASS. 구현 착수 대기 중
 
 ## Archived Plans
-- archive summary: completed=10, parked=3
+- archive summary: completed=11, parked=3
 - older archived plans omitted=0
+- `완료` [AgentOS TUI — pi TUI 격차 해소 (Phase 1) 구현 계획](.agentos/project/exec-plans/archive/2026-07-21-tui-pi-clone-phase1.md) | progress: 계획 초안 작성, Gate 2 리뷰 대기 중
 - `완료` [AgentOS TUI 개선 1차 반복: 스트리밍 응답 및 기본 메뉴 구현](.agentos/project/exec-plans/archive/2026-07-20-tui-improvement.md) | progress: 구현 완료 및 fresh verification PASS
 - `완료` [AgentOS TUI UX Architecture 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-tui-ux-architecture.md) | reviewed_evidence=invalid | progress: 구현 완료 및 fresh verification PASS
 - `완료` [AgentOS 독립 대화형 CLI 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-independent-interactive-cli.md) | reviewed_evidence=invalid | outcome: 사용자는 설치한 `agentos` 한 명령으로 대화형 세션을 시작하거나 단발 자동화를 실행하고, hook과 입력 처리 결과를 이해 가능한 상태·복구 안내와 함께 사용할 수 있다. | progress: ADR-0005와 root project 문서는 갱신되었고, Gate 2 reviewer evidence가 PASS/CLEAN으로 확보되었다. 구현과 fresh verification이 완료되었다.
@@ -29,3 +31,4 @@
 ## Reference Docs
 - older reference docs omitted=0
 - `리뷰 대기 (완료 후 '완료'로 변경)` [[계획 제목] 구현 계획](.agentos/project/exec-plans/TEMPLATE.md) | progress: 계획 초안 작성, 리뷰 대기 중 (상황에 따라 1줄 요약)
+- `완료` [[TUI Transcript] 구현 계획](.agentos/project/exec-plans/2026-07-21-tui-transcript-improvement.md) | progress: 완료

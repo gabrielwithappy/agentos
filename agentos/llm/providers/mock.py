@@ -57,7 +57,7 @@ class MockProvider:
             type="tool_result",
             provider=self.name,
             mode=self.mode,
-            metadata={"summary": "Mock tool executed successfully."},
+            metadata={"name": "mock_tool", "summary": "Mock tool executed successfully."},
         )
         yield LLMEvent(
             type="message_delta",

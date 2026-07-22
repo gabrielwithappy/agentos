@@ -25,6 +25,7 @@ class CliEvent:
     metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: str = field(default_factory=utc_now)
     schema_version: str = CLI_EVENT_SCHEMA_VERSION
+    parent_turn_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return sanitize(
@@ -33,6 +34,7 @@ class CliEvent:
                 "type": self.type,
                 "session_id": self.session_id,
                 "turn_id": self.turn_id,
+                "parent_turn_id": self.parent_turn_id,
                 "timestamp": self.timestamp,
                 "provider": self.provider,
                 "mode": self.mode,
@@ -46,7 +48,15 @@ def new_turn_id() -> str:
     return str(uuid4())
 
 
-def wrap_provider_event(event: dict[str, Any], *, session_id: str, turn_id: str, provider: str, mode: str) -> dict[str, Any]:
+def wrap_provider_event(
+    event: dict[str, Any],
+    *,
+    session_id: str,
+    turn_id: str,
+    provider: str,
+    mode: str,
+    parent_turn_id: str | None = None,
+) -> dict[str, Any]:
     return CliEvent(
         type=str(event.get("type", "provider_event")),
         session_id=session_id,
@@ -55,4 +65,5 @@ def wrap_provider_event(event: dict[str, Any], *, session_id: str, turn_id: str,
         mode=mode,
         payload=event,
         metadata={"cli": {"schema_version": CLI_EVENT_SCHEMA_VERSION}},
+        parent_turn_id=parent_turn_id,
     ).to_dict()

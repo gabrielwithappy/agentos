@@ -49,6 +49,9 @@ Type `/` or `/help` to show the command palette. The MVP commands are:
 - `/hooks`
 - `/tools`
 - `/usage`
+- `/tree` — show the current session's turns as an indented tree with branch support.
+- `/indicator` — switch loading indicator animation style (`ascii` | `unicode` | `emoji` | `kaomoji`).
+- `/model` — switch the LLM provider for the current session (`mock` | `codex`).
 - `/clear`
 - `/exit`
 
@@ -57,13 +60,22 @@ Type `/` or `/help` to show the command palette. The MVP commands are:
 none happened yet. `/usage` shows the last turn's input/output character
 count, or `No usage yet. Next: send a message.` if no turn has completed yet.
 
+While a turn is waiting for the first response chunk, the transcript shows a
+`Thinking…` line. Pressing `Esc` at that point cancels the turn immediately
+and replaces the `Thinking…` line with `Turn cancelled.`; the composer is
+already focused, ready for the next message.
+
 Before the final answer, the transcript may show process entries describing
 what the provider did before answering:
 
 - `Thinking: ...` lines — reasoning steps, displayed in a muted style.
-- `Tool call: name(args)` and `Tool result: ...` lines — tool invocations and
-  their results, displayed in a **warning colour** to visually separate them
-  from reasoning and the final answer.
+- `Tool call: name(args)` lines — tool invocations, displayed in a **warning
+  colour** to visually separate them from reasoning and the final answer.
+- `Tool result: ...` lines — the default rendering of a tool's result. Some
+  tools have a registered custom renderer instead of this plain-text line;
+  today the mock provider's `mock_tool` result renders as a
+  `| field | value |` table. Tools without a registered renderer keep the
+  plain-text `Tool result: ...` line unchanged.
 
 Neither type changes the final assistant answer, which is rendered last.
 
@@ -75,7 +87,11 @@ shows `Session unavailable. Next: /session list`.
 Keyboard behavior:
 
 - `Ctrl-C` cancels an active turn and returns to the composer.
-- `Esc` closes overlays such as command or session picker views.
+- `Esc` cancels a turn that is still waiting for its first response chunk
+  (shows `Turn cancelled.`), or closes overlays such as command or session
+  picker views when no turn is waiting. An open overlay always takes
+  priority, so `Esc` never cancels a turn while an overlay (for example the
+  session resume picker) is on screen.
 - `EOF` exits without a traceback or hang.
 - `Shift+Enter` (`ShiftEnter` in grep-safe verification text) is reserved for newline input in the multiline composer.
 - `/exit` exits the TUI cleanly.

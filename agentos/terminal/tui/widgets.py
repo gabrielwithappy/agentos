@@ -3,12 +3,14 @@ from __future__ import annotations
 import re
 
 from rich.markdown import Markdown
-from textual.widgets import ListView, Static, OptionList, Label, TextArea
+from textual.timer import Timer
+from textual.widgets import ListView, Static, OptionList, Label, TextArea, Input
 from textual.message import Message
 from textual.screen import ModalScreen
 from textual.containers import Vertical, VerticalScroll
 from textual.app import ComposeResult
 from textual.events import Key, Paste
+from textual.reactive import reactive
 
 from agentos.terminal.tui.commands import SlashCommand, matching_commands
 
@@ -65,7 +67,7 @@ class CommandPaletteScreen(ModalScreen[str]):
         width: 72;
         max-width: 90%;
         height: auto;
-        max-height: 14;
+        max-height: 18;
         border: solid $accent;
         background: $surface;
         padding: 1 2;
@@ -76,6 +78,10 @@ class CommandPaletteScreen(ModalScreen[str]):
         margin-bottom: 1;
         text-style: bold;
     }
+    #palette-search {
+        margin-bottom: 1;
+        border: round $accent-darken-2;
+    }
     """
 
     def __init__(self, prefix: str = "") -> None:
@@ -85,13 +91,33 @@ class CommandPaletteScreen(ModalScreen[str]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="palette-container"):
-            yield Label("AgentOS Commands", id="palette-title")
+            yield Label("AgentOS Commands  (type to filter, Enter to select, Esc to cancel)", id="palette-title")
+            yield Input(value=self.prefix.lstrip("/"), placeholder="Filter commands…", id="palette-search")
             yield OptionList(*self._labels(), id="palette-options")
+
+    def on_mount(self) -> None:
+        self.query_one("#palette-search", Input).focus()
 
     def _labels(self) -> list[str]:
         if not self.commands:
-            return [f"No command matches {self.prefix!r}"]
+            return ["No matching commands"]
         return [f"{command.name:<16} {command.description}" for command in self.commands]
+
+    def _refresh_list(self, query: str) -> None:
+        self.commands = matching_commands(query)
+        option_list = self.query_one("#palette-options", OptionList)
+        option_list.clear_options()
+        for label in self._labels():
+            option_list.add_option(label)
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        self._refresh_list(event.value)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Enter in search box selects the first matching command."""
+        if self.commands:
+            self.dismiss(self.commands[0].name)
+        event.stop()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         if 0 <= event.option_index < len(self.commands):
@@ -169,14 +195,37 @@ class ChatMessage(Static):
         margin-bottom: 0;
         border: round $warning;
     }
+    ChatMessage.loading {
+        color: $text-muted;
+        padding-left: 1;
+        margin-bottom: 0;
+    }
     """
 
-    def __init__(self, role: str, text: str = "") -> None:
+    def __init__(self, role: str, text: str = "", turn_id: str | None = None) -> None:
         super().__init__(text)
         self.role = role
         self.text = text
+        self.turn_id = turn_id
         self.rendered_as_markdown = False
         self.add_class(role)
+
+    class ForkRequested(Message):
+        """Posted when the user requests a fork from this message's turn."""
+
+        def __init__(self, chat_message: ChatMessage) -> None:
+            super().__init__()
+            self.chat_message = chat_message
+
+    def action_fork_from_here(self) -> None:
+        """Triggered by 'f' key — request a fork from this turn."""
+        if self.turn_id:
+            self.post_message(self.ForkRequested(self))
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "f" and self.turn_id:
+            self.action_fork_from_here()
+            event.stop()
 
     def update_text(self, text: str, *, markdown: bool = False) -> None:
         self.text = text
@@ -186,6 +235,57 @@ class ChatMessage(Static):
             return
         self.rendered_as_markdown = False
         self.update(text)
+
+
+# Spinner frame sets for each style
+_SPINNER_FRAMES: dict[str, tuple[str, ...]] = {
+    "ascii": ("|", "/", "-", "\\"),
+    "unicode": ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"),
+    "emoji": ("⚕️", "🌀", "🤔", "✨"),
+    "kaomoji": ("(・・;)", "(；・∀・)", "(￣ー￣；)", "(・_・;)"),
+}
+
+
+class SpinnerMessage(ChatMessage):
+    """Animated loading indicator that cycles through style frames."""
+
+    DEFAULT_CSS = """
+    SpinnerMessage {
+        color: $text-muted;
+        padding-left: 1;
+        margin-bottom: 0;
+    }
+    """
+
+    _frame_index: reactive[int] = reactive(0)
+
+    def __init__(self, style: str = "ascii", turn_id: str | None = None) -> None:
+        super().__init__("loading", "Thinking…", turn_id=turn_id)
+        self._style = style
+        self._timer: Timer | None = None
+
+    def on_mount(self) -> None:
+        self._timer = self.set_interval(0.12, self._tick)
+
+    def on_unmount(self) -> None:
+        if self._timer is not None:
+            self._timer.stop()
+
+    def _format_frame(self, frame: str) -> str:
+        return f"{frame} Thinking…"
+
+    def _tick(self) -> None:
+        frames = _SPINNER_FRAMES.get(self._style, _SPINNER_FRAMES["ascii"])
+        self._frame_index = (self._frame_index + 1) % len(frames)
+        self.text = self._format_frame(frames[self._frame_index])
+        self.update(self.text)
+
+    def set_style(self, style: str) -> None:
+        self._style = style
+        self._frame_index = 0
+        frames = _SPINNER_FRAMES.get(style, _SPINNER_FRAMES["ascii"])
+        self.text = self._format_frame(frames[0])
+        self.update(self.text)
 
 
 class Transcript(VerticalScroll):
@@ -202,7 +302,18 @@ class Transcript(VerticalScroll):
         kwargs.setdefault("can_focus", False)
         super().__init__(*children, **kwargs)
 
+    class ForkRequested(Message):
+        """Bubbled up from ChatMessage — carries the turn_id to fork from."""
 
+        def __init__(self, turn_id: str) -> None:
+            super().__init__()
+            self.turn_id = turn_id
+
+    def on_chat_message_fork_requested(self, event: ChatMessage.ForkRequested) -> None:
+        """Relay fork request up to the app with the resolved turn_id."""
+        if event.chat_message.turn_id:
+            event.stop()
+            self.post_message(self.ForkRequested(event.chat_message.turn_id))
 
     def update(self, text: object = "") -> None:
         rendered = str(text)
@@ -212,8 +323,11 @@ class Transcript(VerticalScroll):
             self.mount(message)
         self._scroll_to_end()
 
-    def add_message(self, role: str, text: str = "") -> ChatMessage:
-        message = ChatMessage(role, self._format_message(role, text))
+    def add_message(self, role: str, text: str = "", *, turn_id: str | None = None, style: str = "ascii") -> ChatMessage:
+        if role in ("spinner", "loading"):
+            message = SpinnerMessage(style=style, turn_id=turn_id)
+        else:
+            message = ChatMessage(role, self._format_message(role, text), turn_id=turn_id)
         self._messages.append(message)
         self.mount(message)
         self._scroll_to_end()
@@ -222,6 +336,13 @@ class Transcript(VerticalScroll):
     def update_message(self, message: ChatMessage, text: str, *, markdown: bool = False) -> None:
         message.update_text(text, markdown=markdown)
         self._scroll_to_end()
+
+    def remove_message(self, message: ChatMessage) -> None:
+        if message in self._messages:
+            self._messages.remove(message)
+            if message.is_mounted:
+                message.remove()
+
 
     def _format_message(self, role: str, text: str) -> str:
         if role == "user":
