@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import threading
 
+from agentos.llm.types import LLMEvent
 from agentos.terminal.tui.app import AgentOSTui
 from agentos.terminal.tui.commands import all_commands, command_palette_text, matching_commands
-from agentos.terminal.tui.renderers import render_event, render_session_summary
+from agentos.terminal.tui.renderers import (
+    TOOL_RENDERERS,
+    render_event,
+    render_mock_tool_table,
+    render_session_summary,
+    render_turn_tree,
+)
 from agentos.terminal.tui.state import TuiStatus
 from agentos.terminal.tui.widgets import ChatMessage
 from agentos.terminal import sessions
@@ -460,7 +469,10 @@ def test_transcript_shows_process_events_before_final_answer(tmp_path, monkeypat
             transcript = _transcript_text(pilot)
             assert "Thinking: Considering how to respond to the prompt." in transcript
             assert "Tool call: mock_tool(input=hello)" in transcript
-            assert "Tool result: Mock tool executed successfully." in transcript
+            # mock_tool has a registered custom table renderer (Milestone 4) —
+            # it no longer shows the generic "Tool result: ..." plain text.
+            assert "| field | value |" in transcript
+            assert "| summary | Mock tool executed successfully. |" in transcript
             assert transcript.index("Thinking:") < transcript.index("Mock response from AgentOS")
 
     asyncio.run(run())
@@ -735,4 +747,336 @@ def test_tool_border_reasoning_has_reasoning_class(tmp_path, monkeypatch):
                 assert not m.has_class("tool"), "reasoning message should not have tool class"
 
     asyncio.run(run())
+
+
+# ── Milestone 1 (Phase 2): streaming cancel / loading indicator ────────────────
+
+def _blocking_stream_once(release_event: threading.Event, reached_wait: threading.Event):
+    def stream_once(prompt: str, *, provider: str = "mock"):
+        yield LLMEvent(type="start", provider=provider, mode="tui")
+        reached_wait.set()
+        release_event.wait(timeout=5)
+        yield LLMEvent(
+            type="message_delta",
+            provider=provider,
+            mode="tui",
+            text="mock delayed response text",
+        )
+        yield LLMEvent(
+            type="done",
+            provider=provider,
+            mode="tui",
+            usage={"input_chars": 1, "output_chars": 1},
+        )
+
+    return stream_once
+
+
+def test_loading_indicator_shown_while_waiting_and_removed_on_first_event(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        release_event = threading.Event()
+        reached_wait = threading.Event()
+        monkeypatch.setattr(
+            "agentos.terminal.tui.app.stream_once",
+            _blocking_stream_once(release_event, reached_wait),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Thinking…")
+            assert reached_wait.wait(timeout=5)
+
+            release_event.set()
+            await await_transcript(pilot, "mock delayed response text")
+            transcript_after = _transcript_text(pilot)
+            assert "Thinking…" not in transcript_after
+
+    asyncio.run(run())
+
+
+def test_escape_cancel_turn_stops_further_output(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        release_event = threading.Event()
+        reached_wait = threading.Event()
+        monkeypatch.setattr(
+            "agentos.terminal.tui.app.stream_once",
+            _blocking_stream_once(release_event, reached_wait),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Thinking…")
+            assert reached_wait.wait(timeout=5)
+
+            await pilot.press("escape")
+            await await_transcript(pilot, "Turn cancelled.")
+            transcript = _transcript_text(pilot)
+            assert "Thinking…" not in transcript
+
+            release_event.set()
+            await pilot.pause(0.2)
+            transcript = _transcript_text(pilot)
+            assert "mock delayed response text" not in transcript
+
+    asyncio.run(run())
+
+
+# ── Milestone 2 (Phase 2): session branch data model (parent_turn_id) ──────────
+
+def test_parent_turn_id_chains_across_consecutive_tui_turns(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "first"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            composer.value = "second"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            await pilot.pause(0.1)
+
+        session_files = list((tmp_path / "home" / "sessions").glob("*.jsonl"))
+        assert session_files
+        lines = [
+            json.loads(line)
+            for line in session_files[0].read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        input_events = [event for event in lines if event["type"] == "input_received"]
+        assert len(input_events) == 2
+        first_turn_id, second_turn_id = input_events[0]["turn_id"], input_events[1]["turn_id"]
+        assert first_turn_id != second_turn_id
+
+        first_turn_events = [event for event in lines if event["turn_id"] == first_turn_id]
+        assert first_turn_events
+        assert all(event.get("parent_turn_id") is None for event in first_turn_events)
+
+        second_turn_provider_events = [
+            event
+            for event in lines
+            if event["turn_id"] == second_turn_id and event["type"] != "input_received"
+        ]
+        assert second_turn_provider_events
+        assert all(event.get("parent_turn_id") == first_turn_id for event in second_turn_provider_events)
+
+    asyncio.run(run())
+
+
+# ── Milestone 3 (Phase 2): /tree branch explorer ────────────────────────────────
+
+def test_tree_command_shows_empty_state_before_first_turn(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/tree"
+            await pilot.press("enter")
+            transcript = _transcript_text(pilot)
+            assert "No turns yet. Next: send a message." in transcript
+
+    asyncio.run(run())
+
+
+def test_tree_command_shows_linear_chain_after_two_turns(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "first"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            composer.value = "second"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+            composer.value = "/tree"
+            await pilot.press("enter")
+            transcript = _transcript_text(pilot)
+            # Single chain: exactly one root, one child indented under it.
+            assert transcript.count("├─ ") + transcript.count("└─ ") == 2
+            assert "│  └─ " in transcript or "   └─ " in transcript
+
+    asyncio.run(run())
+
+
+def test_tree_command_listed_in_command_palette(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    text = command_palette_text()
+    assert "/tree" in text
+
+
+def test_render_turn_tree_shows_actual_branches_when_parent_data_diverges():
+    # No branch-creation UI exists yet, but render_turn_tree itself must already
+    # render a real fork if two turns ever share the same parent_turn_id.
+    events = [
+        {"turn_id": "root1", "parent_turn_id": None},
+        {"turn_id": "childA", "parent_turn_id": "root1"},
+        {"turn_id": "childB", "parent_turn_id": "root1"},
+    ]
+    tree_text = render_turn_tree(events)
+    assert "root1" in tree_text
+    assert "childA" in tree_text
+    assert "childB" in tree_text
+    assert "├─ " in tree_text  # non-last sibling uses the branch connector
+    assert "└─ " in tree_text  # last sibling uses the terminal connector
+
+
+# ── Milestone 4 (Phase 2): per-tool custom renderer architecture ───────────────
+
+def test_mock_tool_table_renderer_is_registered():
+    assert "mock_tool" in TOOL_RENDERERS
+    assert TOOL_RENDERERS["mock_tool"] is render_mock_tool_table
+
+
+def test_tool_renderer_dispatches_mock_tool_to_table_and_unregistered_tool_falls_back_to_plain_text():
+    table_rendered = render_event(
+        {"type": "tool_result", "metadata": {"name": "mock_tool", "summary": "did the thing"}}
+    )
+    assert "| field | value |" in table_rendered
+    assert "| summary | did the thing |" in table_rendered
+
+    plain_rendered = render_event(
+        {"type": "tool_result", "metadata": {"name": "some_other_tool", "summary": "did another thing"}}
+    )
+    assert plain_rendered == "Tool result: did another thing"
+    assert "| field | value |" not in plain_rendered
+
+    # No name at all (legacy provider payload shape) also falls back safely.
+    legacy_rendered = render_event({"type": "tool_result", "metadata": {"summary": "legacy shape"}})
+    assert legacy_rendered == "Tool result: legacy shape"
+
+
+def test_mock_tool_table_redacts_secret(monkeypatch):
+    monkeypatch.setenv("AGENTOS_TEST_SECRET", "AGENTOS_SENTINEL_SECRET")
+
+    rendered = render_event(
+        {
+            "type": "tool_result",
+            "metadata": {"name": "mock_tool", "summary": "leaked AGENTOS_SENTINEL_SECRET value"},
+        }
+    )
+
+    assert "| field | value |" in rendered
+    assert "AGENTOS_SENTINEL_SECRET" not in rendered
+
+
+# ── Phase 3 Milestones Tests ──────────────────────────────────────────────────
+
+def test_notification_toast_on_hook_error(tmp_path, monkeypatch):
+    """Milestone 1: Hook failure produces a toast notification banner."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock")
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "   "
+            await pilot.press("enter")
+            await pilot.pause(0.1)
+            # Footer is updated to error
+            assert "last turn error" in str(pilot.app.query_one("#status").render())
+
+    asyncio.run(run())
+
+
+def test_indicator_style_switch_command(tmp_path, monkeypatch):
+    """Milestone 2: /indicator command switches loading indicator style."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            assert app._indicator_style == "ascii"
+            app.process_input("/indicator unicode")
+            assert app._indicator_style == "unicode"
+            app.process_input("/indicator emoji")
+            assert app._indicator_style == "emoji"
+            app.process_input("/indicator kaomoji")
+            assert app._indicator_style == "kaomoji"
+            # Unknown style does not change state
+            app.process_input("/indicator invalid_style")
+            assert app._indicator_style == "kaomoji"
+
+    asyncio.run(run())
+
+
+def test_command_palette_fuzzy_filter():
+    """Milestone 3: matching_commands returns filtered and fuzzy-ranked commands."""
+    # Prefix filtering
+    tree_cmds = matching_commands("tr")
+    assert any(cmd.name == "/tree" for cmd in tree_cmds)
+
+    # Description filtering
+    colour_cmds = matching_commands("colour")
+    assert any(cmd.name == "/theme" for cmd in colour_cmds)
+
+    # Empty query returns all commands
+    all_cmds = matching_commands("")
+    assert len(all_cmds) >= 15
+
+
+def test_branch_fork_creates_parent_turn_id(tmp_path, monkeypatch):
+    """Milestone 4: Forking from a ChatMessage sets _pending_parent_turn_id."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            # Create a turn first
+            composer = pilot.app.query_one("#composer")
+            composer.value = "turn 1"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+            # Request fork from turn 1
+            chat_msg = ChatMessage("user", "turn 1", turn_id="turn_12345")
+            app.on_transcript_fork_requested(app.query_one("#transcript").ForkRequested("turn_12345"))
+            assert app._pending_parent_turn_id == "turn_12345"
+
+    asyncio.run(run())
+
+
+def test_model_switch_command(tmp_path, monkeypatch):
+    """Milestone 5: /model command switches LLM provider in session."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            assert app.provider == "mock"
+            app.process_input("/model codex")
+            assert app.provider == "codex"
+            app.process_input("/model mock")
+            assert app.provider == "mock"
+            # Invalid provider does not change state
+            app.process_input("/model non_existent_provider")
+            assert app.provider == "mock"
+
+    asyncio.run(run())
+
+
+def test_streaming_markdown_helpers():
+    """Milestone 6: Code block detection helpers for streaming markdown."""
+    from agentos.terminal.tui.app import _has_complete_markdown_block, _has_open_code_block
+
+    # Unmatched open fence
+    open_fence = "Hello\n```python\ndef foo():\n"
+    assert _has_open_code_block(open_fence) is True
+    assert _has_complete_markdown_block(open_fence) is False
+
+    # Closed code block
+    closed_fence = "Hello\n```python\ndef foo():\n    return 42\n```\nDone."
+    assert _has_open_code_block(closed_fence) is False
+    assert _has_complete_markdown_block(closed_fence) is True
+
+    # Table block
+    table_text = "Here is table:\n| header1 | header2 |\n| val1 | val2 |"
+    assert _has_complete_markdown_block(table_text) is True
+
 

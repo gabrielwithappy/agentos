@@ -7,6 +7,7 @@ from textual import work
 from textual.app import App, ComposeResult
 from textual.events import Key
 from textual.widgets import Footer, Header, ListItem, Label
+from textual.worker import Worker, get_current_worker
 
 from agentos.commands import hook as hook_command
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
@@ -16,9 +17,9 @@ from agentos.terminal.interaction import run_interactive
 from agentos.terminal.paths import initialize_state
 from agentos.terminal.sessions import SessionError, append_event, create_session, read_session, session_summaries
 from agentos.terminal.tui.commands import command_palette_text, find_command
-from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary
+from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
 from agentos.terminal.tui.state import TuiStatus, get_git_branch
-from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, SessionPicker, StatusFooter, ThemeScreen, Transcript
+from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
 
 # Keyboard shortcut reference table shown by /hotkeys
 _HOTKEYS_TABLE = """\
@@ -34,10 +35,42 @@ Keyboard Shortcuts
   Ctrl+Z            Undo
   Tab               Open command palette (when line starts with /)
   Ctrl+B            Open menu
-  Esc               Cancel / close overlay
+  Esc               Cancel turn (while waiting) / close overlay
   Ctrl+C / EOF      Exit
 ──────────────────────────────────────────────────
 """
+
+
+def _has_open_code_block(text: str) -> bool:
+    """Return True if text contains an unmatched (open) fenced code block.
+
+    Uses fence-line counting (lines starting with ```) instead of backtick character
+    count to avoid false positives from inline code spans.
+    """
+    fence_line_count = sum(
+        1 for line in text.splitlines() if line.lstrip().startswith("```")
+    )
+    return fence_line_count % 2 != 0
+
+
+def _has_complete_markdown_block(text: str) -> bool:
+    """Return True if text has at least one complete code/table block and no open fence."""
+    if _has_open_code_block(text):
+        return False
+    # Has a complete code block
+    if text.count("```") >= 2:
+        return True
+    # Has a complete markdown table (two lines with | separators)
+    table_lines = [line for line in text.splitlines() if line.strip().startswith("|")]
+    return len(table_lines) >= 2
+
+
+def _render_streaming_markdown(text: str) -> str:
+    """For streaming display: return the accumulated text as-is.
+
+    The caller decides whether to render as markdown based on _has_complete_markdown_block.
+    """
+    return text
 
 
 class AgentOSTui(App[None]):
@@ -63,6 +96,11 @@ class AgentOSTui(App[None]):
         self.picker_rows: list[dict] = []
         self.last_tool_calls: list[dict[str, object]] = []
         self.last_usage: dict[str, int] | None = None
+        self._active_turn_worker: Worker | None = None
+        self._loading_message: ChatMessage | None = None
+        self._last_turn_id: str | None = None
+        self._indicator_style: str = "ascii"  # ascii | unicode | emoji | kaomoji
+        self._pending_parent_turn_id: str | None = None  # set by fork action
 
     def _status_with_totals(
         self,
@@ -99,6 +137,16 @@ class AgentOSTui(App[None]):
     def on_mount(self) -> None:
         self._focus_composer()
 
+    # ── Notification helpers (Milestone 1) ──────────────────────────────────
+
+    def _notify_error(self, msg: str) -> None:
+        """Show a transient error banner at the top of the screen."""
+        self.notify(msg, severity="error", timeout=5)
+
+    def _notify_info(self, msg: str) -> None:
+        """Show a transient info banner at the top of the screen."""
+        self.notify(msg, severity="information", timeout=3)
+
     def _focus_composer(self) -> None:
         self.query_one("#composer", Composer).focus()
 
@@ -129,7 +177,7 @@ class AgentOSTui(App[None]):
         if text == "/" or (command and command.handler_id == "help"):
             transcript.update(
                 f"AgentOS\n{command_palette_text()}\nCtrl-C cancels a turn.\n"
-                "Esc closes overlays. EOF exits. Shift+Enter inserts a newline."
+                "Esc cancels a waiting turn or closes overlays. EOF exits. Shift+Enter inserts a newline."
             )
             return
         if command and command.handler_id == "hotkeys":
@@ -189,6 +237,16 @@ class AgentOSTui(App[None]):
             transcript.update(self._usage_summary())
             self._focus_composer()
             return
+        if command and command.handler_id == "tree":
+            transcript.update(self._turn_tree_summary())
+            self._focus_composer()
+            return
+        if command and command.handler_id == "indicator":
+            self._handle_indicator(text, transcript)
+            return
+        if command and command.handler_id == "model":
+            self._handle_model(text, transcript)
+            return
         if command and command.handler_id == "clear":
             transcript.update("")
             self._focus_composer()
@@ -204,9 +262,10 @@ class AgentOSTui(App[None]):
         turn_id = new_turn_id()
         try:
             prompt = apply_input_hooks(text)
-        except HookError:
+        except HookError as exc:
             self.status = self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn="error")
             self.query_one("#status", StatusFooter).update(self.status.footer_text())
+            self._notify_error(f"Hook failed: {exc}. See /hooks for details.")
             transcript.update("Hook failed. Next: /hooks")
             self._focus_composer()
             return
@@ -218,9 +277,15 @@ class AgentOSTui(App[None]):
         self.query_one("#status", StatusFooter).update(self.status.footer_text())
         self.last_tool_calls = []
         self.last_usage = None
+        pending_parent = self._pending_parent_turn_id
+        self._pending_parent_turn_id = None
         transcript.add_message("user", text)
-        self.run_stream(prompt, turn_id, self.session_id, self.provider)
+        self._loading_message = transcript.add_message("spinner", "", style=self._indicator_style)
+        self._active_turn_worker = self.run_stream(prompt, turn_id, self.session_id, self.provider, pending_parent)
         self._focus_composer()
+
+    def _set_last_turn_id(self, turn_id: str) -> None:
+        self._last_turn_id = turn_id
 
     def _open_theme_picker(self) -> None:
         themes = sorted(self.available_themes.keys())
@@ -235,6 +300,11 @@ class AgentOSTui(App[None]):
     def _update_status(self, status: TuiStatus) -> None:
         self.status = status
         self.query_one("#status", StatusFooter).update(status.footer_text())
+
+    def _clear_loading_message(self) -> None:
+        if self._loading_message is not None:
+            self.query_one("#transcript", Transcript).remove_message(self._loading_message)
+            self._loading_message = None
 
     def _tools_summary(self) -> str:
         if not self.last_tool_calls:
@@ -252,6 +322,15 @@ class AgentOSTui(App[None]):
         output_chars = self.last_usage.get("output_chars", 0)
         return f"Last turn usage: input {input_chars} chars, output {output_chars} chars"
 
+    def _turn_tree_summary(self) -> str:
+        if not self.session_id:
+            return "No turns yet. Next: send a message."
+        try:
+            _, events = read_session(self.session_id)
+        except SessionError:
+            return "No turns yet. Next: send a message."
+        return render_turn_tree(events)
+
     def _record_turn_results(self, tool_calls: list[dict[str, object]], usage: dict[str, int] | None) -> None:
         self.last_tool_calls = tool_calls
         if usage:
@@ -260,13 +339,70 @@ class AgentOSTui(App[None]):
             self.total_input_chars += usage.get("input_chars", 0)
             self.total_output_chars += usage.get("output_chars", 0)
 
+    # ── Indicator style handler (Milestone 2) ─────────────────────────────
+
+    _VALID_INDICATOR_STYLES = frozenset({"ascii", "unicode", "emoji", "kaomoji"})
+
+    def _handle_indicator(self, text: str, transcript: Transcript) -> None:
+        arg = text[len("/indicator"):].strip().lower()
+        if not arg:
+            transcript.update(
+                f"Current indicator style: {self._indicator_style}\n"
+                "Styles: ascii | unicode | emoji | kaomoji\n"
+                "Usage: /indicator [style]"
+            )
+            self._focus_composer()
+            return
+        if arg not in self._VALID_INDICATOR_STYLES:
+            self._notify_error(f"Unknown indicator style: {arg!r}. Choose: ascii | unicode | emoji | kaomoji")
+            self._focus_composer()
+            return
+        self._indicator_style = arg
+        self._notify_info(f"Indicator style changed to: {arg}")
+        self._focus_composer()
+
+    # ── Model picker handler (Milestone 5) ────────────────────────────────
+
+    _AVAILABLE_PROVIDERS = ("mock", "codex")
+
+    def _handle_model(self, text: str, transcript: Transcript) -> None:
+        arg = text[len("/model"):].strip().lower()
+        if not arg:
+            available = " | ".join(self._AVAILABLE_PROVIDERS)
+            transcript.update(
+                f"Current provider: {self.provider}\n"
+                f"Available: {available}\n"
+                "Usage: /model [provider]"
+            )
+            self._focus_composer()
+            return
+        if arg not in self._AVAILABLE_PROVIDERS:
+            self._notify_error(f"Unknown provider: {arg!r}. Available: {' | '.join(self._AVAILABLE_PROVIDERS)}")
+            self._focus_composer()
+            return
+        old = self.provider
+        self.provider = arg
+        self._notify_info(f"Provider switched: {old} → {arg}")
+        self._focus_composer()
+
+    # ── Fork / branch handler (Milestone 4) ──────────────────────────────
+
+    def on_transcript_fork_requested(self, event: Transcript.ForkRequested) -> None:
+        """Set pending parent_turn_id so the next submitted message forks from this turn."""
+        self._pending_parent_turn_id = event.turn_id
+        self._notify_info(f"Forking from turn {event.turn_id[:8]}… Type your message to create a branch.")
+        self._focus_composer()
+
     @work(thread=True)
-    def run_stream(self, prompt: str, turn_id: str, session_id: str, provider: str) -> None:
+    def run_stream(self, prompt: str, turn_id: str, session_id: str, provider: str, pending_parent_turn_id: str | None = None) -> None:
         has_error = False
         response_text = ""
         assistant_message: ChatMessage | None = None
         tool_calls: list[dict[str, object]] = []
         usage: dict[str, int] | None = None
+        loading_active = True
+        worker = get_current_worker()
+        parent_turn_id = pending_parent_turn_id if pending_parent_turn_id is not None else self._last_turn_id
 
         def add_reasoning_message(text_content: str) -> None:
             self.query_one("#transcript", Transcript).add_message("reasoning", text_content)
@@ -290,6 +426,8 @@ class AgentOSTui(App[None]):
 
         try:
             for provider_event in stream_once(prompt, provider=provider):
+                if worker.is_cancelled:
+                    return
                 payload = provider_event.to_dict()
                 append_event(
                     session_id,
@@ -299,6 +437,7 @@ class AgentOSTui(App[None]):
                         turn_id=turn_id,
                         provider=provider,
                         mode="tui",
+                        parent_turn_id=parent_turn_id,
                     ),
                 )
                 event_type = payload["type"]
@@ -312,6 +451,9 @@ class AgentOSTui(App[None]):
                         tool_calls[-1]["result"] = metadata.get("summary", "")
                     rendered = render_event(payload)
                     if rendered:
+                        if loading_active and event_type in ("reasoning", "tool_call"):
+                            self.call_from_thread(self._clear_loading_message)
+                            loading_active = False
                         if event_type == "reasoning":
                             self.call_from_thread(add_reasoning_message, rendered)
                         else:
@@ -319,6 +461,9 @@ class AgentOSTui(App[None]):
                             self.call_from_thread(add_tool_message, rendered)
                     continue
                 if event_type == "message_delta":
+                    if loading_active:
+                        self.call_from_thread(self._clear_loading_message)
+                        loading_active = False
                     if assistant_message is None:
                         assistant_message = self.call_from_thread(add_assistant_message)
                     rendered = render_event(payload)
@@ -326,7 +471,9 @@ class AgentOSTui(App[None]):
                         response_text += rendered
                         now = time.monotonic()
                         if now - last_update_time > 0.05:
-                            self.call_from_thread(update_assistant, response_text)
+                            # Streaming markdown: render completed blocks immediately
+                            partial_text = _render_streaming_markdown(response_text)
+                            self.call_from_thread(update_assistant, partial_text, markdown=_has_complete_markdown_block(response_text))
                             last_update_time = now
                     continue
                 if event_type == "error":
@@ -338,6 +485,9 @@ class AgentOSTui(App[None]):
                     continue
                 if event_type == "done":
                     usage = payload.get("usage")
+            if worker.is_cancelled:
+                return
+            self.call_from_thread(self._set_last_turn_id, turn_id)
             if not has_error:
                 if assistant_message is not None:
                     self.call_from_thread(update_assistant, response_text, markdown=True)
@@ -350,9 +500,13 @@ class AgentOSTui(App[None]):
             payload = unsupported_provider_event(provider).to_dict()
             append_event(session_id, payload)
             response_text += payload["error"]["message"]
+            if loading_active:
+                self.call_from_thread(self._clear_loading_message)
+                loading_active = False
             if assistant_message is None:
                 assistant_message = self.call_from_thread(add_assistant_message)
             self.call_from_thread(update_assistant, response_text)
+            self.call_from_thread(self._set_last_turn_id, turn_id)
             self.call_from_thread(
                 self._update_status,
                 self._status_with_totals(provider=provider, session_id=session_id, last_turn="error"),
@@ -384,6 +538,12 @@ class AgentOSTui(App[None]):
     def action_cancel(self) -> None:
         if self.focused is self.query_one("#session-picker", SessionPicker):
             self.query_one("#transcript", Transcript).update("Resume cancelled.")
+            self.query_one("#composer", Composer).focus()
+            return
+        if self._active_turn_worker is not None and self._active_turn_worker.is_running:
+            self._active_turn_worker.cancel()
+            self._clear_loading_message()
+            self.query_one("#transcript", Transcript).add_message("system", "Turn cancelled.")
             self.query_one("#composer", Composer).focus()
             return
         self.query_one("#composer", Composer).focus()
@@ -445,7 +605,7 @@ def run_plain_tui_transcript(provider: str = "mock") -> int:
             return 0
         if text == "/" or (command and command.handler_id == "help"):
             console.print(command_palette_text())
-            console.print("Ctrl-C cancels a turn. Esc closes overlays. EOF exits. Shift+Enter inserts a newline.")
+            console.print("Ctrl-C cancels a turn. Esc cancels a waiting turn or closes overlays. EOF exits. Shift+Enter inserts a newline.")
             continue
         if command and command.handler_id == "hotkeys":
             console.print(_HOTKEYS_TABLE)

@@ -22,6 +22,9 @@ COMMANDS: tuple[SlashCommand, ...] = (
     SlashCommand("/hooks", "Show AgentOS-built hook status", "", "hooks"),
     SlashCommand("/tools", "Show tool calls from the last turn", "", "tools"),
     SlashCommand("/usage", "Show input/output usage from the last turn", "", "usage"),
+    SlashCommand("/tree", "Show the current session's turn tree", "", "tree"),
+    SlashCommand("/indicator", "Switch loading indicator style", "[ascii|unicode|emoji|kaomoji]", "indicator"),
+    SlashCommand("/model", "Switch LLM provider for this session", "[provider]", "model"),
     SlashCommand("/clear", "Clear the visible transcript", "", "clear"),
     SlashCommand("/exit", "Exit the TUI", "", "exit"),
 )
@@ -56,9 +59,27 @@ def matching_commands(prefix: str) -> tuple[SlashCommand, ...]:
         if command not in name_matches
         and normalized in command.description.lower()
     ]
-    return tuple(name_matches + description_matches)
+    exact_and_description = name_matches + description_matches
+    # Optional fuzzy ranking — degrades gracefully if thefuzz is not installed
+    try:
+        from thefuzz import fuzz  # type: ignore[import-untyped]
+
+        def _score(cmd: SlashCommand) -> int:
+            name_score = fuzz.partial_ratio(normalized, cmd.name[1:].lower())
+            desc_score = fuzz.partial_ratio(normalized, cmd.description.lower())
+            return max(name_score, desc_score)
+
+        return tuple(sorted(exact_and_description, key=_score, reverse=True))
+    except ImportError:
+        return tuple(exact_and_description)
 
 
 def find_command(raw: str) -> SlashCommand | None:
     text = raw.strip()
-    return next((command for command in COMMANDS if command.name == text), None)
+    exact = next((command for command in COMMANDS if command.name == text), None)
+    if exact is not None:
+        return exact
+    parts = text.split(maxsplit=1)
+    if parts:
+        return next((command for command in COMMANDS if command.name == parts[0]), None)
+    return None
