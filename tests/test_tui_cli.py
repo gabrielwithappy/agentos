@@ -1024,21 +1024,119 @@ def test_command_palette_fuzzy_filter():
 
 
 def test_branch_fork_creates_parent_turn_id(tmp_path, monkeypatch):
-    """Milestone 4: Forking from a ChatMessage sets _pending_parent_turn_id."""
+    """Milestone 2: Tab-then-f on a focused message forks from that turn via the real key path.
+
+    Phase 3 had only exercised this by calling on_transcript_fork_requested()
+    directly, which passed even though ChatMessage was never actually
+    focusable — a real user pressing Tab then f could never reach this code.
+    This test drives the same real key sequence a user would press.
+    """
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
-            # Create a turn first
             composer = pilot.app.query_one("#composer")
             composer.value = "turn 1"
             await pilot.press("enter")
             await await_transcript(pilot, "Mock response from AgentOS")
 
-            # Request fork from turn 1
-            chat_msg = ChatMessage("user", "turn 1", turn_id="turn_12345")
-            app.on_transcript_fork_requested(app.query_one("#transcript").ForkRequested("turn_12345"))
-            assert app._pending_parent_turn_id == "turn_12345"
+            assistant_message = pilot.app.query_one("#transcript")._messages[-1]
+            assert assistant_message.turn_id, "assistant message must carry a turn_id for f to do anything"
+
+            await pilot.press("tab")
+            assert pilot.app.focused is assistant_message
+            await pilot.press("f")
+
+            assert app._pending_parent_turn_id == assistant_message.turn_id
+
+    asyncio.run(run())
+
+
+def test_focus_cycle(tmp_path, monkeypatch):
+    """Milestone 1: Tab/Shift+Tab move focus between Composer and messages, newest-first, wrapping at both ends."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "turn 1"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+            messages = list(pilot.app.query_one("#transcript")._messages)
+            assert len(messages) >= 2  # user turn + assistant reply
+
+            # Tab from Composer moves to the most recent message with visible focus styling
+            await pilot.press("tab")
+            assert pilot.app.focused is messages[-1]
+            assert pilot.app.focused.has_pseudo_class("focus")
+
+            # A second Tab steps to the next-older message
+            await pilot.press("tab")
+            assert pilot.app.focused is messages[-2]
+
+            # Shift+Tab reverses: newer message, then back to Composer
+            await pilot.press("shift+tab")
+            assert pilot.app.focused is messages[-1]
+            await pilot.press("shift+tab")
+            assert pilot.app.focused is composer
+
+            # Shift+Tab from Composer wraps to the oldest message
+            await pilot.press("shift+tab")
+            assert pilot.app.focused is messages[0]
+
+            # Tab from the oldest message wraps back to Composer
+            await pilot.press("tab")
+            assert pilot.app.focused is composer
+
+    asyncio.run(run())
+
+
+def test_copy_message(tmp_path, monkeypatch):
+    """Milestone 3: c on a focused message copies its text and shows an 'attempted' notification."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "turn 1"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+            target = pilot.app.query_one("#transcript")._messages[-1]
+            await pilot.press("tab")
+            assert pilot.app.focused is target
+
+            await pilot.press("c")
+            assert pilot.app.clipboard == target.text
+            # OSC 52 has no ACK from the terminal, so the notification must say
+            # "attempted", not an unconditional "copied", to avoid a false
+            # success claim on terminals that don't support OSC 52.
+            notifications = " ".join(n.message for n in pilot.app._notifications)
+            assert "복사됨" not in notifications
+            assert "시도" in notifications
+
+    asyncio.run(run())
+
+
+def test_composer_clipboard(tmp_path, monkeypatch):
+    """Milestone 4: Composer's Ctrl+C/Ctrl+V already work via Textual's built-in TextArea bindings."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.focus()
+            composer.text = "copy me"
+            composer.select_all()
+            await pilot.pause()
+
+            await pilot.press("ctrl+c")
+            assert "copy me" in pilot.app.clipboard
+
+            composer.text = ""
+            await pilot.press("ctrl+v")
+            assert "copy me" in composer.text
 
     asyncio.run(run())
 

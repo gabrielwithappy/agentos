@@ -110,9 +110,9 @@ Phase 1·2를 거쳐 AgentOS TUI에 구현된 기능:
 
 ### 2.4 텍스트 입력 고급 기능 (textInput.tsx)
 - **hermes 구현:** `textInput.tsx` (1,441 lines) — 멀티라인 입력, 선택 영역 복사(Shift+Click), 클립보드 읽기/쓰기, IME 지원, 음성 입력 토글키, grapheme 단위 커서 이동.
-- **AgentOS 현황:** `Composer`(TextArea 기반)에서 기본 멀티라인, 단축키(Ctrl+K/U/W/Y/Z) 지원.
-- **구현 방향:** Textual의 `TextArea`는 자체 IME/유니코드를 지원. 클립보드 통합은 `pyperclip` 라이브러리 추가로 가능.
-- **추정 난이도:** ★★☆☆☆
+- **AgentOS 현황:** `Composer`(TextArea 기반)에서 기본 멀티라인, 단축키(Ctrl+K/U/W/Y/Z) 지원. **[Phase 4 완료]** Composer의 `Ctrl+C`/`Ctrl+V`는 Textual 기본 클립보드 연동으로 이미 동작; 대화 이력 메시지는 `Tab`/`Shift+Tab` 포커스 이동 + `c` 키로 시스템 클립보드(OSC 52)에 복사 가능해짐(`agentos/terminal/tui/{widgets,app}.py`).
+- **구현 방향:** Textual의 `TextArea`는 자체 IME/유니코드를 지원. 클립보드 통합은 Textual 내장 `App.copy_to_clipboard()`(OSC 52, `textual>=6.0.0`으로 이미 충족)로 구현 완료 — 별도 `pyperclip` 등 신규 패키지 불필요했음. 남은 항목: 음성 입력 토글키(별도 STT 서브시스템 필요, 미착수), grapheme 단위 커서 이동 전면 재작업(미착수).
+- **추정 난이도:** ★★☆☆☆ (클립보드 하위 항목은 Phase 4로 해소됨)
 
 ### 2.5 스트리밍 마크다운 점진적 렌더링
 - **hermes 구현:** `streamingMarkdown.tsx` (6,348 bytes) — 스트리밍 중에도 완성된 마크다운 블록(헤딩, 코드, 테이블)을 점진적으로 렌더링. 불완전한 마크다운 토큰은 평문으로 보여주다가 블록이 완성되면 전환.

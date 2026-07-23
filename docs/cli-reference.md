@@ -94,6 +94,20 @@ Keyboard behavior:
   session resume picker) is on screen.
 - `EOF` exits without a traceback or hang.
 - `Shift+Enter` (`ShiftEnter` in grep-safe verification text) is reserved for newline input in the multiline composer.
+- `Tab` moves focus out of the composer onto the most recent message in the
+  transcript; further `Tab` presses step to older messages, `Shift+Tab` steps
+  back toward newer ones, and focus wraps between the oldest message and the
+  composer at either end. The focused message is shown with an accent border.
+- `f`, pressed on a focused message, forks a new branch from that message's
+  turn — the next message you send continues from there instead of the main
+  thread.
+- `c`, pressed on a focused message, copies that message's full text to the
+  system clipboard (via the terminal's OSC 52 escape sequence) and shows a
+  "복사 시도됨" (copy attempted) notification. OSC 52 has no confirmation from
+  the terminal, so this notification means the copy was sent, not guaranteed
+  received — on terminals that do not support OSC 52 (for example macOS
+  Terminal.app), nothing will actually land on the clipboard even though the
+  notification appears.
 - `/exit` exits the TUI cleanly.
 
 When stdin or stdout is not a TTY, the TUI is not initialized. The command exits

@@ -3,16 +3,21 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-21T23:18:06Z
+> Generated at: 2026-07-22T22:55:14Z
 
 ## Active Plans
 - older active plans omitted=0
-- `완료` [AgentOS TUI — pi TUI 격차 해소 (Phase 2) 구현 계획](.agentos/project/exec-plans/active/2026-07-22-tui-pi-clone-phase2.md) | reviewed_evidence=invalid | progress: 완료 — 마일스톤 1~6 구현 및 검증 완료
-- `완료` [AgentOS TUI (Pi TUI Parity) 개선 구현 계획](.agentos/project/exec-plans/active/2026-07-21-tui-ux-improvement.md) | progress: Gate 2 3차 리뷰까지 완료 — `plan-reviewer`/`principle-auditor`/`usability-reviewer` 모두 PASS. 구현 착수 대기 중
+- `구현 계획 (리뷰 대기)` [AgentOS TUI — pi TUI 클로닝 Phase 6: 입력 상호작용 기반 구현 계획](.agentos/project/exec-plans/active/2026-07-23-tui-pi-clone-phase6.md) | outcome: 사용자는 `/capabilities`에서 이식 기능의 준비 상태를 확인하고, slash command와 지원하는 argument를 Tab으로 완성하며, 기존 메시지 포커스 이동과 충돌 없는 단축키 안내를 받는다. | progress: 계획 초안 작성 완료, Gate 2 리뷰 대기. Phase 5가 완료 전이면 Task 0에서 중단한다.
+- `리뷰 대기 (완료 후 '완료'로 변경)` [AgentOS TUI — pi/hermes TUI 클론 (Phase 5: 설정 관리 UI `/settings`) 구현 계획](.agentos/project/exec-plans/active/2026-07-23-tui-pi-clone-phase5.md) | progress: 계획 초안 작성, Gate 2 리뷰 대기 중 (아직 서브에이전트 리뷰를 요청하지 않음 — 이 세션의 목적은 계획 문서 작성까지)
+- `완료` [AgentOS TUI — pi/hermes TUI 클론 (Phase 4: 메시지 포커스 이동 및 클립보드 복사) 구현 계획](.agentos/project/exec-plans/active/2026-07-22-tui-pi-clone-phase4.md) | reviewed_evidence=invalid | progress: 계획 초안 작성, 리뷰 대기 중
 
 ## Archived Plans
-- archive summary: completed=11, parked=3
+- archive summary: completed=15, parked=3
 - older archived plans omitted=0
+- `완료` [AgentOS TUI — pi/hermes TUI 클로닝 Phase 3 구현 계획](.agentos/project/exec-plans/archive/2026-07-22-tui-pi-clone-phase3.md) | progress: 계획 초안 작성 완료, Gate 2 리뷰 대기 중
+- `완료` [AgentOS TUI — pi TUI 격차 해소 (Phase 2) 구현 계획](.agentos/project/exec-plans/archive/2026-07-22-tui-pi-clone-phase2.md) | reviewed_evidence=invalid | progress: 완료 — 마일스톤 1~6 구현 및 검증 완료
+- `완료` [AgentOS TUI (Pi TUI Parity) 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-21-tui-ux-improvement.md) | progress: Gate 2 3차 리뷰까지 완료 — `plan-reviewer`/`principle-auditor`/`usability-reviewer` 모두 PASS. 구현 착수 대기 중
+- `완료` [[TUI Transcript] 구현 계획](.agentos/project/exec-plans/archive/2026-07-21-tui-transcript-improvement.md) | progress: 완료
 - `완료` [AgentOS TUI — pi TUI 격차 해소 (Phase 1) 구현 계획](.agentos/project/exec-plans/archive/2026-07-21-tui-pi-clone-phase1.md) | progress: 계획 초안 작성, Gate 2 리뷰 대기 중
 - `완료` [AgentOS TUI 개선 1차 반복: 스트리밍 응답 및 기본 메뉴 구현](.agentos/project/exec-plans/archive/2026-07-20-tui-improvement.md) | progress: 구현 완료 및 fresh verification PASS
 - `완료` [AgentOS TUI UX Architecture 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-tui-ux-architecture.md) | reviewed_evidence=invalid | progress: 구현 완료 및 fresh verification PASS
@@ -31,4 +36,3 @@
 ## Reference Docs
 - older reference docs omitted=0
 - `리뷰 대기 (완료 후 '완료'로 변경)` [[계획 제목] 구현 계획](.agentos/project/exec-plans/TEMPLATE.md) | progress: 계획 초안 작성, 리뷰 대기 중 (상황에 따라 1줄 요약)
-- `완료` [[TUI Transcript] 구현 계획](.agentos/project/exec-plans/2026-07-21-tui-transcript-improvement.md) | progress: 완료
