@@ -4,6 +4,7 @@ import typer
 from rich.console import Console
 
 from agentos.commands import setup, run, harness, doctor, skill, agent, llm, session, hook
+from agentos.terminal.paths import read_preferred_provider
 from agentos.terminal.tui import run_tui
 
 app = typer.Typer(
@@ -19,7 +20,7 @@ console = Console()
 def main(
     ctx: typer.Context,
     version: bool = typer.Option(False, "--version", help="Print version and exit."),
-    provider: str = typer.Option("mock", "--provider", help="Interactive provider."),
+    provider: str | None = typer.Option(None, "--provider", help="Interactive provider."),
 ):
     if version:
         console.print("AgentOS CLI version 0.1.0")
@@ -32,7 +33,8 @@ def main(
             err=True,
         )
         raise typer.Exit(2)
-    raise typer.Exit(run_tui(provider=provider))
+    selected_provider = provider or read_preferred_provider() or "mock"
+    raise typer.Exit(run_tui(provider=selected_provider))
 
 
 # Add subcommands as commands if they are single actions

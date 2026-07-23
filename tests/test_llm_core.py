@@ -5,6 +5,7 @@ from unittest import mock
 from typer.testing import CliRunner
 
 from agentos.cli import app
+from agentos.llm.registry import DuplicateProviderError, ProviderRegistry, supported_providers
 from agentos.llm.providers.mock import MOCK_MESSAGE, MockProvider
 from agentos.llm.redaction import redact_text
 
@@ -43,6 +44,23 @@ def test_mock_provider_stream_events_are_deterministic():
     assert events[5]["usage"]["input_chars"] == 5
 
 
+def test_registry_reports_supported_provider_names():
+    assert supported_providers() == ("codex", "mock")
+
+
+def test_registry_rejects_duplicate_provider_registration():
+    registry = ProviderRegistry()
+    registry.register("mock", MockProvider)
+
+    with mock.patch.dict(os.environ, {}, clear=False):
+        try:
+            registry.register("mock", MockProvider)
+        except DuplicateProviderError as exc:
+            assert exc.provider == "mock"
+        else:
+            raise AssertionError("Duplicate provider registration should fail.")
+
+
 def test_redaction_replaces_sentinel_secret():
     with mock.patch.dict(os.environ, {"AGENTOS_TEST_SECRET": "SENTINEL_SECRET"}):
         assert "SENTINEL_SECRET" not in redact_text("token=SENTINEL_SECRET")
@@ -75,8 +93,10 @@ def test_llm_login_logout_mock_contract():
         assert "No real account" in payload["message"]
 
 
-def test_run_json_once_stream_events():
-    result = runner.invoke(app, ["run", "--json", "--once", "hello"])
+def test_run_json_once_stream_events(tmp_path):
+    from unittest import mock as _mock
+    with _mock.patch.dict(os.environ, {"AGENTOS_HOME": str(tmp_path / "home")}, clear=False):
+        result = runner.invoke(app, ["run", "--json", "--once", "hello", "--provider", "mock"])
 
     assert result.exit_code == 0
     events = json_lines(result.stdout)
@@ -103,8 +123,8 @@ def test_unsupported_provider_jsonl_failure_schema():
     assert event["provider"] == "unknown"
     assert event["mode"] == "unsupported"
     assert event["error"]["code"] == "unsupported_provider"
-    assert "mock and codex providers" in event["error"]["message"]
-    assert "--provider codex" in event["recovery"]
+    assert "codex, mock" in event["error"]["message"]
+    assert "codex, mock" in event["recovery"]
     assert "SENTINEL_SECRET" not in result.stdout
     assert "SENTINEL_SECRET" not in result.stderr
 

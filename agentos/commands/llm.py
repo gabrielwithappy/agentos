@@ -14,24 +14,62 @@ def _emit_json(payload: dict) -> None:
     typer.echo(json.dumps(sanitize(payload), sort_keys=True))
 
 
-def _handle_unsupported(provider: str, as_json: bool) -> None:
-    event = unsupported_provider_event(provider).to_dict()
-    if as_json:
-        _emit_json(event)
-    else:
-        error = event["error"]
-        typer.echo(f"{error['message']} {event['recovery']}", err=True)
-    raise typer.Exit(1)
+def _unsupported_payload(provider: str) -> dict:
+    return unsupported_provider_event(provider).to_dict()
 
 
-def _status_payload(action: str, provider: str) -> dict:
+def build_status_payload(provider: str) -> dict:
     try:
-        status = get_provider(provider).status()
+        return get_provider(provider).status().to_dict()
     except UnsupportedProviderError:
-        _handle_unsupported(provider, True)
-    payload = status.to_dict()
-    payload["action"] = action
+        return _unsupported_payload(provider)
+
+
+def build_login_payload(provider: str) -> dict:
+    try:
+        payload = get_provider(provider).login().to_dict()
+    except UnsupportedProviderError:
+        return _unsupported_payload(provider)
+    payload["action"] = "login"
     return payload
+
+
+def iter_login_updates(provider: str):
+    try:
+        provider_impl = get_provider(provider)
+    except UnsupportedProviderError:
+        yield {"type": "result", "payload": _unsupported_payload(provider)}
+        return
+
+    login_updates = getattr(provider_impl, "login_updates", None)
+    if callable(login_updates):
+        yield from login_updates()
+        return
+
+    yield {"type": "result", "payload": build_login_payload(provider)}
+
+
+def build_logout_payload(provider: str) -> dict:
+    try:
+        payload = get_provider(provider).logout().to_dict()
+    except UnsupportedProviderError:
+        return _unsupported_payload(provider)
+    payload["action"] = "logout"
+    return payload
+
+
+def _emit_payload(payload: dict, json_output: bool) -> None:
+    if payload.get("error"):
+        if json_output:
+            _emit_json(payload)
+        else:
+            error = payload["error"]
+            typer.echo(f"{error['message']} {payload.get('recovery', '')}".strip(), err=True)
+        raise typer.Exit(1)
+    if json_output:
+        _emit_json(payload)
+        return
+    typer.echo(payload["message"])
 
 
 @app.command()
@@ -40,14 +78,7 @@ def status(
     json_output: bool = typer.Option(False, "--json", help="Emit sanitized JSON"),
 ) -> None:
     """Show provider status."""
-    try:
-        payload = get_provider(provider).status().to_dict()
-    except UnsupportedProviderError:
-        _handle_unsupported(provider, json_output)
-    if json_output:
-        _emit_json(payload)
-        return
-    typer.echo(payload["message"])
+    _emit_payload(build_status_payload(provider), json_output)
 
 
 @app.command()
@@ -56,15 +87,7 @@ def login(
     json_output: bool = typer.Option(False, "--json", help="Emit sanitized JSON"),
 ) -> None:
     """Run provider login."""
-    try:
-        payload = get_provider(provider).login().to_dict()
-    except UnsupportedProviderError:
-        _handle_unsupported(provider, json_output)
-    payload["action"] = "login"
-    if json_output:
-        _emit_json(payload)
-        return
-    typer.echo(payload["message"])
+    _emit_payload(build_login_payload(provider), json_output)
 
 
 @app.command()
@@ -73,12 +96,4 @@ def logout(
     json_output: bool = typer.Option(False, "--json", help="Emit sanitized JSON"),
 ) -> None:
     """Run provider logout."""
-    try:
-        payload = get_provider(provider).logout().to_dict()
-    except UnsupportedProviderError:
-        _handle_unsupported(provider, json_output)
-    payload["action"] = "logout"
-    if json_output:
-        _emit_json(payload)
-        return
-    typer.echo(payload["message"])
+    _emit_payload(build_logout_payload(provider), json_output)

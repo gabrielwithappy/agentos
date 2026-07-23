@@ -105,8 +105,6 @@ def write_preferred_provider(provider: str, home: str | Path | None = None) -> N
         preferred_provider_path(home),
         {"schema_version": STATE_SCHEMA_VERSION, "provider": provider},
     )
-
-
 def state_status(home: str | Path | None = None) -> dict[str, Any]:
     root = agentos_home(home)
     manifest = root / "state-manifest.json"

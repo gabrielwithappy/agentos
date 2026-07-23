@@ -89,3 +89,10 @@ allowed model policy = <approved models or model family and any usage limits>
 ```
 
 승인 후에도 provider session 호출, OAuth client registration, credential persistence, and billing-affecting actions는 별도 implementation plan과 fresh Gate 2 review가 있어야 시작할 수 있다.
+
+## 2026-07-23 범위 추가
+
+- 승인 addendum: AgentOS는 provider registry와 auth store core foundation을 소유할 수 있다.
+- current runtime path: `codex` 실사용 경로는 external CLI compatibility path를 유지한다.
+- future native OAuth/transport requires a separate reviewed plan.
+- 이 addendum은 API key adapter 제외, raw token/env/provider stderr 비노출, billing-affecting action 금지 원칙을 바꾸지 않는다.

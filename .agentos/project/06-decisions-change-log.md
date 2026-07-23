@@ -15,6 +15,7 @@
 | 2026-07-19 | AgentOS 독립 대화형 CLI와 안전한 hook/input lifecycle을 구현 방향으로 승인 | [0005-agentos-independent-interactive-cli.md](reference/decisions/0005-agentos-independent-interactive-cli.md) |
 | 2026-07-18 | LLM credential strategy approved: Codex account-login 후보를 후속 실제 provider 구현 계획의 입력으로 승인하고 API-key adapter를 1차 구현 경로에서 제외. Provider 호출, OAuth client 등록, credential persistence, 비용 발생 작업은 별도 구현 계획과 Gate 2 전까지 금지 | [0004-agentos-llm-credential-strategy.md](reference/decisions/0004-agentos-llm-credential-strategy.md) |
 | 2026-07-19 | AgentOS TUI UX Architecture: `REQ-CLI-003`을 구현하기 위해 terminal-only Textual TUI shell을 추가하고, pi/Hermes는 read-only design evidence로만 사용하며, no-TTY JSONL, credential, session retention, delete/prune confirmation, and existing AgentOS-built hook boundaries를 유지하기로 결정 | `.agentos/project/exec-plans/active/2026-07-19-agentos-tui-ux-architecture.md` |
+| 2026-07-23 | AgentOS pi-style LLM runtime의 core foundation(provider registry + auth store)만 먼저 구현하고, current `codex` path는 external CLI compatibility path로 유지하며 native OAuth/transport는 후속 reviewed plan으로 분리 | `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime.md` |
 
 ## 변경 관리
 
@@ -37,4 +38,4 @@ supporting docs는 root project 문서, active execution plan, `AGENTS.md`, vend
 - plan=.agentos/project/exec-plans/archive/2026-07-18-llm-auth-api-adoption-analysis.md
 - artifact=.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md
 - verification=Task 1.1 approval input is recorded in `0004-agentos-llm-credential-strategy.md`.
-- next safe action=독립 대화형 CLI와 hook/input lifecycle의 file-level implementation plan을 작성하고 fresh Gate 2 review를 받는다. Codex provider adapter 확장은 credential boundary 안에서 별도 후속 범위로 유지한다.
+- next safe action=LLM runtime core foundation reviewed plan을 구현하고 focused/public verification을 통과시킨다. Native OAuth/transport는 별도 후속 범위로 유지한다.

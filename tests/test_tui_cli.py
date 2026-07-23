@@ -4,6 +4,7 @@ import asyncio
 import json
 import threading
 
+from agentos.commands import llm as llm_command
 from agentos.llm.types import LLMEvent
 from agentos.terminal.tui.app import AgentOSTui
 from agentos.terminal.tui.commands import all_commands, command_palette_text, matching_commands
@@ -246,7 +247,9 @@ def test_slash_command_catalog_contains_stable_names_descriptions_and_hints():
 
     for name in (
         "/help",
+        "/login",
         "/status",
+        "/logout",
         "/session",
         "/session list",
         "/session resume",
@@ -265,7 +268,7 @@ def test_slash_command_catalog_contains_stable_names_descriptions_and_hints():
 def test_command_palette_lists_commands_with_descriptions():
     palette = command_palette_text()
 
-    for name in ("/status", "/session", "/hooks", "/tools", "/usage", "/clear", "/exit"):
+    for name in ("/login", "/status", "/logout", "/session", "/hooks", "/tools", "/usage", "/clear", "/exit"):
         assert name in palette
     assert "Show provider" in palette
     assert "Open the session resume picker" in palette
@@ -277,6 +280,157 @@ def test_matching_commands_filters_by_name_and_description():
 
     assert {command.name for command in by_name} >= {"/session", "/session list", "/session resume"}
     assert {command.name for command in by_description} >= {"/hooks", "/status"}
+
+
+def test_auth_commands_are_explicitly_scoped_to_codex():
+    commands = {command.name: command for command in all_commands()}
+
+    assert commands["/login"].description.startswith("Codex login")
+    assert commands["/logout"].description.startswith("Codex logout")
+    assert "auth status" in commands["/status"].description.lower()
+
+
+def test_login_command_catalog_marks_codex_scope():
+    palette = command_palette_text()
+
+    assert "/login" in palette
+    assert "/logout" in palette
+    assert "Codex login" in palette
+    assert "Codex logout" in palette
+
+
+def test_status_auth_non_codex_provider_keeps_footer_and_shows_autoswitch_hint(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/status"
+            await pilot.press("enter")
+            transcript = _transcript_text(pilot)
+            assert "provider mock" in transcript
+            assert "Codex auth commands inactive for provider mock. Next: /model codex" in transcript
+
+    asyncio.run(run())
+
+
+def test_login_autoswitches_to_codex_provider(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "iter_login_updates",
+            lambda provider: iter([
+                {"type": "result", "payload": {
+                    "provider": provider,
+                    "mode": "account-login",
+                    "status": "authenticated",
+                    "message": "Codex CLI login completed. Account-login session is managed by Codex CLI.",
+                }},
+            ]),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Codex login result")
+            transcript = _transcript_text(pilot)
+            assert "Provider switched: mock → codex" in transcript
+            assert "Starting Codex login… External browser approval may follow." in transcript
+            assert pilot.app.provider == "codex"
+            assert pilot.app.focused is composer
+
+    asyncio.run(run())
+
+
+def test_status_auth_codex_appends_authenticated_block(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "build_status_payload",
+            lambda provider: {
+                "provider": provider,
+                "mode": "account-login",
+                "status": "authenticated",
+                "message": "Codex CLI reports an authenticated account-login session.",
+            },
+        )
+        app = AgentOSTui(provider="codex", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/status"
+            await pilot.press("enter")
+            transcript = _transcript_text(pilot)
+            assert "provider codex" in transcript
+            assert "Codex auth status" in transcript
+            assert "Status: authenticated" in transcript
+
+    asyncio.run(run())
+
+
+def test_login_success_shows_external_approval_copy_and_result(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "iter_login_updates",
+            lambda provider: iter([
+                {"type": "hint", "text": "Open this login URL if the browser did not open:\nhttps://auth.openai.com/oauth/authorize?code=abc"},
+                {"type": "result", "payload": {
+                    "provider": provider,
+                    "mode": "account-login",
+                    "status": "authenticated",
+                    "message": "Codex CLI login completed. Account-login session is managed by Codex CLI.",
+                }},
+            ]),
+        )
+        app = AgentOSTui(provider="codex", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Codex login result")
+            transcript = _transcript_text(pilot)
+            assert "Starting Codex login… External browser approval may follow." in transcript
+            assert "Open this login URL if the browser did not open:" in transcript
+            assert "https://auth.openai.com/oauth/authorize?code=abc" in transcript
+            assert "Status: authenticated" in transcript
+            assert "Codex CLI login completed." in transcript
+
+    asyncio.run(run())
+
+
+def test_logout_already_signed_out_is_noop_success(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "build_status_payload",
+            lambda provider: {
+                "provider": provider,
+                "mode": "account-login",
+                "status": "unauthenticated",
+                "message": "Codex CLI is installed, but no authenticated account-login session is active.",
+            },
+        )
+
+        def fail_logout(provider: str) -> dict:
+            raise AssertionError("logout helper should not be called when already signed out")
+
+        monkeypatch.setattr(llm_command, "build_logout_payload", fail_logout)
+        app = AgentOSTui(provider="codex", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/logout"
+            await pilot.press("enter")
+            transcript = _transcript_text(pilot)
+            assert "Codex logout not needed." in transcript
+            assert "Status: already signed out" in transcript
+            assert "Next: /login" in transcript
+
+    asyncio.run(run())
 
 
 def test_palette_and_unknown_command_recovery_restore_focus(tmp_path, monkeypatch):
@@ -1178,3 +1332,46 @@ def test_streaming_markdown_helpers():
     assert _has_complete_markdown_block(table_text) is True
 
 
+
+
+def test_model_switch_persists_preferred_provider(tmp_path, monkeypatch):
+    from agentos.terminal.paths import read_preferred_provider
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/model codex"
+            await pilot.press("enter")
+            assert read_preferred_provider() == "codex"
+
+    asyncio.run(run())
+
+
+def test_login_autoswitch_persists_preferred_provider(tmp_path, monkeypatch):
+    from agentos.terminal.paths import read_preferred_provider
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "iter_login_updates",
+            lambda provider: iter([
+                {"type": "result", "payload": {
+                    "provider": provider,
+                    "mode": "account-login",
+                    "status": "authenticated",
+                    "message": "Codex CLI login completed. Account-login session is managed by Codex CLI.",
+                }},
+            ]),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Codex login result")
+            assert read_preferred_provider() == "codex"
+
+    asyncio.run(run())

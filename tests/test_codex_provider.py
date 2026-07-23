@@ -347,7 +347,28 @@ def test_cli_run_codex_jsonl(tmp_path, monkeypatch):
     assert [event["type"] for event in events] == ["start", "message_delta", "done"]
     assert all(event["provider"] == "codex" for event in events)
     assert all(event["mode"] == "account-login" for event in events)
-    assert events[1]["text"] == "OK"
+
+
+def test_cli_run_codex_jsonl_stderr_is_not_forwarded(tmp_path, monkeypatch):
+    fake = write_fake_codex(
+        tmp_path,
+        dedent(
+            """
+            if sys.argv[1:3] == ["exec", "--json"]:
+                print("provider stderr SENTINEL_SECRET", file=sys.stderr)
+                raise SystemExit(7)
+            raise SystemExit(2)
+            """
+        ),
+    )
+    monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
+    monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+
+    result = runner.invoke(app, ["run", "--json", "--once", "hello", "--provider", "codex"])
+
+    assert result.exit_code == 1
+    assert "SENTINEL_SECRET" not in result.stdout
+    assert "SENTINEL_SECRET" not in result.stderr
 
 
 def test_cli_run_codex_failure_exits_nonzero_and_redacts(tmp_path, monkeypatch):
@@ -400,3 +421,28 @@ def test_opt_in_real_codex_status_smoke_is_guarded(monkeypatch):
     assert result.exit_code == 0
     assert payload["provider"] == "codex"
     assert payload["mode"] == "account-login"
+
+
+def test_login_updates_surfaces_browser_url(tmp_path, monkeypatch):
+    fake = write_fake_codex(
+        tmp_path,
+        dedent(
+            """
+            if sys.argv[1:] == ["login"]:
+                print("Open this URL in your browser: https://auth.openai.com/oauth/authorize?code=abc")
+                raise SystemExit(1)
+            if sys.argv[1:] == ["login", "status"]:
+                print("not signed in", file=sys.stderr)
+                raise SystemExit(1)
+            raise SystemExit(2)
+            """
+        ),
+    )
+    monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
+
+    updates = list(CodexCliProvider().login_updates())
+
+    assert updates[0]["type"] == "hint"
+    assert "https://auth.openai.com/oauth/authorize?code=abc" in updates[0]["text"]
+    assert updates[-1]["type"] == "result"
+    assert "https://auth.openai.com/oauth/authorize?code=abc" in updates[-1]["payload"]["recovery"]

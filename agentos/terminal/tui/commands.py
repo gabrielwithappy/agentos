@@ -13,7 +13,9 @@ class SlashCommand:
 
 COMMANDS: tuple[SlashCommand, ...] = (
     SlashCommand("/help", "Show commands and keyboard help", "", "help"),
-    SlashCommand("/status", "Show provider, session, hooks, and last turn state", "", "status"),
+    SlashCommand("/login", "Codex login via the existing CLI account flow", "", "login"),
+    SlashCommand("/status", "Show provider, session, hooks, last turn, and Codex auth status", "", "status"),
+    SlashCommand("/logout", "Codex logout for the current CLI account session", "", "logout"),
     SlashCommand("/hotkeys", "Show all keyboard shortcuts", "", "hotkeys"),
     SlashCommand("/theme", "Switch the TUI colour theme", "[theme-name]", "theme"),
     SlashCommand("/session", "Show session command help", "[list|resume]", "session"),
@@ -60,7 +62,6 @@ def matching_commands(prefix: str) -> tuple[SlashCommand, ...]:
         and normalized in command.description.lower()
     ]
     exact_and_description = name_matches + description_matches
-    # Optional fuzzy ranking — degrades gracefully if thefuzz is not installed
     try:
         from thefuzz import fuzz  # type: ignore[import-untyped]
 
