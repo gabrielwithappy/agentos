@@ -40,7 +40,9 @@ across turns in the session).
 Type `/` or `/help` to show the command palette. The MVP commands are:
 
 - `/help`
-- `/status`
+- `/login` — start the Codex CLI account-login flow. If the current provider is not `codex`, AgentOS auto-switches the session provider to `codex` first; AgentOS may then hand off to the external browser approval flow managed by Codex CLI.
+- `/status` — show the current TUI/session footer state and, when the active provider is `codex`, append Codex auth status and recovery guidance. On other providers it explains that `/login` or `/logout` will auto-switch to `codex`.
+- `/logout` — end the current Codex CLI account-login session. If the current provider is not `codex`, AgentOS auto-switches to `codex` first; if the session is already signed out, AgentOS reports that as a no-op with guidance.
 - `/hotkeys` — show all keyboard shortcuts in the transcript
 - `/theme` — open a theme-picker modal; select a Textual built-in theme (21 available) to apply it immediately; `Esc` cancels without changing the theme; the choice is session-scoped and reverts to the default on restart
 - `/session`
@@ -156,6 +158,4 @@ and without `--yes`, deletion exits `2` and changes nothing.
 
 ## Credential Boundary
 
-AgentOS does not store API keys, OAuth tokens, raw token values, raw provider
-stderr, or provider auth file paths. Codex account login is owned by the
-external Codex CLI. `agentos llm` reports sanitized status and recovery only.
+AgentOS does not store API keys, raw token values, raw provider stderr, or provider auth file paths. The current `codex` path is an external CLI compatibility path owned by Codex CLI. AgentOS now owns only the local runtime core foundation (provider registry + auth store foundation) and continues to report sanitized status and recovery only. `agentos run --once --provider codex --json` now forwards Codex CLI JSON items as a live stdout stream instead of waiting for full process completion before replay. Native OAuth/transport is deferred to a separate reviewed plan.

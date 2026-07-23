@@ -84,6 +84,29 @@ def initialize_state(home: str | Path | None = None) -> Path:
     return root
 
 
+def preferred_provider_path(home: str | Path | None = None) -> Path:
+    return agentos_home(home) / "preferred-provider.json"
+
+
+def read_preferred_provider(home: str | Path | None = None) -> str | None:
+    path = preferred_provider_path(home)
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    provider = payload.get("provider")
+    return provider if isinstance(provider, str) and provider else None
+
+
+def write_preferred_provider(provider: str, home: str | Path | None = None) -> None:
+    atomic_write_json(
+        preferred_provider_path(home),
+        {"schema_version": STATE_SCHEMA_VERSION, "provider": provider},
+    )
+
+
 def state_status(home: str | Path | None = None) -> dict[str, Any]:
     root = agentos_home(home)
     manifest = root / "state-manifest.json"

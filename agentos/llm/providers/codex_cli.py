@@ -148,7 +148,57 @@ class CodexCliProvider:
             )
             return
 
-        result = self._run_codex(["exec", "--json", prompt], executable=executable)
+        command = [executable, "exec", "--json", prompt]
+        process = self._open_codex_process(["exec", "--json", prompt], executable=executable)
+        if process is None:
+            yield self._error_event(
+                code="missing_cli",
+                message="Codex CLI executable is not available. Install Codex CLI before using provider 'codex'.",
+                recovery=CODEX_RECOVERY_INSTALL,
+                retryable=False,
+            )
+            return
+
+        stdout_lines: list[str] = []
+        buffered_plaintext: list[str] = []
+        output_chars = 0
+        start_emitted = False
+
+        def emit_start() -> LLMEvent:
+            return LLMEvent(
+                type="start",
+                provider=self.name,
+                mode=self.mode,
+                metadata={"transport": "codex-cli"},
+            )
+
+        assert process.stdout is not None
+        for raw_line in process.stdout:
+            stdout_lines.append(raw_line.rstrip("\n"))
+            stripped = raw_line.strip()
+            if stripped.startswith("{"):
+                classified = self._parse_output_items(raw_line)
+                if classified and not start_emitted:
+                    start_emitted = True
+                    yield emit_start()
+                for kind, text, metadata in classified:
+                    if kind == "message_delta":
+                        output_chars += len(text or "")
+                    yield LLMEvent(
+                        type=kind,
+                        provider=self.name,
+                        mode=self.mode,
+                        text=text,
+                        metadata=metadata or {},
+                    )
+            elif stripped and not self._is_diagnostic_line(redact_text(stripped)):
+                buffered_plaintext.append(stripped)
+
+        result = self._completed_process_from_stream(
+            process=process,
+            command=command,
+            stdout_lines=stdout_lines,
+        )
         if result.returncode != 0:
             code = "codex_cli_timeout" if result.returncode == 124 else "codex_cli_failed"
             message = (
@@ -164,24 +214,25 @@ class CodexCliProvider:
             )
             return
 
-        yield LLMEvent(
-            type="start",
-            provider=self.name,
-            mode=self.mode,
-            metadata={"transport": "codex-cli"},
-        )
+        if buffered_plaintext and not start_emitted:
+            start_emitted = True
+            yield emit_start()
 
-        output_chars = 0
-        for kind, text, metadata in self._parse_output_items(result.stdout):
-            if kind == "message_delta":
-                output_chars += len(text or "")
+        for raw_text in buffered_plaintext:
+            text = str(sanitize(redact_text(raw_text)))
+            if not text:
+                continue
+            output_chars += len(text)
             yield LLMEvent(
-                type=kind,
+                type="message_delta",
                 provider=self.name,
                 mode=self.mode,
                 text=text,
-                metadata=metadata or {},
             )
+
+        if not start_emitted:
+            yield emit_start()
+
         yield LLMEvent(
             type="done",
             provider=self.name,
@@ -215,6 +266,41 @@ class CodexCliProvider:
             return subprocess.CompletedProcess([executable, *args], 124, "", "timeout")
         except OSError:
             return subprocess.CompletedProcess([executable, *args], 127, "", "unavailable")
+
+    def _open_codex_process(
+        self, args: list[str], *, executable: str
+    ) -> subprocess.Popen[str] | None:
+        try:
+            return subprocess.Popen(
+                [executable, *args],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                env=self._subprocess_env(),
+                text=True,
+            )
+        except OSError:
+            return None
+
+    def _completed_process_from_stream(
+        self,
+        *,
+        process: subprocess.Popen[str],
+        command: list[str],
+        stdout_lines: list[str],
+    ) -> subprocess.CompletedProcess[str]:
+        try:
+            returncode = process.wait(timeout=self.timeout_seconds)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            try:
+                remaining_stdout, _ = process.communicate(timeout=1)
+            except subprocess.TimeoutExpired:
+                remaining_stdout = ""
+            if remaining_stdout:
+                stdout_lines.extend(remaining_stdout.splitlines())
+            return subprocess.CompletedProcess(command, 124, "\n".join(stdout_lines), "timeout")
+
+        return subprocess.CompletedProcess(command, returncode, "\n".join(stdout_lines), "")
 
     def _subprocess_env(self) -> dict[str, str]:
         env: dict[str, str] = {}
