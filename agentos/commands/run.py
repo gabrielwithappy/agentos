@@ -22,7 +22,6 @@ def main(
 ):
     """Start the interactive agent chat session."""
     selected_provider = provider or read_preferred_provider() or "mock"
-
     if json_output and not once:
         typer.echo("--json requires --once.", err=True)
         raise typer.Exit(2)

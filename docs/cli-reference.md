@@ -158,4 +158,4 @@ and without `--yes`, deletion exits `2` and changes nothing.
 
 ## Credential Boundary
 
-AgentOS does not store API keys, raw token values, raw provider stderr, or provider auth file paths. The current `codex` path is an external CLI compatibility path owned by Codex CLI. AgentOS now owns only the local runtime core foundation (provider registry + auth store foundation) and continues to report sanitized status and recovery only. Native OAuth/transport is deferred to a separate reviewed plan.
+AgentOS does not store API keys, raw token values, raw provider stderr, or provider auth file paths. The current `codex` path is an external CLI compatibility path owned by Codex CLI. AgentOS now owns only the local runtime core foundation (provider registry + auth store foundation) and continues to report sanitized status and recovery only. `agentos run --once --provider codex --json` now forwards Codex CLI JSON items as a live stdout stream instead of waiting for full process completion before replay. Native OAuth/transport is deferred to a separate reviewed plan.
