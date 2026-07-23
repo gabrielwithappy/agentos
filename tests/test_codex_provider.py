@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from pathlib import Path
 from textwrap import dedent
 
@@ -188,6 +189,34 @@ def test_stream_parses_reasoning_and_tool_call_items(tmp_path, monkeypatch):
     assert events[2]["metadata"]["arguments"] == {"path": "."}
     assert events[3]["metadata"]["summary"] == "a.txt"
     assert events[4]["text"] == "Done"
+
+
+def test_stream_emits_before_process_exit(tmp_path, monkeypatch):
+    fake = write_fake_codex(
+        tmp_path,
+        dedent(
+            """
+            import time
+            if sys.argv[1:3] == ["exec", "--json"]:
+                print(json.dumps({"text": "first"}), flush=True)
+                time.sleep(0.35)
+                raise SystemExit(0)
+            raise SystemExit(2)
+            """
+        ),
+    )
+    monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
+
+    started_at = time.monotonic()
+    stamps: list[tuple[str, float]] = []
+    for event in CodexCliProvider(timeout_seconds=2).stream_once("hello"):
+        stamps.append((event.type, time.monotonic() - started_at))
+
+    first_message_at = next(timestamp for event_type, timestamp in stamps if event_type == "message_delta")
+    done_at = next(timestamp for event_type, timestamp in stamps if event_type == "done")
+
+    assert first_message_at < done_at
+    assert done_at - first_message_at >= 0.2
 
 
 def test_stream_redacts_secrets_from_reasoning_and_tool_call_items(tmp_path, monkeypatch):
