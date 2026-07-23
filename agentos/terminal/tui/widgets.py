@@ -200,7 +200,13 @@ class ChatMessage(Static):
         padding-left: 1;
         margin-bottom: 0;
     }
+    ChatMessage:focus {
+        border: round $accent;
+        background: $boost;
+    }
     """
+
+    can_focus = True
 
     def __init__(self, role: str, text: str = "", turn_id: str | None = None) -> None:
         super().__init__(text)
@@ -222,9 +228,22 @@ class ChatMessage(Static):
         if self.turn_id:
             self.post_message(self.ForkRequested(self))
 
+    def action_copy_message(self) -> None:
+        """Triggered by 'c' key — copy this message's text to the clipboard.
+
+        Uses Textual's OSC 52 clipboard integration, which is fire-and-forget
+        (no ACK from the terminal), so the confirmation wording says "attempted"
+        rather than claiming success on terminals that don't support OSC 52.
+        """
+        self.app.copy_to_clipboard(self.text)
+        self.notify("클립보드로 복사 시도됨 (터미널이 OSC 52를 지원해야 반영됩니다)", severity="information", timeout=3)
+
     def on_key(self, event: Key) -> None:
         if event.key == "f" and self.turn_id:
             self.action_fork_from_here()
+            event.stop()
+        elif event.key == "c":
+            self.action_copy_message()
             event.stop()
 
     def update_text(self, text: str, *, markdown: bool = False) -> None:

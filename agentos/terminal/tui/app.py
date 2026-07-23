@@ -34,6 +34,9 @@ Keyboard Shortcuts
   Ctrl+Y            Yank (paste killed text)
   Ctrl+Z            Undo
   Tab               Open command palette (when line starts with /)
+  Tab / Shift+Tab   Move focus to messages (Composer <-> newest..oldest)
+  c                 Copy focused message to clipboard
+  f                 Fork a new branch from focused message
   Ctrl+B            Open menu
   Esc               Cancel turn (while waiting) / close overlay
   Ctrl+C / EOF      Exit
@@ -411,7 +414,7 @@ class AgentOSTui(App[None]):
             self.query_one("#transcript", Transcript).add_message("tool", text_content)
 
         def add_assistant_message() -> ChatMessage:
-            return self.query_one("#transcript", Transcript).add_message("assistant", "")
+            return self.query_one("#transcript", Transcript).add_message("assistant", "", turn_id=turn_id)
 
         def update_assistant(text_content: str, *, markdown: bool = False) -> None:
             if assistant_message is not None:
@@ -524,6 +527,55 @@ class AgentOSTui(App[None]):
             elif event.key == "escape":
                 self.action_cancel()
                 event.stop()
+
+    def action_focus_next(self) -> None:
+        """Override Screen's default tab->focus_next binding (app.py:270-271 in Textual's
+        screen.py) to cycle Composer/messages newest-first instead of DOM mount order.
+
+        A plain Tab press is never stopped by Composer/TextArea (default
+        tab_behavior="focus"), so it bubbles to App._on_key, which resolves the
+        Screen-level "tab" binding to this action *before* App.on_key would ever
+        run — overriding on_key alone cannot intercept Tab; the action itself
+        must be overridden. Falls back to the default DOM-order behavior when
+        focus isn't on Composer or a transcript message (e.g. SessionPicker).
+        """
+        if not self._cycle_transcript_focus("tab"):
+            super().action_focus_next()
+
+    def action_focus_previous(self) -> None:
+        """Shift+Tab counterpart to action_focus_next — see that docstring."""
+        if not self._cycle_transcript_focus("shift+tab"):
+            super().action_focus_previous()
+
+    def _focus_ring(self) -> list[Composer | ChatMessage]:
+        """Ordered focus targets: Composer, then messages newest-first.
+
+        Textual's default Tab/Shift+Tab focus_next/focus_previous follow DOM
+        mount order (oldest message first), which would make Tab-from-Composer
+        land on the oldest message. This explicit ring makes Tab always move
+        toward the most recent message first, matching the expected chat-review
+        flow, while still wrapping cleanly at both ends.
+        """
+        composer = self.query_one("#composer", Composer)
+        transcript = self.query_one("#transcript", Transcript)
+        messages = list(reversed(transcript._messages))
+        return [composer, *messages]
+
+    def _cycle_transcript_focus(self, key: str) -> bool:
+        """Move focus within the Composer/message ring. Returns True if handled.
+
+        Only intervenes when the currently focused widget is Composer or a
+        transcript ChatMessage — other focus targets (e.g. SessionPicker) fall
+        back to Textual's default focus_next/focus_previous behavior.
+        """
+        ring = self._focus_ring()
+        focused = self.focused
+        if focused not in ring:
+            return False
+        index = ring.index(focused)
+        index = (index + 1) % len(ring) if key == "tab" else (index - 1) % len(ring)
+        self.set_focus(ring[index])
+        return True
 
     def _resume_picker_index(self, index: int) -> None:
         row = self.picker_rows[index] if 0 <= index < len(self.picker_rows) else None
