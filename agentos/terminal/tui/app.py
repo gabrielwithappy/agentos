@@ -9,12 +9,12 @@ from textual.events import Key
 from textual.widgets import Footer, Header, ListItem, Label
 from textual.worker import Worker, get_current_worker
 
-from agentos.commands import hook as hook_command
+from agentos.commands import hook as hook_command, llm as llm_command
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
 from agentos.terminal.events import CliEvent, new_turn_id, wrap_provider_event
 from agentos.terminal.hooks import HookError, apply_input_hooks
 from agentos.terminal.interaction import run_interactive
-from agentos.terminal.paths import initialize_state
+from agentos.terminal.paths import initialize_state, write_preferred_provider
 from agentos.terminal.sessions import SessionError, append_event, create_session, read_session, session_summaries
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
@@ -190,9 +190,15 @@ class AgentOSTui(App[None]):
         if command and command.handler_id == "theme":
             self._open_theme_picker()
             return
+        if command and command.handler_id == "login":
+            self._handle_auth_action("login", transcript)
+            return
         if command and command.handler_id == "status":
-            transcript.update(self.status.footer_text())
+            transcript.update(self._status_summary())
             self._focus_composer()
+            return
+        if command and command.handler_id == "logout":
+            self._handle_auth_action("logout", transcript)
             return
         if command and command.handler_id == "session":
             transcript.update("/session list - List recent sessions\n/session resume - Open the session resume picker")
@@ -342,6 +348,66 @@ class AgentOSTui(App[None]):
             self.total_input_chars += usage.get("input_chars", 0)
             self.total_output_chars += usage.get("output_chars", 0)
 
+    def _auth_provider_autoswitch_copy(self, action: str, previous_provider: str) -> str:
+        return (
+            f"Provider switched: {previous_provider} → codex\n"
+            f"Starting Codex {action}… External browser approval may follow."
+        )
+
+    def _format_auth_result(self, heading: str, payload: dict[str, object]) -> str:
+        lines = [heading]
+        status = payload.get("status")
+        if isinstance(status, str) and status:
+            lines.append(f"Status: {status}")
+        message = payload.get("message")
+        if isinstance(message, str) and message:
+            lines.append(message)
+        recovery = payload.get("recovery")
+        if isinstance(recovery, str) and recovery:
+            lines.append(recovery)
+        next_command = payload.get("next_command")
+        if isinstance(next_command, str) and next_command:
+            lines.append(f"Next: {next_command}")
+        return "\n".join(lines)
+
+    def _status_summary(self) -> str:
+        summary = self.status.footer_text()
+        if self.provider != "codex":
+            return summary + f"\nCodex auth commands inactive for provider {self.provider}. Next: /model codex"
+        payload = llm_command.build_status_payload("codex")
+        return summary + "\n" + self._format_auth_result("Codex auth status", payload)
+
+    def _handle_auth_action(self, action: str, transcript: Transcript) -> None:
+        if self.provider != "codex":
+            previous_provider = self.provider
+            self.provider = "codex"
+            write_preferred_provider(self.provider)
+            if self.session_id:
+                self._update_status(
+                    self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn=self.status.last_turn)
+                )
+            transcript.add_message("system", self._auth_provider_autoswitch_copy(action, previous_provider))
+        else:
+            transcript.add_message("system", f"Starting Codex {action}… External browser approval may follow.")
+        if not self.session_id:
+            self.session_id = create_session(provider=self.provider, mode="tui")
+        if action == "logout":
+            status_payload = llm_command.build_status_payload("codex")
+            if status_payload.get("status") == "unauthenticated":
+                transcript.add_message("system", "Codex logout not needed.\nStatus: already signed out\nNext: /login")
+                self._focus_composer()
+                return
+            if status_payload.get("status") == "missing_cli":
+                transcript.add_message("system", self._format_auth_result("Codex auth status", status_payload))
+                self._focus_composer()
+                return
+        self._loading_message = transcript.add_message("spinner", "", style=self._indicator_style)
+        self._update_status(
+            self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn="running")
+        )
+        self._active_turn_worker = self.run_auth_action(action, self.session_id, self.provider)
+        self._focus_composer()
+
     # ── Indicator style handler (Milestone 2) ─────────────────────────────
 
     _VALID_INDICATOR_STYLES = frozenset({"ascii", "unicode", "emoji", "kaomoji"})
@@ -385,6 +451,7 @@ class AgentOSTui(App[None]):
             return
         old = self.provider
         self.provider = arg
+        write_preferred_provider(self.provider)
         self._notify_info(f"Provider switched: {old} → {arg}")
         self._focus_composer()
 
@@ -395,6 +462,50 @@ class AgentOSTui(App[None]):
         self._pending_parent_turn_id = event.turn_id
         self._notify_info(f"Forking from turn {event.turn_id[:8]}… Type your message to create a branch.")
         self._focus_composer()
+
+    @work(thread=True)
+    def run_auth_action(self, action: str, session_id: str, provider: str) -> None:
+        def add_system_message(text_content: str) -> None:
+            self.query_one("#transcript", Transcript).add_message("system", text_content)
+
+        def add_system_markdown_message(text_content: str) -> None:
+            transcript = self.query_one("#transcript", Transcript)
+            message = transcript.add_message("system", text_content)
+            transcript.update_message(message, text_content, markdown=True)
+
+        def format_login_hint(text_content: str) -> str:
+            parts = text_content.splitlines()
+            if not parts:
+                return text_content
+            url = parts[-1].strip()
+            if url.startswith("http://") or url.startswith("https://"):
+                lead = "\n".join(parts[:-1]).strip()
+                prefix = f"{lead}\n\n" if lead else ""
+                return f"{prefix}[Open Codex login URL]({url})\n\nRaw URL:\n<{url}>"
+            return text_content
+
+        if action == "login":
+            payload: dict[str, object] | None = None
+            for update in llm_command.iter_login_updates(provider):
+                if update.get("type") == "hint":
+                    self.call_from_thread(self._clear_loading_message)
+                    self.call_from_thread(add_system_markdown_message, format_login_hint(str(update.get("text", ""))))
+                    continue
+                if update.get("type") == "result":
+                    payload = dict(update.get("payload", {}))
+            if payload is None:
+                payload = llm_command.build_login_payload(provider)
+        else:
+            payload = llm_command.build_logout_payload(provider)
+        status_value = str(payload.get("status", "unknown"))
+        last_turn = "done" if status_value in {"authenticated", "logged_out", "unauthenticated"} else "error"
+        rendered = self._format_auth_result(f"Codex {action} result", payload)
+        self.call_from_thread(self._clear_loading_message)
+        self.call_from_thread(add_system_message, rendered)
+        self.call_from_thread(
+            self._update_status,
+            self._status_with_totals(provider=provider, session_id=session_id, last_turn=last_turn),
+        )
 
     @work(thread=True)
     def run_stream(self, prompt: str, turn_id: str, session_id: str, provider: str, pending_parent_turn_id: str | None = None) -> None:

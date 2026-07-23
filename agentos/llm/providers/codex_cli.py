@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -15,6 +16,14 @@ from agentos.llm.types import LLMEvent, ProviderStatus
 CODEX_MODE = "account-login"
 CODEX_RECOVERY_LOGIN = "Run: agentos llm login --provider codex or codex login"
 CODEX_RECOVERY_INSTALL = "Install Codex CLI, then run: codex login"
+
+_URL_RE = re.compile(r"https?://[^\s\"\'<>]+")
+
+
+def _first_url(text: str) -> str | None:
+    match = _URL_RE.search(text)
+    return match.group(0) if match else None
+
 
 _ENV_ALLOWLIST = {
     "CODEX_HOME",
@@ -79,8 +88,62 @@ class CodexCliProvider:
             )
 
         result = self._run_codex(["login"], executable=executable)
+        return self._login_result(result)
+
+    def login_updates(self) -> Iterator[dict[str, Any]]:
+        executable = self._resolve_executable()
+        if executable is None:
+            yield {"type": "result", "payload": self._missing_cli_status(
+                "Codex CLI executable is not available. Install Codex CLI before logging in."
+            ).to_dict()}
+            return
+
+        try:
+            process = subprocess.Popen(
+                [executable, "login"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                env=self._subprocess_env(),
+                text=True,
+            )
+        except OSError:
+            yield {"type": "result", "payload": self._missing_cli_status(
+                "Codex CLI executable is not available. Install Codex CLI before logging in."
+            ).to_dict()}
+            return
+
+        seen_urls: set[str] = set()
+        combined_output: list[str] = []
+        assert process.stdout is not None
+        for raw_line in process.stdout:
+            line = redact_text(raw_line.strip())
+            if not line:
+                continue
+            combined_output.append(line)
+            url = _first_url(line)
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                yield {
+                    "type": "hint",
+                    "text": f"Open this login URL if the browser did not open:\n{url}",
+                }
+
+        returncode = process.wait(timeout=self.timeout_seconds)
+        result = subprocess.CompletedProcess(
+            [executable, "login"],
+            returncode,
+            "\n".join(combined_output),
+            "",
+        )
+        yield {"type": "result", "payload": self._login_result(result).to_dict()}
+
+    def _login_result(self, result: subprocess.CompletedProcess[str]) -> ProviderStatus:
+        login_url = _first_url(redact_text((result.stdout or "") + "\n" + (result.stderr or "")))
         if result.returncode == 0:
             status = self.status()
+            recovery = None if status.authenticated else CODEX_RECOVERY_LOGIN
+            if login_url and not status.authenticated:
+                recovery = f"Open this login URL if needed: {login_url}\n{CODEX_RECOVERY_LOGIN}"
             return ProviderStatus(
                 provider=self.name,
                 mode=self.mode,
@@ -89,10 +152,13 @@ class CodexCliProvider:
                 persistent_credential=status.persistent_credential,
                 status="authenticated" if status.authenticated else "unauthenticated",
                 message="Codex CLI login completed. Account-login session is managed by Codex CLI.",
-                recovery=None if status.authenticated else CODEX_RECOVERY_LOGIN,
+                recovery=recovery,
                 next_command=None if status.authenticated else "agentos llm login --provider codex",
             )
 
+        recovery = CODEX_RECOVERY_LOGIN
+        if login_url:
+            recovery = f"Open this login URL if needed: {login_url}\n{CODEX_RECOVERY_LOGIN}"
         return ProviderStatus(
             provider=self.name,
             mode=self.mode,
@@ -101,7 +167,7 @@ class CodexCliProvider:
             persistent_credential=False,
             status="failed",
             message="Codex CLI login did not complete successfully.",
-            recovery=CODEX_RECOVERY_LOGIN,
+            recovery=recovery,
             next_command="agentos llm login --provider codex",
         )
 

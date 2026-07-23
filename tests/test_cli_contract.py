@@ -14,8 +14,9 @@ def test_root_without_tty_exits_2():
     assert "Interactive mode requires a TTY" in result.stderr
 
 
-def test_run_once_json_preserves_provider_event_names():
-    result = runner.invoke(app, ["run", "--once", "hello", "--json"])
+def test_run_once_json_preserves_provider_event_names(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    result = runner.invoke(app, ["run", "--once", "hello", "--json", "--provider", "mock"])
     assert result.exit_code == 0
     events = [json.loads(line) for line in result.stdout.splitlines()]
     assert [event["type"] for event in events] == [
@@ -61,3 +62,29 @@ def test_harness_uses_explicit_project_root(mock_execv):
     result = runner.invoke(app, ["harness", "--project-root", "."])
     assert result.exit_code == 0
     mock_execv.assert_called_once()
+
+
+def test_run_once_uses_saved_preferred_provider_when_flag_missing(tmp_path, monkeypatch):
+    from agentos.terminal.paths import initialize_state, write_preferred_provider
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    initialize_state()
+    write_preferred_provider("codex")
+
+    result = runner.invoke(app, ["run", "--once", "hello", "--json"])
+
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    assert events[0]["provider"] == "codex"
+
+
+def test_run_once_explicit_provider_overrides_saved_preference(tmp_path, monkeypatch):
+    from agentos.terminal.paths import initialize_state, write_preferred_provider
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    initialize_state()
+    write_preferred_provider("codex")
+
+    result = runner.invoke(app, ["run", "--once", "hello", "--json", "--provider", "mock"])
+
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    assert events[0]["provider"] == "mock"

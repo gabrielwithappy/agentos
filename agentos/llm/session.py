@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from agentos.llm.providers.codex_cli import CodexCliProvider
-from agentos.llm.providers.mock import MockProvider
+from agentos.llm.registry import UnknownProviderError, create_provider, supported_providers
 from agentos.llm.redaction import redact_text
 from agentos.llm.types import LLMEvent
 
-
-SUPPORTED_PROVIDERS = {"codex", "mock"}
+SUPPORTED_PROVIDERS = set(supported_providers())
 
 
 class UnsupportedProviderError(ValueError):
@@ -17,17 +15,16 @@ class UnsupportedProviderError(ValueError):
         super().__init__(f"Provider {provider!r} is not supported.")
 
 
-def get_provider(provider: str) -> CodexCliProvider | MockProvider:
-    normalized = provider.strip().lower()
-    if normalized == "mock":
-        return MockProvider()
-    if normalized == "codex":
-        return CodexCliProvider()
-    raise UnsupportedProviderError(redact_text(provider))
+def get_provider(provider: str):
+    try:
+        return create_provider(provider)
+    except UnknownProviderError as exc:
+        raise UnsupportedProviderError(redact_text(exc.provider)) from exc
 
 
 def unsupported_provider_event(provider: str) -> LLMEvent:
     sanitized_provider = redact_text(provider)
+    supported = ", ".join(sorted(SUPPORTED_PROVIDERS))
     return LLMEvent(
         type="error",
         provider=sanitized_provider,
@@ -36,10 +33,10 @@ def unsupported_provider_event(provider: str) -> LLMEvent:
             "code": "unsupported_provider",
             "message": (
                 f"Provider {sanitized_provider!r} is not available. "
-                "This build supports the mock and codex providers."
+                f"This build supports: {supported}."
             ),
         },
-        recovery="Use --provider mock or --provider codex.",
+        recovery=f"Use one of: {supported}.",
     )
 
 
