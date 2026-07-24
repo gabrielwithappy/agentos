@@ -7,7 +7,7 @@ The CLI stores user state under `AGENTOS_HOME` or `~/.agentos`.
 
 ```bash
 agentos [--version] [--help]
-agentos run --once "Prompt" [--provider mock|codex] [--json]
+agentos run --once "Prompt" [--provider mock|codex|codex-cli] [--json]
 agentos setup [--home PATH]
 agentos doctor [--json]
 agentos session list
@@ -19,8 +19,9 @@ agentos hook list
 agentos hook enable NAME
 agentos hook disable NAME
 agentos hook config show
-agentos llm status|login|logout --provider mock|codex [--json]
+agentos llm status|login|logout --provider mock|codex|codex-cli [--json]
 agentos harness --project-root PATH [engine args...]
+python -m agentos.runtime.bench --prompt "Prompt" [--provider mock|codex] [--format json] [--assert-warm-faster]
 ```
 
 Running bare `agentos` starts an interactive session only when stdin and stdout
@@ -40,9 +41,9 @@ across turns in the session).
 Type `/` or `/help` to show the command palette. The MVP commands are:
 
 - `/help`
-- `/login` — start the Codex CLI account-login flow. If the current provider is not `codex`, AgentOS auto-switches the session provider to `codex` first; AgentOS may then hand off to the external browser approval flow managed by Codex CLI.
+- `/login` — start the AgentOS-owned Codex account-login flow. If the current provider is not `codex`, AgentOS auto-switches the session provider to `codex` first. The flow attempts browser login first (default); if the browser cannot be opened, AgentOS falls back to device-code sign-in automatically within the same login flow.
 - `/status` — show the current TUI/session footer state and, when the active provider is `codex`, append Codex auth status and recovery guidance. On other providers it explains that `/login` or `/logout` will auto-switch to `codex`.
-- `/logout` — end the current Codex CLI account-login session. If the current provider is not `codex`, AgentOS auto-switches to `codex` first; if the session is already signed out, AgentOS reports that as a no-op with guidance.
+- `/logout` — end the current Codex account-login session. If the current provider is not `codex`, AgentOS auto-switches to `codex` first; if the session is already logged out, AgentOS reports that as a sanitized no-op success with guidance.
 - `/hotkeys` — show all keyboard shortcuts in the transcript
 - `/theme` — open a theme-picker modal; select a Textual built-in theme (21 available) to apply it immediately; `Esc` cancels without changing the theme; the choice is session-scoped and reverts to the default on restart
 - `/session`
@@ -127,6 +128,57 @@ unrecognized event types. CLI lifecycle metadata is added under
 `metadata.cli`. Diagnostics and recovery text are written to stderr, not
 JSONL stdout.
 
+## Invocation Runtime Benchmark
+
+Installed `agentos` is the canonical command path for everyday use. `uv run
+agentos ...` is a development path that may include environment bootstrap
+overhead and should not be used as the only evidence for user-perceived
+runtime latency. The warm runtime measurement surface is available through:
+
+```bash
+uv run python -m agentos.runtime.bench --prompt "Reply with OK only." --provider codex --format json
+```
+
+The JSON output contains `uv_run`, `installed_cli`, `direct_provider`, and
+`runtime_warm`, each with `bootstrap_ms`, `first_event_ms`, `provider_ms`,
+`persistence_ms`, and `total_ms` phase timings. The current `codex` provider
+still uses the external Codex CLI compatibility path; this benchmark does not
+introduce native OAuth, native transport, credential parsing, or a daemon.
+
+설치된 agentos가 없을 때:
+
+```bash
+bash scripts/verify-cli-isolated-install.sh
+```
+
+Expected: `PASS agentos-cli-isolated-install`. Until that passes, use
+`uv run agentos ...` only as a development fallback.
+
+runtime health check가 실패할 때:
+
+```bash
+uv run agentos doctor --json
+```
+
+Expected JSON fields include `launcher`, `runtime`, `recovery`, and
+`next_action`. If `launcher.status` is `development_shim`, the `agentos`
+found by that command is the active `uv`/virtualenv shim, not a shell-installed
+canonical launcher. Follow `next_action`; if stale runtime cleanup is reported,
+clean the stale runtime/socket state and rerun the benchmark before changing
+architecture.
+
+benchmark 결과가 기대보다 느릴 때:
+
+```bash
+uv run python -m agentos.runtime.bench --prompt "Reply with OK only." --provider codex --assert-warm-faster
+```
+
+Expected: `PASS invocation-runtime-benchmark` only when the measured warm path
+beats the `uv run` path by at least the configured threshold and has lower
+bootstrap time. Without that PASS line, do not start daemon/server-client
+migration; keep the external CLI compatibility path and record the benchmark
+evidence.
+
 ## Hooks
 
 Hooks are built-in declarative policies from `AGENTOS_HOME/config.toml` with
@@ -158,4 +210,47 @@ and without `--yes`, deletion exits `2` and changes nothing.
 
 ## Credential Boundary
 
-AgentOS does not store API keys, raw token values, raw provider stderr, or provider auth file paths. The current `codex` path is an external CLI compatibility path owned by Codex CLI. AgentOS now owns only the local runtime core foundation (provider registry + auth store foundation) and continues to report sanitized status and recovery only. `agentos run --once --provider codex --json` now forwards Codex CLI JSON items as a live stdout stream instead of waiting for full process completion before replay. Native OAuth/transport is deferred to a separate reviewed plan.
+AgentOS does not store API keys, raw token values, raw provider stderr, provider auth file paths, raw callback query values, or raw response bodies. AgentOS owns native Codex auth/transport: the native provider is the canonical `codex` path, using a documented OpenAI Codex account-login flow (browser login by default, with device-code as an automatic fallback in the same login flow) and a native streaming transport. The external CLI compatibility path (`agentos/llm/providers/codex_cli.py`) is a recovery-only debug/rollback path, selected only when native auth/transport fails explicitly; it is never the default interactive path.
+
+## Native Codex Sign-In (`--provider codex`)
+
+`agentos llm login --provider codex` (or `/login` in the TUI) starts the
+AgentOS-owned account-login flow:
+
+1. AgentOS attempts **browser login** by default: it opens a local callback
+   server and your browser to the Codex sign-in page.
+2. If the browser cannot be opened, AgentOS falls back to **device-code**
+   sign-in automatically, in the same login flow — no separate command is
+   required.
+3. After sign-in, run `agentos llm status --provider codex --json` to
+   confirm `authenticated: true`.
+
+Session refresh is transparent: an expired access token is refreshed from
+the stored refresh token the next time status or a run is checked, with no
+user action required unless the refresh token itself has expired (in which
+case `agentos llm login --provider codex` is required again).
+
+`agentos llm logout --provider codex` removes the local native Codex auth
+record. Running it again when the session is **already logged out** is a
+sanitized no-op success, not an error.
+
+### Recovery-only debug path: `--provider codex-cli`
+
+`--provider codex-cli` delegates to the previously-installed Codex CLI
+instead of AgentOS-owned native auth/transport. It is not selected
+automatically; use it only when native `codex` sign-in or streaming fails
+and you need the older external-CLI path as a rollback while diagnosing the
+issue.
+
+### Opt-in real integration smoke
+
+Unit tests use fake callback servers, fake device-code endpoints, and fake
+transports — no network access. A real two-turn smoke test against your
+authenticated Codex account only runs when you explicitly opt in:
+
+```bash
+AGENTOS_CODEX_INTEGRATION=1 uv run agentos llm status --provider codex --json
+AGENTOS_CODEX_INTEGRATION=1 uv run pytest tests/test_codex_session_integration.py -q
+```
+
+Without `AGENTOS_CODEX_INTEGRATION=1`, these real-network checks do not run.

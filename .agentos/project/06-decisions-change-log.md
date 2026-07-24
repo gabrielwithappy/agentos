@@ -16,6 +16,7 @@
 | 2026-07-18 | LLM credential strategy approved: Codex account-login 후보를 후속 실제 provider 구현 계획의 입력으로 승인하고 API-key adapter를 1차 구현 경로에서 제외. Provider 호출, OAuth client 등록, credential persistence, 비용 발생 작업은 별도 구현 계획과 Gate 2 전까지 금지 | [0004-agentos-llm-credential-strategy.md](reference/decisions/0004-agentos-llm-credential-strategy.md) |
 | 2026-07-19 | AgentOS TUI UX Architecture: `REQ-CLI-003`을 구현하기 위해 terminal-only Textual TUI shell을 추가하고, pi/Hermes는 read-only design evidence로만 사용하며, no-TTY JSONL, credential, session retention, delete/prune confirmation, and existing AgentOS-built hook boundaries를 유지하기로 결정 | `.agentos/project/exec-plans/active/2026-07-19-agentos-tui-ux-architecture.md` |
 | 2026-07-23 | AgentOS pi-style LLM runtime의 core foundation(provider registry + auth store)만 먼저 구현하고, current `codex` path는 external CLI compatibility path로 유지하며 native OAuth/transport는 후속 reviewed plan으로 분리 | `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime.md` |
+| 2026-07-24 | AgentOS가 native Codex auth/transport(browser callback 우선/device-code fallback login, refresh/logout/status, WebSocket 우선/SSE fallback streaming)를 직접 소유하도록 승인. native provider가 canonical `codex` path가 되고, external CLI compatibility path는 native 실패 시에만 선택되는 recovery-only debug/rollback path로 재분류됨 | `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport.md` |
 
 ## 변경 관리
 

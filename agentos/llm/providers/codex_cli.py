@@ -42,7 +42,11 @@ _ENV_ALLOWLIST = {
 
 
 class CodexCliProvider:
-    name = "codex"
+    """External CLI compatibility path. This is a recovery-only debug/rollback
+    provider, selected explicitly via `--provider codex-cli`; it is never the
+    default `codex` interactive path."""
+
+    name = "codex-cli"
     mode = CODEX_MODE
 
     def __init__(self, executable: str | None = None, timeout_seconds: int = 120):
