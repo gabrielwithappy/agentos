@@ -303,6 +303,7 @@
     "tests/test_cli_hooks.py",
     "tests/test_cli_isolated_install.py",
     "tests/test_codex_provider.py",
+    "tests/test_codex_session_integration.py",
     "tests/test_events.py",
     "tests/test_interactive_cli.py",
     "tests/test_llm_core.py",
