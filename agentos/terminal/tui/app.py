@@ -10,12 +10,24 @@ from textual.widgets import Footer, Header, ListItem, Label
 from textual.worker import Worker, get_current_worker
 
 from agentos.commands import hook as hook_command, llm as llm_command
+from agentos.conversation.persistence import commit_turn, empty_state, next_sequence
+from agentos.conversation.runtime import ConversationRuntime
+from agentos.llm.providers.codex_native import DEFAULT_MODEL as CODEX_DEFAULT_MODEL
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
 from agentos.terminal.events import CliEvent, new_turn_id, wrap_provider_event
 from agentos.terminal.hooks import HookError, apply_input_hooks
 from agentos.terminal.interaction import run_interactive
 from agentos.terminal.paths import initialize_state, write_preferred_provider
-from agentos.terminal.sessions import SessionError, append_event, create_session, read_session, session_summaries
+from agentos.terminal.sessions import (
+    SessionError,
+    append_event,
+    conversation_events_path,
+    conversation_snapshot_path,
+    create_session,
+    read_session,
+    resume_conversation_state,
+    session_summaries,
+)
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
 from agentos.terminal.tui.state import TuiStatus, get_git_branch
@@ -42,6 +54,19 @@ Keyboard Shortcuts
   Ctrl+C / EOF      Exit
 ──────────────────────────────────────────────────
 """
+
+
+SHELL_LOGIN_RECOVERY_TEXT = (
+    "AgentOS-owned Codex sign-in is required.\n"
+    "Open another terminal and run: agentos llm login --provider codex\n"
+    "Then return here and run /status."
+)
+
+
+def _default_model_for_provider(provider: str) -> str:
+    if provider in ("codex", "codex-cli"):
+        return CODEX_DEFAULT_MODEL
+    return f"{provider}-default"
 
 
 def _has_open_code_block(text: str) -> bool:
@@ -95,6 +120,10 @@ class AgentOSTui(App[None]):
         self.total_output_chars: int = 0
         # Git branch: queried once at startup and cached (branch rarely changes during a session)
         self.git_branch: str | None = get_git_branch()
+        self._runtime: ConversationRuntime | None = None
+        self._runtime_provider: str | None = None
+        self._picker_mode: str = "session"  # "session" | "branch"
+        self.branch_picker_rows: list[str] = []
         self.status = self._status_with_totals(provider=provider, session_id=self.session_id)
         self.picker_rows: list[dict] = []
         self.last_tool_calls: list[dict[str, object]] = []
@@ -105,6 +134,28 @@ class AgentOSTui(App[None]):
         self._indicator_style: str = "ascii"  # ascii | unicode | emoji | kaomoji
         self._pending_parent_turn_id: str | None = None  # set by fork action
 
+    def _ensure_runtime(self, session_id: str, provider: str) -> ConversationRuntime:
+        """Returns the `ConversationRuntime` for `session_id`, creating or
+        rebuilding it as needed: a fresh session id, a resumed session, or a
+        provider switch (`/model`) each require a runtime bound to the
+        matching (session, provider) pair. A provider switch keeps the same
+        in-memory `ConversationState` (already up to date — every turn is
+        persisted immediately after it commits) rather than re-reading it
+        from disk, avoiding a redundant round trip and any window where a
+        just-completed turn might not have been persisted yet.
+        """
+        if self._runtime is None or self._runtime.state.session_id != session_id:
+            state = resume_conversation_state(session_id) if session_id else empty_state(session_id)
+            self._runtime = ConversationRuntime(
+                state, provider=provider, model=_default_model_for_provider(provider)
+            )
+        elif self._runtime_provider != provider:
+            self._runtime = ConversationRuntime(
+                self._runtime.state, provider=provider, model=_default_model_for_provider(provider)
+            )
+        self._runtime_provider = provider
+        return self._runtime
+
     def _status_with_totals(
         self,
         *,
@@ -113,7 +164,11 @@ class AgentOSTui(App[None]):
         hook_count: int = 0,
         last_turn: str | None = None,
     ) -> TuiStatus:
-        """Build a TuiStatus that always carries the current cumulative counters and git branch."""
+        """Build a TuiStatus that always carries the current cumulative counters, git branch, and active conversation branch."""
+        conversation_branch = None
+        if self._runtime is not None and self._runtime.state.session_id == session_id:
+            active = self._runtime.state.active_branch()
+            conversation_branch = f"{active.branch_id[:8]}:{active.label}"
         base = TuiStatus.initial(
             provider=provider,
             session_id=session_id,
@@ -121,6 +176,7 @@ class AgentOSTui(App[None]):
             git_branch=self.git_branch,
             total_input_chars=self.total_input_chars,
             total_output_chars=self.total_output_chars,
+            conversation_branch=conversation_branch,
         )
         if last_turn is not None:
             return base.with_last_turn(last_turn)
@@ -213,6 +269,7 @@ class AgentOSTui(App[None]):
             rows = session_summaries()
             picker = self.query_one("#session-picker", SessionPicker)
             picker.clear()
+            self._picker_mode = "session"
             self.picker_rows = []
             if not rows:
                 transcript.update("No sessions found. Esc to return.")
@@ -278,6 +335,11 @@ class AgentOSTui(App[None]):
             transcript.update("Hook failed. Next: /hooks")
             self._focus_composer()
             return
+        # Resolved before appending this turn's own `input_received` event:
+        # `_ensure_runtime` may fall back to migrating the legacy JSONL log
+        # when no new-format snapshot exists yet, and that log must reflect
+        # only *prior* turns, never the in-flight one being submitted right now.
+        runtime = self._ensure_runtime(self.session_id, self.provider)
         append_event(
             self.session_id,
             CliEvent("input_received", self.session_id, turn_id, self.provider, "tui", {"length": len(prompt)}).to_dict(),
@@ -290,7 +352,7 @@ class AgentOSTui(App[None]):
         self._pending_parent_turn_id = None
         transcript.add_message("user", text)
         self._loading_message = transcript.add_message("spinner", "", style=self._indicator_style)
-        self._active_turn_worker = self.run_stream(prompt, turn_id, self.session_id, self.provider, pending_parent)
+        self._active_turn_worker = self.run_stream(runtime, prompt, turn_id, self.session_id, self.provider, pending_parent)
         self._focus_composer()
 
     def _set_last_turn_id(self, turn_id: str) -> None:
@@ -458,8 +520,33 @@ class AgentOSTui(App[None]):
     # ── Fork / branch handler (Milestone 4) ──────────────────────────────
 
     def on_transcript_fork_requested(self, event: Transcript.ForkRequested) -> None:
-        """Set pending parent_turn_id so the next submitted message forks from this turn."""
+        """Fork the conversation runtime's active branch from this message
+        and switch to it immediately, so the `convo-branch` status
+        indicator reflects the fork right away — not only after the next
+        message is sent. Also sets `_pending_parent_turn_id` for the
+        existing `/tree` (CliEvent `parent_turn_id`) linkage."""
         self._pending_parent_turn_id = event.turn_id
+        if self._runtime is not None:
+            fork_point_message_id = next(
+                (m.id for m in self._runtime.state.messages.values() if m.turn_id == event.turn_id), None
+            )
+            new_branch_id = self._runtime.fork_branch(
+                from_message_id=fork_point_message_id, label=f"fork-{event.turn_id[:8]}"
+            )
+            self._runtime.switch_branch(new_branch_id)
+            # Persist immediately: without this, a fork the user never
+            # follows up with another message on would be silently lost on
+            # resume — the state on disk would still reflect whatever was
+            # last committed by an actual turn, before the fork happened.
+            if self.session_id:
+                events_path = conversation_events_path(self.session_id)
+                snapshot_path = conversation_snapshot_path(self.session_id)
+                commit_turn(events_path, snapshot_path, sequence=next_sequence(events_path), state=self._runtime.state)
+            self._update_status(
+                self._status_with_totals(
+                    provider=self.provider, session_id=self.session_id, last_turn=self.status.last_turn
+                )
+            )
         self._notify_info(f"Forking from turn {event.turn_id[:8]}… Type your message to create a branch.")
         self._focus_composer()
 
@@ -508,7 +595,15 @@ class AgentOSTui(App[None]):
         )
 
     @work(thread=True)
-    def run_stream(self, prompt: str, turn_id: str, session_id: str, provider: str, pending_parent_turn_id: str | None = None) -> None:
+    def run_stream(
+        self,
+        runtime: ConversationRuntime,
+        prompt: str,
+        turn_id: str,
+        session_id: str,
+        provider: str,
+        pending_parent_turn_id: str | None = None,
+    ) -> None:
         has_error = False
         response_text = ""
         assistant_message: ChatMessage | None = None
@@ -524,6 +619,9 @@ class AgentOSTui(App[None]):
         def add_tool_message(text_content: str) -> None:
             self.query_one("#transcript", Transcript).add_message("tool", text_content)
 
+        def add_system_message(text_content: str) -> None:
+            self.query_one("#transcript", Transcript).add_message("system", text_content)
+
         def add_assistant_message() -> ChatMessage:
             return self.query_one("#transcript", Transcript).add_message("assistant", "", turn_id=turn_id)
 
@@ -538,9 +636,18 @@ class AgentOSTui(App[None]):
         import time
         last_update_time = 0.0
 
+        # `ConversationRuntime.submit_turn()` only commits `runtime.state`
+        # (user + assistant message, continuation, branch head) once, after
+        # its own internal loop reaches a `done` event — see its docstring.
+        # If the worker is cancelled mid-stream, closing this generator here
+        # (rather than merely abandoning it) deterministically raises
+        # `GeneratorExit` at its suspended `yield`, skipping that post-loop
+        # commit regardless of Python implementation/GC timing.
+        turn_stream = runtime.submit_turn(prompt)
         try:
-            for provider_event in stream_once(prompt, provider=provider):
+            for provider_event in turn_stream:
                 if worker.is_cancelled:
+                    turn_stream.close()
                     return
                 payload = provider_event.to_dict()
                 append_event(
@@ -552,6 +659,7 @@ class AgentOSTui(App[None]):
                         provider=provider,
                         mode="tui",
                         parent_turn_id=parent_turn_id,
+                        branch_id=runtime.state.active_branch_id,
                     ),
                 )
                 event_type = payload["type"]
@@ -592,6 +700,16 @@ class AgentOSTui(App[None]):
                     continue
                 if event_type == "error":
                     has_error = True
+                    if loading_active:
+                        self.call_from_thread(self._clear_loading_message)
+                        loading_active = False
+                    error_payload = payload.get("error") or {}
+                    if error_payload.get("code") == "unauthenticated":
+                        self.call_from_thread(add_system_message, SHELL_LOGIN_RECOVERY_TEXT)
+                    else:
+                        rendered = render_event(payload)
+                        if rendered:
+                            self.call_from_thread(add_system_message, rendered)
                     self.call_from_thread(
                         self._update_status,
                         self._status_with_totals(provider=provider, session_id=session_id, last_turn="error"),
@@ -610,6 +728,9 @@ class AgentOSTui(App[None]):
                     self._update_status,
                     self._status_with_totals(provider=provider, session_id=session_id, last_turn="done"),
                 )
+                events_path = conversation_events_path(session_id)
+                snapshot_path = conversation_snapshot_path(session_id)
+                commit_turn(events_path, snapshot_path, sequence=next_sequence(events_path), state=runtime.state)
         except UnsupportedProviderError:
             payload = unsupported_provider_event(provider).to_dict()
             append_event(session_id, payload)
@@ -689,6 +810,9 @@ class AgentOSTui(App[None]):
         return True
 
     def _resume_picker_index(self, index: int) -> None:
+        if self._picker_mode == "branch":
+            self._select_branch_picker_index(index)
+            return
         row = self.picker_rows[index] if 0 <= index < len(self.picker_rows) else None
         transcript = self.query_one("#transcript", Transcript)
         if not row or not row.get("available", False):
@@ -696,11 +820,34 @@ class AgentOSTui(App[None]):
             self.query_one("#composer", Composer).focus()
             return
         self._resume_session(str(row["session_id"]))
+        # `_resume_session` may itself open the branch picker (multi-branch
+        # session) — only return focus to the composer if it didn't.
+        if self._picker_mode != "branch":
+            self.query_one("#composer", Composer).focus()
+
+    def _select_branch_picker_index(self, index: int) -> None:
+        transcript = self.query_one("#transcript", Transcript)
+        self._picker_mode = "session"
+        if not (0 <= index < len(self.branch_picker_rows)) or self._runtime is None:
+            transcript.update("Branch unavailable. Kept active branch.")
+            self.query_one("#composer", Composer).focus()
+            return
+        branch_id = self.branch_picker_rows[index]
+        self._runtime.switch_branch(branch_id)
+        branch = self._runtime.state.branches[branch_id]
+        transcript.update(f"Switched to branch {branch_id[:8]} ({branch.label}).")
+        self._update_status(
+            self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn=self.status.last_turn)
+        )
         self.query_one("#composer", Composer).focus()
 
     def action_cancel(self) -> None:
         if self.focused is self.query_one("#session-picker", SessionPicker):
-            self.query_one("#transcript", Transcript).update("Resume cancelled.")
+            if self._picker_mode == "branch":
+                self._picker_mode = "session"
+                self.query_one("#transcript", Transcript).update("Kept active branch.")
+            else:
+                self.query_one("#transcript", Transcript).update("Resume cancelled.")
             self.query_one("#composer", Composer).focus()
             return
         if self._active_turn_worker is not None and self._active_turn_worker.is_running:
@@ -720,9 +867,40 @@ class AgentOSTui(App[None]):
             return
         self.session_id = meta["session_id"]
         self.provider = meta["provider"]
+        # Resolved before building status: the footer's `convo-branch`
+        # indicator reads `self._runtime`, so the runtime must reflect the
+        # newly resumed session first or the footer would briefly show the
+        # previous session's (or no) active branch.
+        runtime = self._ensure_runtime(self.session_id, self.provider)
         self.status = self._status_with_totals(provider=self.provider, session_id=self.session_id)
         self.query_one("#status", StatusFooter).update(self.status.footer_text())
+        if len(runtime.state.branches) > 1:
+            self._open_branch_picker(runtime)
+            return
         transcript.update(f"Resumed session {self.session_id[:8]}.\nSession summary updated.")
+
+    def _open_branch_picker(self, runtime: ConversationRuntime) -> None:
+        """Session-and-branch resume, second step: when the resumed session
+        has more than one branch (a fork happened), let the user pick which
+        one becomes active before continuing — otherwise the first turn
+        after resume would silently continue whichever branch happened to
+        be active when the session was last saved.
+        """
+        picker = self.query_one("#session-picker", SessionPicker)
+        picker.clear()
+        self._picker_mode = "branch"
+        self.branch_picker_rows = []
+        for branch_id, branch in runtime.state.branches.items():
+            active_marker = " (active)" if branch_id == runtime.state.active_branch_id else ""
+            picker.append(ListItem(Label(f"{branch_id[:8]} {branch.label}{active_marker}")))
+            self.branch_picker_rows.append(branch_id)
+        transcript = self.query_one("#transcript", Transcript)
+        transcript.update(
+            f"Resumed session {self.session_id[:8]}.\n"
+            "Multiple branches found.\n"
+            "Esc to keep the active branch. Enter to switch."
+        )
+        self.call_after_refresh(picker.focus)
 
     def action_open_menu(self) -> None:
         def menu_callback(command: str) -> None:
@@ -748,7 +926,12 @@ def run_tui(provider: str = "mock") -> int:
 
 
 def run_plain_tui_transcript(provider: str = "mock") -> int:
-    console = Console()
+    # `highlight=False`: this plain-text fallback is parsed verbatim by
+    # AGENTOS_TUI_TEST_PLAIN pseudo-TTY harnesses. Rich's default content
+    # highlighter otherwise wraps bare "/" (and similar path-like tokens) in
+    # ANSI color codes even with no markup in the call sites here, breaking
+    # exact-substring assertions against the plain text.
+    console = Console(highlight=False)
     initialize_state()
     session_id = create_session(provider=provider, mode="tui")
     status = TuiStatus.initial(provider=provider, session_id=session_id)

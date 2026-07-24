@@ -8,9 +8,16 @@ from typer.testing import CliRunner
 
 from agentos.cli import app
 from agentos.llm.providers.codex_cli import CodexCliProvider
+from agentos.llm.types import ProviderCapabilities
 
 
 runner = CliRunner()
+
+
+def test_codex_cli_provider_declares_context_aware_false_capability():
+    capabilities = CodexCliProvider().capabilities()
+
+    assert capabilities == ProviderCapabilities(context_aware=False, supports_continuation=False)
 
 
 def json_lines(output: str) -> list[dict]:
@@ -76,7 +83,7 @@ def test_status_missing_cli_contract(monkeypatch):
 
     payload = CodexCliProvider().status().to_dict()
 
-    assert payload["provider"] == "codex"
+    assert payload["provider"] == "codex-cli"
     assert payload["mode"] == "account-login"
     assert payload["status"] == "missing_cli"
     assert payload["credential_present"] is False
@@ -262,7 +269,7 @@ def test_failure_event_is_sanitized(tmp_path, monkeypatch):
 
     assert len(events) == 1
     assert events[0]["type"] == "error"
-    assert events[0]["provider"] == "codex"
+    assert events[0]["provider"] == "codex-cli"
     assert events[0]["mode"] == "account-login"
     assert events[0]["error"]["code"] == "codex_cli_failed"
     assert events[0]["metadata"]["retryable"] is True
@@ -283,11 +290,11 @@ def test_cli_status_codex_json(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
 
-    result = runner.invoke(app, ["llm", "status", "--json", "--provider", "codex"])
+    result = runner.invoke(app, ["llm", "status", "--json", "--provider", "codex-cli"])
 
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
-    assert payload["provider"] == "codex"
+    assert payload["provider"] == "codex-cli"
     assert payload["mode"] == "account-login"
     assert payload["status"] == "authenticated"
     assert payload["authenticated"] is True
@@ -313,8 +320,8 @@ def test_cli_login_logout_codex_json(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
 
-    login = runner.invoke(app, ["llm", "login", "--provider", "codex", "--json"])
-    logout = runner.invoke(app, ["llm", "logout", "--provider", "codex", "--json"])
+    login = runner.invoke(app, ["llm", "login", "--provider", "codex-cli", "--json"])
+    logout = runner.invoke(app, ["llm", "logout", "--provider", "codex-cli", "--json"])
 
     assert login.exit_code == 0
     assert logout.exit_code == 0
@@ -340,12 +347,12 @@ def test_cli_run_codex_jsonl(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
 
-    result = runner.invoke(app, ["run", "--json", "--once", "hello", "--provider", "codex"])
+    result = runner.invoke(app, ["run", "--json", "--once", "hello", "--provider", "codex-cli"])
 
     assert result.exit_code == 0
     events = json_lines(result.stdout)
     assert [event["type"] for event in events] == ["start", "message_delta", "done"]
-    assert all(event["provider"] == "codex" for event in events)
+    assert all(event["provider"] == "codex-cli" for event in events)
     assert all(event["mode"] == "account-login" for event in events)
 
 
@@ -364,7 +371,7 @@ def test_cli_run_codex_jsonl_stderr_is_not_forwarded(tmp_path, monkeypatch):
     monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
     monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
 
-    result = runner.invoke(app, ["run", "--json", "--once", "hello", "--provider", "codex"])
+    result = runner.invoke(app, ["run", "--json", "--once", "hello", "--provider", "codex-cli"])
 
     assert result.exit_code == 1
     assert "SENTINEL_SECRET" not in result.stdout
@@ -386,7 +393,7 @@ def test_cli_run_codex_failure_exits_nonzero_and_redacts(tmp_path, monkeypatch):
     monkeypatch.setenv("CODEX_CLI_PATH", str(fake))
     monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
 
-    result = runner.invoke(app, ["run", "--json", "--once", "hello", "--provider", "codex"])
+    result = runner.invoke(app, ["run", "--json", "--once", "hello", "--provider", "codex-cli"])
 
     assert result.exit_code == 1
     events = json_lines(result.stdout)
@@ -402,7 +409,7 @@ def test_redaction_missing_cli_does_not_expose_configured_path(monkeypatch):
     monkeypatch.setenv("CODEX_CLI_PATH", "/tmp/SENTINEL_SECRET/codex")
     monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
 
-    result = runner.invoke(app, ["llm", "status", "--json", "--provider", "codex"])
+    result = runner.invoke(app, ["llm", "status", "--json", "--provider", "codex-cli"])
 
     assert result.exit_code == 0
     assert "SENTINEL_SECRET" not in result.stdout
@@ -416,10 +423,10 @@ def test_opt_in_real_codex_status_smoke_is_guarded(monkeypatch):
         return
 
     monkeypatch.delenv("CODEX_CLI_PATH", raising=False)
-    result = runner.invoke(app, ["llm", "status", "--json", "--provider", "codex"])
+    result = runner.invoke(app, ["llm", "status", "--json", "--provider", "codex-cli"])
     payload = json.loads(result.stdout)
     assert result.exit_code == 0
-    assert payload["provider"] == "codex"
+    assert payload["provider"] == "codex-cli"
     assert payload["mode"] == "account-login"
 
 

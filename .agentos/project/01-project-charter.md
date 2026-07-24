@@ -34,7 +34,7 @@
 
 ## 승인과 완료
 
-- 현재 승인 상태: 독립 대화형 CLI와 hook/input lifecycle 방향이 승인됨. LLM runtime은 2026-07-23 기준으로 provider registry + auth store core foundation 구현이 승인되었고, `codex` 실사용 경로는 external CLI compatibility path를 유지한다.
+- 현재 승인 상태: 독립 대화형 CLI와 hook/input lifecycle 방향이 승인됨. LLM runtime은 2026-07-23 기준으로 provider registry + auth store core foundation 구현이 승인되었고, 2026-07-24 addendum으로 `codex`의 native auth/transport(browser callback 우선/device-code fallback login, refresh/logout/status, WebSocket 우선/SSE fallback streaming) 소유가 추가로 승인되었다. native provider가 canonical `codex` 경로이며, 기존 external CLI compatibility path는 native 실패 시에만 쓰이는 recovery-only debug/rollback path로 유지된다.
 - 승인 근거: `.agentos/project/reference/decisions/0005-agentos-independent-interactive-cli.md`, `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md`
 - 완료 이해: 새 CLI 구현 계획이 command/event/hook/session/test 계약을 확정하고 Gate 2를 통과하면 구현을 시작할 수 있다.
 - 남은 소유자 질문: hook의 첫 MVP에서 사용자 설정 hook을 어떤 선언형 형식으로 제공할지와 session 보존 기간은 실행 계획에서 안전한 기본값과 함께 확정한다.

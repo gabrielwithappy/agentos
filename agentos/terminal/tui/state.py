@@ -18,6 +18,7 @@ class TuiStatus:
     git_branch: str | None = None
     total_input_chars: int = 0
     total_output_chars: int = 0
+    conversation_branch: str | None = None
 
     @classmethod
     def initial(
@@ -30,6 +31,7 @@ class TuiStatus:
         git_branch: str | None = None,
         total_input_chars: int = 0,
         total_output_chars: int = 0,
+        conversation_branch: str | None = None,
     ) -> "TuiStatus":
         current = cwd or Path.cwd()
         home = Path.home()
@@ -46,6 +48,7 @@ class TuiStatus:
             git_branch=git_branch,
             total_input_chars=total_input_chars,
             total_output_chars=total_output_chars,
+            conversation_branch=conversation_branch,
         )
 
     def with_last_turn(self, value: str) -> "TuiStatus":
@@ -61,6 +64,7 @@ class TuiStatus:
             git_branch=self.git_branch,
             total_input_chars=self.total_input_chars,
             total_output_chars=self.total_output_chars,
+            conversation_branch=self.conversation_branch,
         )
 
     def with_totals(self, input_chars: int, output_chars: int) -> "TuiStatus":
@@ -76,6 +80,7 @@ class TuiStatus:
             git_branch=self.git_branch,
             total_input_chars=input_chars,
             total_output_chars=output_chars,
+            conversation_branch=self.conversation_branch,
         )
 
     def footer_text(self) -> str:
@@ -97,6 +102,10 @@ class TuiStatus:
         ]
         if self.git_branch is not None:
             parts.append(f"branch {shorten(self.git_branch)}")
+        if self.conversation_branch is not None:
+            # Distinct from the git `branch` label above: this is the
+            # active *conversation* branch (fork/resume target), not a git ref.
+            parts.append(f"convo-branch {shorten(self.conversation_branch)}")
         parts.append(f"total in/out {self.total_input_chars}/{self.total_output_chars} chars")
         return " | ".join(parts)
 

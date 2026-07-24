@@ -90,7 +90,11 @@ def test_composer_submit_updates_transcript_and_restores_focus(tmp_path, monkeyp
             await await_transcript(pilot, "Mock response from AgentOS")
             assert "You: hello" in _transcript_text(pilot)
             assert "last turn done" in str(pilot.app.query_one("#status").render())
-            session_files = list((tmp_path / "home" / "sessions").glob("*.jsonl"))
+            session_files = [
+                path
+                for path in (tmp_path / "home" / "sessions").glob("*.jsonl")
+                if "conversation-events" not in path.name
+            ]
             assert session_files
             assert "agentos.cli-event/v1" in session_files[0].read_text(encoding="utf-8")
             assert pilot.app.focused is composer
@@ -905,8 +909,12 @@ def test_tool_border_reasoning_has_reasoning_class(tmp_path, monkeypatch):
 
 # ── Milestone 1 (Phase 2): streaming cancel / loading indicator ────────────────
 
-def _blocking_stream_once(release_event: threading.Event, reached_wait: threading.Event):
-    def stream_once(prompt: str, *, provider: str = "mock"):
+def _blocking_session_stream_context(release_event: threading.Event, reached_wait: threading.Event):
+    """`run_stream()` now drives `ConversationRuntime.submit_turn()`, which
+    calls `agentos.conversation.runtime.session_stream_context(request,
+    provider=...)` — the equivalent blocking double for that call site."""
+
+    def session_stream_context(request, *, provider: str = "mock"):
         yield LLMEvent(type="start", provider=provider, mode="tui")
         reached_wait.set()
         release_event.wait(timeout=5)
@@ -923,7 +931,7 @@ def _blocking_stream_once(release_event: threading.Event, reached_wait: threadin
             usage={"input_chars": 1, "output_chars": 1},
         )
 
-    return stream_once
+    return session_stream_context
 
 
 def test_loading_indicator_shown_while_waiting_and_removed_on_first_event(tmp_path, monkeypatch):
@@ -932,8 +940,8 @@ def test_loading_indicator_shown_while_waiting_and_removed_on_first_event(tmp_pa
         release_event = threading.Event()
         reached_wait = threading.Event()
         monkeypatch.setattr(
-            "agentos.terminal.tui.app.stream_once",
-            _blocking_stream_once(release_event, reached_wait),
+            "agentos.conversation.runtime.session_stream_context",
+            _blocking_session_stream_context(release_event, reached_wait),
         )
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
@@ -957,8 +965,8 @@ def test_escape_cancel_turn_stops_further_output(tmp_path, monkeypatch):
         release_event = threading.Event()
         reached_wait = threading.Event()
         monkeypatch.setattr(
-            "agentos.terminal.tui.app.stream_once",
-            _blocking_stream_once(release_event, reached_wait),
+            "agentos.conversation.runtime.session_stream_context",
+            _blocking_session_stream_context(release_event, reached_wait),
         )
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
@@ -997,7 +1005,11 @@ def test_parent_turn_id_chains_across_consecutive_tui_turns(tmp_path, monkeypatc
             await await_transcript(pilot, "Mock response from AgentOS")
             await pilot.pause(0.1)
 
-        session_files = list((tmp_path / "home" / "sessions").glob("*.jsonl"))
+        session_files = [
+            path
+            for path in (tmp_path / "home" / "sessions").glob("*.jsonl")
+            if "conversation-events" not in path.name
+        ]
         assert session_files
         lines = [
             json.loads(line)
@@ -1373,5 +1385,365 @@ def test_login_autoswitch_persists_preferred_provider(tmp_path, monkeypatch):
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
             assert read_preferred_provider() == "codex"
+
+    asyncio.run(run())
+
+
+# ── PI session runtime Task 6 Step 1: ConversationRuntime.submit_turn() wiring ──
+
+
+def test_second_turn_carries_first_turn_context_via_conversation_runtime(tmp_path, monkeypatch):
+    """`run_stream()` now drives `ConversationRuntime.submit_turn()` instead
+    of the stateless `stream_once(prompt)` shim; the mock provider's
+    `stream_context()` echoes every prior `user` message, so a second turn
+    in the same session must see the first turn's text too."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "remember-marker-one"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+            composer.value = "second turn"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            await pilot.pause(0.1)
+
+            transcript_text = _transcript_text(pilot)
+            second_response_index = transcript_text.rfind("Received context [")
+            assert second_response_index != -1
+            second_response = transcript_text[second_response_index:]
+            assert "remember-marker-one" in second_response
+            assert "second turn" in second_response
+
+    asyncio.run(run())
+
+
+def test_conversation_runtime_snapshot_is_persisted_after_a_successful_turn(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            await pilot.pause(0.1)
+            session_id = pilot.app.session_id
+
+        snapshot_path = sessions.conversation_snapshot_path(session_id, home=str(tmp_path / "home"))
+        assert snapshot_path.is_file()
+        payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        assert payload["last_event_sequence"] == 0
+
+        # `payload["state"]["messages"]` is a dict keyed by message id and
+        # serialized with `sort_keys=True` for deterministic JSON, so its
+        # iteration order is not conversation order — reconstruct the real
+        # order the same way production code does, via the branch chain.
+        rebuilt = sessions.resume_conversation_state(session_id, home=str(tmp_path / "home"))
+        ordered = rebuilt.branch_messages(rebuilt.active_branch_id)
+        assert [m.role for m in ordered] == ["user", "assistant"]
+        assert ordered[0].text == "hello"
+
+    asyncio.run(run())
+
+
+def test_resumed_session_second_turn_still_carries_first_turn_context(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "remember-marker-two"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            await pilot.pause(0.1)
+            session_id = pilot.app.session_id
+
+        # A brand new AgentOSTui instance (simulating a fresh process/resume)
+        # must rebuild its ConversationRuntime from the persisted snapshot,
+        # not start from an empty state.
+        resumed_app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with resumed_app.run_test() as pilot:
+            pilot.app.session_id = session_id
+            pilot.app.provider = "mock"
+            composer = pilot.app.query_one("#composer")
+            composer.value = "second turn after resume"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            await pilot.pause(0.1)
+
+            transcript_text = _transcript_text(pilot)
+            assert "remember-marker-two" in transcript_text
+            assert "second turn after resume" in transcript_text
+
+    asyncio.run(run())
+
+
+def test_unauthenticated_codex_turn_shows_another_terminal_status_recovery_text(tmp_path, monkeypatch):
+    from agentos.terminal.tui.app import SHELL_LOGIN_RECOVERY_TEXT
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="codex", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Open another terminal")
+
+            transcript_text = _transcript_text(pilot)
+            assert SHELL_LOGIN_RECOVERY_TEXT in transcript_text
+            assert "Thinking" not in transcript_text and "…" not in transcript_text.split(
+                SHELL_LOGIN_RECOVERY_TEXT
+            )[0]
+
+    asyncio.run(run())
+
+
+def test_cancel_after_conversation_runtime_wiring_does_not_commit_a_partial_turn(tmp_path, monkeypatch):
+    """Regression for the `ConversationRuntime.submit_turn()` atomicity
+    contract now that `run_stream()` drives it: cancelling mid-stream must
+    leave no user/assistant message committed to the runtime's state, so a
+    subsequent turn in the same session starts from a clean context."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        release_event = threading.Event()
+        reached_wait = threading.Event()
+        monkeypatch.setattr(
+            "agentos.conversation.runtime.session_stream_context",
+            _blocking_session_stream_context(release_event, reached_wait),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "cancel-me"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Thinking…")
+            assert reached_wait.wait(timeout=5)
+
+            await pilot.press("escape")
+            await await_transcript(pilot, "Turn cancelled.")
+            release_event.set()
+            await pilot.pause(0.2)
+
+            assert pilot.app._runtime is not None
+            assert pilot.app._runtime.state.messages == {}
+
+    asyncio.run(run())
+
+
+# ── PI session runtime Task 6 Step 3: recovery matrix + active branch indicator ──
+
+
+def test_fork_via_f_key_immediately_changes_active_branch_indicator(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "turn 1"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+            status_before = str(pilot.app.query_one("#status").render())
+            assert "convo-branch" not in status_before or "fork-" not in status_before
+
+            assistant_message = pilot.app.query_one("#transcript")._messages[-1]
+            await pilot.press("tab")
+            assert pilot.app.focused is assistant_message
+            await pilot.press("f")
+
+            status_after = str(pilot.app.query_one("#status").render())
+            assert "convo-branch" in status_after
+            assert "fork-" in status_after
+            assert pilot.app._runtime.state.active_branch_id != "main"
+
+    asyncio.run(run())
+
+
+def test_resume_with_multiple_branches_opens_branch_picker_and_switching_updates_active_branch(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "turn 1"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+            assistant_message = pilot.app.query_one("#transcript")._messages[-1]
+            await pilot.press("tab")
+            await pilot.press("f")
+            await pilot.pause(0.1)
+            session_id = pilot.app.session_id
+
+        resumed_app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with resumed_app.run_test() as pilot:
+            pilot.app.session_id = session_id
+            pilot.app.provider = "mock"
+            pilot.app._resume_session(session_id)
+            await pilot.pause(0.1)
+
+            assert pilot.app._picker_mode == "branch"
+            assert len(pilot.app.branch_picker_rows) >= 2
+            transcript_text = _transcript_text(pilot)
+            assert "Multiple branches found" in transcript_text
+
+            pilot.app._select_branch_picker_index(0)
+            await pilot.pause(0.1)
+
+            status_after = str(pilot.app.query_one("#status").render())
+            assert "convo-branch" in status_after
+            assert pilot.app._picker_mode == "session"
+
+    asyncio.run(run())
+
+
+def test_corrupted_snapshot_falls_back_to_replay_recovery_without_crashing(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            await pilot.pause(0.1)
+            session_id = pilot.app.session_id
+
+        snapshot_path = sessions.conversation_snapshot_path(session_id, home=str(tmp_path / "home"))
+        snapshot_path.write_text("{not valid json", encoding="utf-8")
+
+        resumed_app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with resumed_app.run_test() as pilot:
+            pilot.app.session_id = session_id
+            pilot.app.provider = "mock"
+            composer = pilot.app.query_one("#composer")
+            composer.value = "second turn"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+            await pilot.pause(0.1)
+
+            transcript_text = _transcript_text(pilot)
+            assert "hello" in transcript_text
+            assert "second turn" in transcript_text
+
+    asyncio.run(run())
+
+
+def test_transport_error_shows_sanitized_recovery_message_in_transcript(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+
+        def failing_stream_context(request, *, provider: str = "mock"):
+            yield LLMEvent(type="start", provider=provider, mode="tui")
+            yield LLMEvent(
+                type="error",
+                provider=provider,
+                mode="tui",
+                error={"code": "transport_error", "message": "connection reset: token=SENTINEL_SECRET"},
+                recovery="Resend your message.",
+            )
+
+        monkeypatch.setattr("agentos.conversation.runtime.session_stream_context", failing_stream_context)
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "hello"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Next: /status")
+
+            transcript_text = _transcript_text(pilot)
+            assert "SENTINEL_SECRET" not in transcript_text
+            assert "Thinking" not in transcript_text.split("Next: /status")[0][-20:]
+            assert "last turn error" in str(pilot.app.query_one("#status").render())
+
+    asyncio.run(run())
+
+
+def test_login_command_shows_sanitized_failure_when_browser_and_device_code_both_fail(tmp_path, monkeypatch):
+    """Regression: browser launch failing then the device-code fallback also
+    failing (e.g. no network access) previously propagated an uncaught
+    AuthError out of the `run_auth_action` Textual worker and crashed the
+    app. The TUI must show a graceful login-failed message instead."""
+    import agentos.llm.auth.openai_codex as auth_module
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            auth_module,
+            "complete_browser_login",
+            lambda prepared, **kwargs: (_ for _ in ()).throw(auth_module.BrowserLaunchFailedError()),
+        )
+        monkeypatch.setattr(
+            auth_module,
+            "request_device_code",
+            lambda *a, **k: (_ for _ in ()).throw(
+                auth_module.AuthError("device_code_request_failed", "Could not start device sign-in.")
+            ),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Codex login result")
+
+            transcript_text = _transcript_text(pilot)
+            assert "did not complete successfully" in transcript_text
+            assert "Traceback" not in transcript_text
+
+    asyncio.run(run())
+
+
+def test_login_command_shows_browser_url_as_clickable_link(tmp_path, monkeypatch):
+    """Regression: the TUI's `/login` previously never showed any URL at all
+    ("browser 로그인 주소가 발생하지 않음") since `login_updates()`'s hint was
+    static placeholder text with no URL in it. `format_login_hint()` in
+    `run_auth_action` turns a hint whose last line is a bare URL into a
+    clickable markdown link plus the raw URL — this only works if the hint
+    actually contains one."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "iter_login_updates",
+            lambda provider: iter(
+                [
+                    {
+                        "type": "hint",
+                        "text": "Open this URL to sign in:\nhttps://auth.openai.com/oauth/authorize?x=1",
+                    },
+                    {
+                        "type": "result",
+                        "payload": {
+                            "provider": provider,
+                            "mode": "account-login",
+                            "status": "failed",
+                            "authenticated": False,
+                            "credential_present": False,
+                            "persistent_credential": False,
+                            "message": "Codex sign-in did not complete successfully.",
+                        },
+                    },
+                ]
+            ),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Codex login result")
+
+            transcript_text = _transcript_text(pilot)
+            assert "https://auth.openai.com/oauth/authorize" in transcript_text
 
     asyncio.run(run())

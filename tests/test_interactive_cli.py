@@ -57,3 +57,68 @@ def test_interactive_session_file_uses_cli_event_envelopes(tmp_path, monkeypatch
     env = {"AGENTOS_HOME": str(tmp_path)}
     result = runner.invoke(app, ["run", "--once", "hello"], env=env)
     assert result.exit_code == 0
+
+
+# ── PI session runtime Task 6 Step 2: legacy interactive fallback runtime wiring ──
+
+
+def test_legacy_interactive_fallback_second_turn_carries_context_via_session_runtime(tmp_path, monkeypatch):
+    """`run_interactive()` (used when the Textual TUI fails to start) now
+    drives `ConversationRuntime.submit_turn()` too, not the stateless
+    `stream_once(prompt)` shim — the mock provider's `stream_context()`
+    echoes every prior `user` message, so a second turn in the same
+    fallback session must see the first turn's text."""
+    from agentos.terminal.interaction import run_interactive
+    from agentos.terminal.paths import initialize_state
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    initialize_state()
+    inputs = iter(["remember-marker-fallback", "second fallback turn", ""])
+
+    def fake_input(_prompt: str = "") -> str:
+        try:
+            return next(inputs)
+        except StopIteration:
+            raise EOFError
+
+    monkeypatch.setattr("builtins.input", fake_input)
+
+    printed: list[str] = []
+    monkeypatch.setattr(
+        "agentos.terminal.interaction.console.print",
+        lambda text="", **kwargs: printed.append(str(text)),
+    )
+
+    exit_code = run_interactive(provider="mock")
+
+    assert exit_code == 0
+    joined = "\n".join(printed)
+    second_response = joined.rsplit("Received context [", 1)[-1]
+    assert "remember-marker-fallback" in second_response
+    assert "second fallback turn" in second_response
+
+
+def test_legacy_interactive_fallback_persists_conversation_runtime_snapshot(tmp_path, monkeypatch):
+    from agentos.terminal.interaction import run_interactive
+    from agentos.terminal.paths import initialize_state
+    from agentos.terminal.sessions import conversation_snapshot_path, list_sessions
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    initialize_state()
+    inputs = iter(["hello"])
+
+    def fake_input(_prompt: str = "") -> str:
+        try:
+            return next(inputs)
+        except StopIteration:
+            raise EOFError
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr("agentos.terminal.interaction.console.print", lambda *a, **k: None)
+
+    run_interactive(provider="mock")
+
+    rows = list_sessions()
+    assert rows
+    snapshot_path = conversation_snapshot_path(rows[0]["session_id"])
+    assert snapshot_path.is_file()

@@ -42,6 +42,32 @@ def test_setup_doctor_json_contract(tmp_path):
     assert doctor.exit_code == 0
     payload = json.loads(doctor.stdout)
     assert payload["configured"] is True
+    assert "launcher" in payload
+    assert "runtime" in payload
+    assert "recovery" in payload
+    assert "next_action" in payload
+
+
+def test_doctor_json_does_not_treat_uv_venv_shim_as_installed_launcher(tmp_path):
+    home = initialize_state(tmp_path / "home")
+    venv = tmp_path / "venv"
+    bin_dir = venv / "bin"
+    bin_dir.mkdir(parents=True)
+    shim = bin_dir / "agentos"
+    shim.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    shim.chmod(0o755)
+    env = {
+        "AGENTOS_HOME": str(home),
+        "VIRTUAL_ENV": str(venv),
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+    }
+
+    doctor = runner.invoke(app, ["doctor", "--json"], env=env)
+
+    assert doctor.exit_code == 0
+    payload = json.loads(doctor.stdout)
+    assert payload["launcher"]["installed_agentos"] is False
+    assert payload["launcher"]["status"] == "development_shim"
 
 
 def test_setup_rejects_symlink_home(tmp_path):

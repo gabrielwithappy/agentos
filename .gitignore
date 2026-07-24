@@ -8,6 +8,8 @@ __pycache__/
 HISTORY.md
 profiles/
 runtime/
+!agentos/runtime/
+!agentos/runtime/*.py
 knowledge/
 *.tar
 CLAUDE.md

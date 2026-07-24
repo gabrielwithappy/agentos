@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from agentos.llm.redaction import redact_text, sanitize
-from agentos.llm.types import LLMEvent, ProviderStatus
+from agentos.llm.types import LLMEvent, ProviderCapabilities, ProviderStatus
 
 
 CODEX_MODE = "account-login"
@@ -42,12 +42,23 @@ _ENV_ALLOWLIST = {
 
 
 class CodexCliProvider:
-    name = "codex"
+    """External CLI compatibility path. This is a recovery-only debug/rollback
+    provider, selected explicitly via `--provider codex-cli`; it is never the
+    default `codex` interactive path."""
+
+    name = "codex-cli"
     mode = CODEX_MODE
 
     def __init__(self, executable: str | None = None, timeout_seconds: int = 120):
         self._configured_executable = executable
         self.timeout_seconds = timeout_seconds
+
+    def capabilities(self) -> ProviderCapabilities:
+        """The external CLI compatibility path only supports the stateless
+        `stream_once(prompt)` shim: each call launches a fresh `codex exec`
+        subprocess with no continuation, so it cannot honor a context-aware
+        multi-message request."""
+        return ProviderCapabilities(context_aware=False, supports_continuation=False)
 
     def status(self) -> ProviderStatus:
         executable = self._resolve_executable()

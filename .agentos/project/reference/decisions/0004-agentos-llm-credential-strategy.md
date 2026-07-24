@@ -96,3 +96,12 @@ allowed model policy = <approved models or model family and any usage limits>
 - current runtime path: `codex` 실사용 경로는 external CLI compatibility path를 유지한다.
 - future native OAuth/transport requires a separate reviewed plan.
 - 이 addendum은 API key adapter 제외, raw token/env/provider stderr 비노출, billing-affecting action 금지 원칙을 바꾸지 않는다.
+
+## 2026-07-24 native Codex auth/transport 승인 addendum
+
+- 승인 addendum: AgentOS는 이제 native Codex auth/transport(browser callback 우선 + device-code fallback login lifecycle, refresh/logout/status, WebSocket 우선/SSE fallback native streaming transport)를 직접 소유할 수 있다. approval scope는 `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport.md`로 구체화된 execution plan을 따른다.
+- canonical path 전환: native auth/transport 구현이 완료되면 `codex` provider의 canonical 경로는 native provider이며, 기존 external CLI compatibility path(`agentos/llm/providers/codex_cli.py`)는 native 경로가 명시적으로 실패했을 때만 선택 가능한 recovery-only debug/rollback path로 재분류된다. external CLI compatibility path는 자동 기본 경로가 아니다.
+- 여전히 금지: API key 입력, import, 저장, API-key adapter 구현. AgentOS 자체 OAuth client는 문서화된 공식 Codex account-login flow(browser callback/device-code)만 사용하며 별도의 비공식 endpoint를 추측해 사용하지 않는다.
+- 여전히 금지: raw token, raw refresh token, raw key, raw environment, raw provider stderr, raw callback query, raw response body를 UI, JSONL, stdout/stderr, logs, DOM, console, test artifact에 노출하는 것.
+- billing/entitlement: 이 addendum은 기존 `subscription_entitlement_policy`, `billing_owner`, `allowed_model_policy`를 바꾸지 않는다. native transport도 동일한 ChatGPT Plus/Pro account-login 기반 Codex 사용 정책과 허용 모델 정책을 따른다.
+- 이 addendum은 API key adapter 제외, raw token/env/provider stderr 비노출, billing-affecting action 금지 원칙을 바꾸지 않는다.

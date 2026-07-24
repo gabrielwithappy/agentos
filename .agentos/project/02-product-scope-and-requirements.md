@@ -24,6 +24,7 @@
 | REQ-LLM-002 | API key adapter를 1차 구현 경로에서 제외 | must | ADR과 후속 handoff가 API key 입력, import, 저장, API-key adapter 구현 제외를 명시함 | `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md` | `PASS subscription-implementation-scope-separated` | 현재 |
 | REQ-LLM-003 | Mock-only LLM runtime contract 추가 | must | 실제 provider 호출, OAuth, API key, persistent credential store, billing 없이 mock provider와 sanitized JSONL event contract가 CLI에서 검증됨 | `.agentos/project/exec-plans/active/2026-07-18-agentos-llm-core-mvp.md` | `pytest tests/test_cli.py tests/test_llm_core.py -q`; `PASS secret-redaction-jsonl`; `PASS llm-core-docs-aligned` | 현재 |
 | REQ-LLM-004 | LLM runtime core foundation 추가 | must | provider registry, provider-independent auth store foundation, and canonical external CLI compatibility path가 구현되고, native OAuth/transport는 deferred 범위로 문서화됨 | `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime.md` | `pytest tests/test_auth_store.py tests/test_llm_core.py tests/test_codex_provider.py tests/test_cli_contract.py -q`; `PASS docs-llm-core-scope-aligned` | 현재 |
+| REQ-LLM-005 | native Codex auth/transport 소유 | must | AgentOS가 browser callback 우선/device-code fallback login lifecycle, refresh/logout/status, WebSocket 우선/SSE fallback native streaming transport를 직접 소유하고, external CLI compatibility path는 native 실패 시에만 선택되는 recovery-only debug/rollback path로 재분류됨 | `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport.md` | `pytest tests/test_codex_oauth.py tests/test_codex_transport.py tests/test_codex_provider.py tests/test_auth_store.py tests/test_cli_contract.py tests/test_tui_cli.py -q`; `PASS codex-native-docs-aligned` | 현재 |
 | REQ-CLI-001 | 독립 대화형 AgentOS CLI | must | isolated install 후 source checkout 밖에서도 `agentos --help`, `agentos setup`, `agentos doctor`, TTY 대화형 세션, `run --once`가 명시된 exit/output contract로 동작 | `0005-agentos-independent-interactive-cli.md` | `PASS cli-focused-suite`; `PASS agentos-cli-isolated-install`; `PASS interactive-cli-acceptance`; `PASS agentos-independent-cli-suite` | 완료 |
 | REQ-CLI-002 | 안전하고 관측 가능한 hook/input lifecycle | must | hook ordering/timeout/failure/cancel/redaction이 typed event와 tests로 검증되고, hook이 JSONL stdout과 credential boundary를 침범하지 않음 | `0005-agentos-independent-interactive-cli.md` | `PASS cli-hook-registry-contract`; `PASS cli-hook-secret-regression`; `PASS interactive-cli-acceptance` | 완료 |
 | REQ-CLI-003 | 시각적으로 이해 가능한 AgentOS TUI | must | TTY에서 transcript, composer, footer, command palette, session picker, recovery가 검증되고, no-TTY JSONL contract, credential boundary, existing session retention/delete/prune confirmation, and only existing AgentOS-built hooks boundary가 유지됨 | `.agentos/project/exec-plans/active/2026-07-19-agentos-tui-ux-architecture.md` | `PASS agentos-tui-focused-suite`; `PASS agentos-tui-secret-recovery-suite`; `PASS interactive-cli-acceptance`; `PASS agentos-cli-isolated-install`; `PASS installed-tui-smoke`; `PASS agentos-public-suite`; `PASS agentos-tui-docs-aligned` | 완료 |
@@ -51,14 +52,13 @@
 - pi의 TypeScript/Bun/TUI runtime 직접 이식, Hermes gateway/메신저/백업 등 대규모 운영 command 복제
 - arbitrary third-party code hook 또는 승인 없는 project-local hook 실행
 - LLM API key 입력, import, 저장, API-key adapter 구현
-- provider session 호출, OAuth client 등록, credential persistence, or billing-affecting actions before a separate reviewed implementation plan
-- native OAuth/transport implementation before a separate reviewed implementation plan
+- provider session 호출, OAuth client 등록, credential persistence, or billing-affecting actions before a separate reviewed implementation plan (REQ-LLM-005는 이 경계 안에서 승인됨)
 - TUI does not change session retention, session auto-delete behavior, delete/prune confirmation remains unchanged, or hook trust policy; it may show only existing AgentOS-built hooks and sanitized hook events.
 
 허용된 예외:
 
 - `REQ-LLM-003`의 mock-only LLM runtime contract는 provider credential strategy 승인 전에도 구현할 수 있다. 이 예외는 실제 provider 호출, OAuth/account-login, API key path, persistent credential store, billing-affecting behavior, or approved credential status claim을 만들 수 없다.
-- `REQ-LLM-004`의 core foundation은 local-only provider registry와 auth store foundation까지 허용한다. 하지만 `codex`의 native OAuth/transport, live token refresh, direct OpenAI endpoint 호출은 별도 reviewed plan 전까지 제외한다.
+- `REQ-LLM-004`의 core foundation은 local-only provider registry와 auth store foundation까지 허용했다. `REQ-LLM-005` 승인 이후 `codex`의 native OAuth/transport, live token refresh, documented OpenAI Codex account-login endpoint 호출이 허용 범위에 포함된다. 승인 범위는 여전히 API key adapter, 비공식/미문서화 endpoint 추측, credential persistence 확장을 제외한다.
 
 범위 변경 트리거:
 
