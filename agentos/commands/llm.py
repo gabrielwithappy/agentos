@@ -86,8 +86,23 @@ def login(
     provider: str = typer.Option("mock", "--provider", help="LLM provider name"),
     json_output: bool = typer.Option(False, "--json", help="Emit sanitized JSON"),
 ) -> None:
-    """Run provider login."""
-    _emit_payload(build_login_payload(provider), json_output)
+    """Run provider login.
+
+    Streams hints (e.g. the browser sign-in URL, or the device-code
+    verification URL/code if browser auto-launch fails) to stderr as they
+    become known — a one-shot CLI invocation has no other way to show the
+    user where to sign in before the flow completes.
+    """
+    payload: dict | None = None
+    for update in iter_login_updates(provider):
+        if update.get("type") == "hint":
+            typer.echo(str(update.get("text", "")), err=True)
+            continue
+        payload = dict(update.get("payload", {}))
+    if payload is None:
+        payload = build_login_payload(provider)
+    payload.setdefault("action", "login")
+    _emit_payload(payload, json_output)
 
 
 @app.command()

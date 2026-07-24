@@ -210,22 +210,41 @@ def _make_callback_handler(expected_state: str, result: _CallbackResult) -> type
     return CallbackHandler
 
 
-def run_browser_login(
+@dataclass(frozen=True)
+class PreparedBrowserLogin:
+    """A browser-login attempt with the authorize URL already built and the
+    local callback server already bound (listening at the OS level) — but
+    not yet launched or waited on.
+
+    Splitting this out of `run_browser_login()` lets callers show `auth_url`
+    to the user immediately, before — and regardless of whether — an
+    automatic browser launch succeeds. Without this, a user on a session
+    where auto-launch silently fails (or isn't attempted) never sees any
+    URL at all, since the previous single-call `run_browser_login()` only
+    ever exposed the URL as a local variable, never to its caller.
+    """
+
+    auth_url: str
+    _server: HTTPServer
+    _result: _CallbackResult
+    _redirect_uri: str
+    _pkce: PkceCodes
+    _issuer: str
+    _client_id: str
+
+
+def prepare_browser_login(
     *,
-    transport: HttpTransport | None = None,
     issuer: str | None = None,
     client_id: str | None = None,
-    timeout_seconds: float = 300.0,
-    open_browser: bool = True,
-) -> TokenResult:
-    """Browser-callback login: opens a local HTTP server, launches the
-    browser to the authorize URL, waits for the redirect, then exchanges the
-    authorization code for tokens. Raises `AuthError` subclasses on failure;
-    never returns or logs a raw authorization code, token, or callback query.
+) -> PreparedBrowserLogin:
+    """Builds the authorize URL and binds the local callback server, without
+    opening a browser or waiting for the callback yet. The underlying socket
+    is already listening (bound in `HTTPServer.__init__`), so it is safe to
+    show `auth_url` to the user here and defer `complete_browser_login()`.
     """
     resolved_issuer = issuer or _env_issuer()
     resolved_client_id = client_id or _env_client_id()
-    http = transport or UrllibHttpTransport()
 
     port = _find_free_port(DEFAULT_CALLBACK_PORT, FALLBACK_CALLBACK_PORT)
     redirect_uri = f"http://localhost:{port}/auth/callback"
@@ -235,8 +254,6 @@ def run_browser_login(
     result = _CallbackResult()
     handler_cls = _make_callback_handler(state, result)
     server = HTTPServer(("127.0.0.1", port), handler_cls)
-    server_thread = threading.Thread(target=server.handle_request, daemon=True)
-    server_thread.start()
 
     auth_url = build_authorize_url(
         issuer=resolved_issuer,
@@ -246,31 +263,79 @@ def run_browser_login(
         pkce=pkce,
     )
 
+    return PreparedBrowserLogin(
+        auth_url=auth_url,
+        _server=server,
+        _result=result,
+        _redirect_uri=redirect_uri,
+        _pkce=pkce,
+        _issuer=resolved_issuer,
+        _client_id=resolved_client_id,
+    )
+
+
+def complete_browser_login(
+    prepared: PreparedBrowserLogin,
+    *,
+    transport: HttpTransport | None = None,
+    timeout_seconds: float = 300.0,
+    open_browser: bool = True,
+) -> TokenResult:
+    """Attempts to auto-launch the browser to `prepared.auth_url` (best
+    effort — the URL should already have been shown to the user regardless
+    of this outcome) and waits for the local callback, then exchanges the
+    authorization code for tokens. Raises `AuthError` subclasses on
+    failure; never returns or logs a raw authorization code, token, or
+    callback query.
+    """
+    http = transport or UrllibHttpTransport()
+    server = prepared._server
+    server_thread = threading.Thread(target=server.handle_request, daemon=True)
+    server_thread.start()
+
     if open_browser:
-        opened = http.open_browser(auth_url)
+        opened = http.open_browser(prepared.auth_url)
         if not opened:
             server.server_close()
             raise BrowserLaunchFailedError()
 
-    completed = result.event.wait(timeout=timeout_seconds)
+    completed = prepared._result.event.wait(timeout=timeout_seconds)
     server.server_close()
 
     if not completed:
         raise CallbackTimeoutError()
-    if result.error == "state_mismatch":
+    if prepared._result.error == "state_mismatch":
         raise StateMismatchError()
-    if result.error:
+    if prepared._result.error:
         raise AuthError("callback_error", "Sign-in failed during the browser callback.")
-    if not result.code:
+    if not prepared._result.code:
         raise AuthError("callback_missing_code", "Sign-in callback did not include an authorization code.")
 
     return _exchange_code_for_tokens(
         http,
-        issuer=resolved_issuer,
-        client_id=resolved_client_id,
-        redirect_uri=redirect_uri,
-        pkce=pkce,
-        authorization_code=result.code,
+        issuer=prepared._issuer,
+        client_id=prepared._client_id,
+        redirect_uri=prepared._redirect_uri,
+        pkce=prepared._pkce,
+        authorization_code=prepared._result.code,
+    )
+
+
+def run_browser_login(
+    *,
+    transport: HttpTransport | None = None,
+    issuer: str | None = None,
+    client_id: str | None = None,
+    timeout_seconds: float = 300.0,
+    open_browser: bool = True,
+) -> TokenResult:
+    """Convenience wrapper: `prepare_browser_login()` +
+    `complete_browser_login()` in one call, for callers that don't need
+    `auth_url` surfaced separately before waiting for the callback.
+    """
+    prepared = prepare_browser_login(issuer=issuer, client_id=client_id)
+    return complete_browser_login(
+        prepared, transport=transport, timeout_seconds=timeout_seconds, open_browser=open_browser
     )
 
 
@@ -298,6 +363,27 @@ def _exchange_code_for_tokens(
     except (urllib.error.URLError, OSError, ValueError) as exc:
         raise AuthError("token_exchange_failed", "Token exchange failed.", retryable=True) from exc
     return _token_result_from_payload(payload)
+
+
+def chatgpt_account_id_from_id_token(id_token: str) -> str | None:
+    """Extracts `chatgpt_account_id` from the id_token's
+    `https://api.openai.com/auth` claim, without verifying the token's
+    signature — the claim is only used to populate the `ChatGPT-Account-Id`
+    request header the Responses API requires for ChatGPT-account sessions,
+    the same trust boundary the token itself already crossed at login."""
+    parts = id_token.split(".")
+    if len(parts) < 2:
+        return None
+    padded = parts[1] + "=" * (-len(parts[1]) % 4)
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(padded))
+    except (ValueError, json.JSONDecodeError):
+        return None
+    auth_claim = claims.get("https://api.openai.com/auth")
+    if not isinstance(auth_claim, dict):
+        return None
+    account_id = auth_claim.get("chatgpt_account_id")
+    return str(account_id) if account_id else None
 
 
 def _token_result_from_payload(payload: dict[str, Any]) -> TokenResult:

@@ -7,7 +7,7 @@ The CLI stores user state under `AGENTOS_HOME` or `~/.agentos`.
 
 ```bash
 agentos [--version] [--help]
-agentos run --once "Prompt" [--provider mock|codex|codex-cli] [--json]
+agentos run --once "Prompt" [--provider mock|codex|codex-cli] [--json]  # sends one message and exits — stateless, no continuing session
 agentos setup [--home PATH]
 agentos doctor [--json]
 agentos session list
@@ -28,14 +28,35 @@ Running bare `agentos` starts an interactive session only when stdin and stdout
 are TTYs. In pipes or redirects it exits with code `2` and points to
 `agentos run --once "<prompt>"`.
 
+## Canonical Session Runtime vs Stateless `--once`
+
+`agentos` (bare, or `agentos run` without `--once`) is the canonical
+interactive path: it starts a `ConversationRuntime`-owned session where every
+turn's context (prior user/assistant/tool messages, in order) is actually
+sent to the provider on the next turn, not just the newest prompt. This is
+true for both the Textual TUI and its legacy interactive fallback (used only
+when Textual itself fails to start) — both consume the same
+`ConversationRuntime.submit_turn()` event stream, so context carries across
+turns identically in either path.
+
+`agentos run --once "Prompt"` is the deliberate opposite: **"Sends one message and exits; it does not continue an interactive session. Use agentos for a continuing conversation."** It uses the stateless
+`stream_once(prompt)` compatibility shim — no prior turns, no provider
+continuation, no session-runtime persistence. This is intentional: `--once`
+exists for scripting/automation/one-shot JSONL output where a continuing
+session would be the wrong tool. `agentos run --once --help` shows the same
+guidance.
+
 ## AgentOS TUI
 
 Bare `agentos` and `agentos run` open the AgentOS TUI in a real terminal. The
 first screen shows `AgentOS`, a transcript, the composer placeholder
 `Type a message or / for commands`, and a footer with `cwd`, `provider`,
 `model`, `session`, `hooks`, `mode`, `last turn`, optionally `branch <name>`
-(omitted when the working directory is not inside a git repository or git is
-unavailable), and `total in/out N/M chars` (starts at `0/0` and accumulates
+(the current **git** branch; omitted when the working directory is not inside
+a git repository or git is unavailable), optionally `convo-branch <id>:<label>`
+(the active **conversation** branch — distinct from the git `branch` field
+above; shown once a turn has run, and updated immediately after a fork or a
+branch switch), and `total in/out N/M chars` (starts at `0/0` and accumulates
 across turns in the session).
 
 Type `/` or `/help` to show the command palette. The MVP commands are:
@@ -83,9 +104,22 @@ what the provider did before answering:
 Neither type changes the final assistant answer, which is rendered last.
 
 Unknown commands show `Unknown command. Next: /help` and return focus to the
-composer. `/session resume` opens the session resume flow; with no sessions it
-shows `No sessions found. Esc to return.` and with an unavailable session it
-shows `Session unavailable. Next: /session list`.
+composer. `/session resume` opens the session-and-branch picker: with no
+sessions it shows `No sessions found. Esc to return.`, with an unavailable
+session it shows `Session unavailable. Next: /session list`, and — this is
+the only place a session can be *statefully* resumed — if the resumed session
+has more than one conversation branch (a prior fork), a second picker step
+opens automatically (`Multiple branches found. Esc to keep the active branch.
+Enter to switch.`) before the transcript is ready. `Esc` on the session
+picker shows `Resume cancelled.`; `Esc` on the branch picker shows `Kept
+active branch.` and keeps whichever branch was active when the session was
+last saved.
+
+The shell command `agentos session resume SESSION_ID` is **inspection-only**
+— it prints the session's metadata and `Use agentos to resume a continuing
+conversation.`; it never starts a turn, since a one-shot shell command exits
+before any turn could run and cannot host a continuing conversation. Use the
+TUI's `/session resume` picker (above) to actually resume one.
 
 Keyboard behavior:
 
@@ -101,9 +135,14 @@ Keyboard behavior:
   transcript; further `Tab` presses step to older messages, `Shift+Tab` steps
   back toward newer ones, and focus wraps between the oldest message and the
   composer at either end. The focused message is shown with an accent border.
-- `f`, pressed on a focused message, forks a new branch from that message's
-  turn — the next message you send continues from there instead of the main
-  thread.
+- `f`, pressed on a focused message, forks a new conversation branch from
+  that message's turn immediately — the `convo-branch` footer indicator
+  updates right away (not only after your next message), the fork shares the
+  prior messages as an immutable prefix (nothing is copied or duplicated),
+  and it never inherits the source branch's provider continuation, since the
+  two branches can diverge from this point on. The fork is persisted right
+  away too, so it survives even if you never send another message before
+  closing AgentOS.
 - `c`, pressed on a focused message, copies that message's full text to the
   system clipboard (via the terminal's OSC 52 escape sequence) and shows a
   "복사 시도됨" (copy attempted) notification. OSC 52 has no confirmation from
@@ -116,6 +155,32 @@ Keyboard behavior:
 When stdin or stdout is not a TTY, the TUI is not initialized. The command exits
 `2`, stdout stays empty, and stderr contains
 `Interactive mode requires a TTY. Next: agentos run --once "<prompt>".`
+
+## Recovery Matrix
+
+Every failure mode below produces a sanitized outcome plus an explicit next
+action in both the TUI transcript and the JSONL event stream — never a raw
+stack trace, provider stderr, token, or credential.
+
+| Failure | Sanitized outcome shown | Next action |
+| --- | --- | --- |
+| Unauthenticated (Codex turn sent without sign-in) | `AgentOS-owned Codex sign-in is required.` | `Open another terminal and run: agentos llm login --provider codex` then `Then return here and run /status.` |
+| Transport error (network/streaming failure) | The sanitized provider error message, e.g. `<message> Next: /status` | `Resend your message.` |
+| Snapshot corruption (unreadable/malformed `.conversation-snapshot.json`) | Resume proceeds transparently via replay | The corrupted snapshot is discarded; state is rebuilt entirely from the durable `.conversation-events.jsonl` log — no crash, no data loss for already-committed turns |
+| Replay across restart/resume | Prior turns' context is intact; no provider continuation is reused | A new process always starts a fresh transport-session epoch, so a persisted continuation handle from a previous run never matches and is never reused — the next turn falls back to full context replay automatically |
+| Cancel (`Esc` while a turn is waiting) | `Turn cancelled.` | Composer is refocused; no partial user/assistant message, continuation, or branch head is committed — the conversation state is exactly as it was before the cancelled turn |
+
+`/login`'s browser-first flow always shows `Open this URL to sign in:` followed
+by the actual authorize URL — shown immediately, before AgentOS even attempts
+to auto-launch a browser, since there is no way to know in advance whether
+auto-launch will succeed (headless/remote/sandboxed sessions commonly can't
+launch one at all). If the browser cannot be opened automatically, AgentOS
+falls back to device-code sign-in in the same flow and shows a second hint,
+`Could not open a browser automatically. Open <verification URL> and enter
+code: <code>` (see [Native Codex Sign-In](#native-codex-sign-in---provider-codex)).
+Both the TUI and the plain `agentos llm login` shell command show these
+hints (the shell command writes them to stderr, keeping `--json` stdout as
+exactly the final sanitized status payload).
 
 ## JSONL
 
@@ -179,6 +244,52 @@ bootstrap time. Without that PASS line, do not start daemon/server-client
 migration; keep the external CLI compatibility path and record the benchmark
 evidence.
 
+### Session Runtime Benchmark
+
+Every provider declares an explicit capability (`ProviderCapabilities`,
+`agentos/llm/types.py`): `context_aware=False` providers only support the
+stateless `stream_once(prompt)` **compatibility fallback**, the same shim
+`agentos run --once` uses — they are never silently selected for the
+canonical multi-turn interactive path. Callers that need context-aware
+invocation and get an unsupported provider receive a sanitized
+`unsupported_capability` error with an explicit recovery action, not a
+silent context drop or a stack trace.
+
+```bash
+uv run python -m agentos.runtime.bench --provider mock --runs 5 \
+  --first-prompt "Remember AGENTOS_SESSION_MARKER=oak." \
+  --second-prompt "What is AGENTOS_SESSION_MARKER?" \
+  --assert-session-runtime
+```
+
+Runs one discarded warmup trial, then 5 paired two-turn trials alternating
+continuation-reuse and forced-full-context-replay second turns, recording
+`context_build_ms` (time to build the deterministic provider-bound context)
+and `first_event_ms` for every sample. `PASS session-runtime-benchmark`
+requires mock's `context_build_ms` p95 `<= 50ms` and the marker planted in
+the first turn to survive into every second-turn response.
+
+For the native `codex` provider, the same command requires explicit opt-in:
+
+```bash
+AGENTOS_CODEX_INTEGRATION=1 uv run python -m agentos.runtime.bench --provider codex --runs 5 \
+  --first-prompt "Remember AGENTOS_SESSION_MARKER=oak." \
+  --second-prompt "What is AGENTOS_SESSION_MARKER?" \
+  --assert-session-runtime
+```
+
+Without `AGENTOS_CODEX_INTEGRATION=1` it prints `PASS
+session-runtime-benchmark skipped=integration-disabled` and exits `0` — it
+never silently runs against your real account. With the flag set, it runs an
+authenticated preflight first; if unauthenticated it prints `STOP
+session-runtime-benchmark unauthenticated` and exits `2`. Once opted in and
+authenticated it never skips again: the outcome is always `PASS
+session-runtime-benchmark` (context p95 within threshold, median second-turn
+`first_event_ms` at least 250ms lower than an equivalent stateless
+invocation, and the marker preserved across five linked turns) or a sanitized
+`FAIL session-runtime-benchmark stop=daemon-follow-up-not-approved` — a
+threshold failure never auto-proposes a daemon/client split.
+
 ## Hooks
 
 Hooks are built-in declarative policies from `AGENTOS_HOME/config.toml` with
@@ -201,12 +312,37 @@ raw token, raw key, raw environment, or raw provider stderr.
 
 Sessions are local user data under `AGENTOS_HOME/sessions`:
 
-- `<uuid>.jsonl`
-- `<uuid>.meta.json`
+- `<uuid>.jsonl` — legacy `agentos.session/v1` append-only CLI event log
+  (`input_received`, wrapped provider events). Still written on every turn
+  for `/tree` and inspection commands.
+- `<uuid>.meta.json` — session metadata (provider, mode, timestamps).
+- `<uuid>.conversation-events.jsonl` — durable `agentos.conversation-session/v1`
+  `turn_committed(sequence=N)` log: each line carries the full post-turn
+  conversation state. Written (fsync'd) *before* the paired snapshot below,
+  so a crash between the two is always recoverable by replay.
+- `<uuid>.conversation-snapshot.json` — the latest conversation state,
+  written to `.tmp`, fsync'd, atomically renamed into place, then the
+  containing directory is fsync'd. Resume reads this snapshot plus any
+  `turn_committed` events newer than it; a missing, unreadable, or
+  interrupted-rename (orphaned `.tmp`) snapshot is simply treated as absent
+  and rebuilt entirely from the events log.
+
+A session created before this conversation-runtime existed has only the
+first two files. Resuming it migrates the legacy JSONL log read-only (it is
+never written to using the new protocol): assistant/tool text is recovered
+verbatim from `message_delta`/`tool_result` payloads, while each legacy
+user turn — whose prompt text was never persisted in a recoverable form,
+only its length — is represented as an explicitly labeled placeholder
+message (`[legacy session: original prompt text was not persisted, ...]`).
+A migrated legacy session always resumes via full replay and never attaches
+a provider continuation, since the legacy format predates continuation
+entirely — this is the same "no reuse" property every fresh session gets
+after a real process restart (see Recovery Matrix above).
 
 There is no automatic deletion. `session delete` and `session prune` preview
 their target and require an interactive confirmation or `--yes`. Without a TTY
-and without `--yes`, deletion exits `2` and changes nothing.
+and without `--yes`, deletion exits `2` and changes nothing; deleting a
+session removes all four file variants above.
 
 ## Credential Boundary
 

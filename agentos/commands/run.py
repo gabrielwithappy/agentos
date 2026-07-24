@@ -17,7 +17,14 @@ console = Console()
 def main(
     prompt: str | None = typer.Argument(None),
     json_output: bool = typer.Option(False, "--json", help="Emit sanitized JSONL events"),
-    once: bool = typer.Option(False, "--once", help="Run one LLM turn and exit"),
+    once: bool = typer.Option(
+        False,
+        "--once",
+        help=(
+            "Sends one message and exits; it does not continue an interactive "
+            "session. Use agentos for a continuing conversation."
+        ),
+    ),
     provider: str | None = typer.Option(None, "--provider", help="LLM provider name"),
 ):
     """Start the interactive agent chat session."""
@@ -29,6 +36,11 @@ def main(
     if once:
         if prompt is None or not prompt.strip():
             typer.echo("A prompt is required. Next: agentos run --once \"<prompt>\".", err=True)
+            typer.echo(
+                "--once sends one message and exits; it does not continue an interactive session. "
+                "Use agentos for a continuing conversation.",
+                err=True,
+            )
             raise typer.Exit(2)
         try:
             prompt = apply_input_hooks(prompt)

@@ -10,6 +10,50 @@ EventType = Literal[
 
 
 @dataclass(frozen=True)
+class InvocationMessage:
+    """Provider-bound message for the request-context invocation protocol.
+
+    This is the provider-facing counterpart of `agentos.conversation.ConversationMessage`:
+    it carries only what a provider needs (`role`, `text`) plus opaque
+    `metadata`, never the conversation runtime's internal bookkeeping
+    (`id`, `source`, `parent_message_id`).
+    """
+
+    role: Literal["system", "user", "assistant", "tool"]
+    text: str
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class InvocationRequest:
+    """Context-aware provider invocation request.
+
+    Replaces a bare prompt string with ordered `messages` plus an opaque
+    `continuation` handle. Providers that cannot honor multi-message
+    context (see `ProviderCapabilities.context_aware`) reject this in favor
+    of the `stream_once(prompt)` compatibility shim.
+    """
+
+    messages: list[InvocationMessage]
+    continuation: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ProviderCapabilities:
+    """Explicit capability declaration for a provider.
+
+    `context_aware=False` means the provider only supports the stateless
+    `stream_once(prompt)` shim and must not be selected for the canonical
+    multi-turn interactive path; callers detect this explicitly instead of
+    guessing from provider name.
+    """
+
+    context_aware: bool
+    supports_continuation: bool = False
+
+
+@dataclass(frozen=True)
 class ProviderStatus:
     provider: str
     mode: str

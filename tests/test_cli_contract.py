@@ -169,7 +169,12 @@ def test_run_once_json_codex_native_authenticated_stream_redacts_secret(tmp_path
     original_init = codex_native_module.CodexNativeProvider.__init__
 
     def patched_init(self, *, store=None, transport_factory=None, model=codex_native_module.DEFAULT_MODEL):
-        original_init(self, store=AuthFileStore(home=home), transport_factory=lambda token: FakeTransport(), model=model)
+        original_init(
+            self,
+            store=AuthFileStore(home=home),
+            transport_factory=lambda token, account_id: FakeTransport(),
+            model=model,
+        )
 
     monkeypatch.setattr(codex_native_module.CodexNativeProvider, "__init__", patched_init)
 
@@ -180,3 +185,40 @@ def test_run_once_json_codex_native_authenticated_stream_redacts_secret(tmp_path
     assert [event["type"] for event in events] == ["start", "message_delta", "done"]
     assert "SENTINEL_SECRET" not in result.stdout
     assert "SENTINEL_SECRET" not in result.stderr
+
+
+# ── PI session runtime Task 6 Step 2: stateless --once vs continuing conversation ──
+
+
+def test_run_once_help_text_clarifies_it_is_stateless_not_a_continuing_conversation():
+    # Rich wraps/truncates the `--help` panel based on terminal width; pin a
+    # wide `COLUMNS` so this assertion doesn't depend on the runner's
+    # ambient terminal size.
+    wide_runner = CliRunner(env={"COLUMNS": "200"})
+    result = wide_runner.invoke(app, ["run", "--help"])
+    normalized = " ".join(result.output.split())
+
+    assert result.exit_code == 0
+    assert "does not continue an interactive session" in normalized
+    assert "Use agentos for a continuing conversation." in normalized
+
+
+def test_run_once_missing_prompt_error_also_explains_stateless_scope():
+    result = runner.invoke(app, ["run", "--once"])
+
+    assert result.exit_code == 2
+    assert "does not continue an interactive session" in result.stderr
+    assert "Use agentos for a continuing conversation." in result.stderr
+
+
+def test_session_resume_shell_command_is_inspection_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    from agentos.terminal.sessions import create_session
+
+    session_id = create_session(provider="mock", mode="interactive")
+
+    result = runner.invoke(app, ["session", "resume", session_id])
+
+    assert result.exit_code == 0
+    assert "inspection only" in result.output
+    assert "Use agentos to resume a continuing conversation." in result.output

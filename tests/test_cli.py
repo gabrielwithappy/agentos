@@ -38,8 +38,8 @@ def test_doctor_command_missing_env(tmp_path):
         assert "not configured at" in result.stdout
         assert "Diagnosis completed with errors" in result.stdout
 
-def test_run_command():
-    result = runner.invoke(app, ["run", "--once", "hello"])
+def test_run_command(tmp_path):
+    result = runner.invoke(app, ["run", "--once", "hello"], env={"AGENTOS_HOME": str(tmp_path)})
     assert result.exit_code == 0
     assert "Mock response" in result.stdout
 

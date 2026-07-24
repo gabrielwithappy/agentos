@@ -45,12 +45,17 @@ def show(session_id: str) -> None:
 
 @app.command()
 def resume(session_id: str) -> None:
+    """Inspection-only: shows a session's metadata. Does not continue it —
+    a shell command exits before any turn could run, so it cannot host a
+    continuing conversation. Use `agentos` (the TUI's `/session resume`
+    picker) to actually resume one."""
     try:
         meta, _ = sessions.read_session(session_id)
     except sessions.SessionError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(2)
-    console.print(f"Resume session {meta['session_id']} with provider {meta['provider']}.")
+    console.print(f"Session {meta['session_id']} (provider={meta['provider']}): inspection only.")
+    console.print("Use agentos to resume a continuing conversation.")
 
 
 @app.command()

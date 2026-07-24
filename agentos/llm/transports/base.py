@@ -5,6 +5,9 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 from uuid import uuid4
 
+from agentos.llm.redaction import redact_text
+from agentos.llm.types import InvocationRequest
+
 
 @dataclass(frozen=True)
 class TransportRequest:
@@ -24,7 +27,7 @@ class TransportRequest:
     def to_request_body(self) -> dict[str, Any]:
         body: dict[str, Any] = {
             "model": self.model,
-            "store": True,
+            "store": False,
             "stream": True,
             "input": self.messages,
         }
@@ -61,3 +64,37 @@ class TransportError(Exception):
 
 class TransportProtocol(Protocol):
     def stream(self, request: TransportRequest) -> Iterator[ProviderEvent]: ...
+
+
+def build_transport_request(
+    *, model: str, invocation_request: InvocationRequest, session_id: str | None = None
+) -> TransportRequest:
+    """Maps a provider-independent `InvocationRequest` to a Codex Responses
+    `TransportRequest`.
+
+    `system`-role messages become `instructions` (Responses has no `system`
+    input role); every other message keeps its caller-decided order.
+    `invocation_request.continuation` becomes `previous_response_id`
+    verbatim — it is an opaque handle, never inspected or logged. When
+    `continuation` is absent (fresh session, expired handle, restart/resume)
+    `previous_response_id` stays unset and `messages` carries the full
+    replay the caller already assembled, since there is no provider-side
+    history to resume from.
+    """
+    instructions_parts = [redact_text(m.text) for m in invocation_request.messages if m.role == "system"]
+    instructions = "\n\n".join(instructions_parts) if instructions_parts else None
+    messages = [
+        {"role": m.role, "content": redact_text(m.text)}
+        for m in invocation_request.messages
+        if m.role != "system"
+    ]
+    kwargs: dict[str, Any] = {}
+    if session_id is not None:
+        kwargs["session_id"] = session_id
+    return TransportRequest(
+        model=model,
+        messages=messages,
+        instructions=instructions,
+        previous_response_id=invocation_request.continuation,
+        **kwargs,
+    )

@@ -161,14 +161,15 @@ async def main():
     os.environ["AGENTOS_HOME"] = str(tmp / "home")
     app = AgentOSTui(provider="mock")
     async with app.run_test() as pilot:
-        assert "AgentOS" in str(pilot.app.query_one("#transcript").render())
+        transcript = pilot.app.query_one("#transcript")
+        assert any("AgentOS" in message.text for message in transcript._messages)
         status = str(pilot.app.query_one("#status").render())
         for label in ("cwd", "provider", "model", "session", "hooks", "mode", "last turn"):
             assert label in status
         composer = pilot.app.query_one("#composer")
         composer.value = "/help"
         await pilot.press("enter")
-        assert "/session resume" in str(pilot.app.query_one("#transcript").render())
+        assert any("/session resume" in message.text for message in transcript._messages)
         composer.value = "/exit"
         await pilot.press("enter")
 

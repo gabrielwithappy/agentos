@@ -149,7 +149,13 @@ def delete_session(session_id: str, home: str | Path | None = None) -> None:
     sid = validate_session_id(session_id)
     root = sessions_dir(home)
     found = False
-    for suffix in (".jsonl", ".meta.json"):
+    for suffix in (
+        ".jsonl",
+        ".meta.json",
+        ".conversation-events.jsonl",
+        ".conversation-snapshot.json",
+        ".conversation-snapshot.json.tmp",
+    ):
         path = root / f"{sid}{suffix}"
         if path.exists():
             path.unlink()
@@ -163,3 +169,46 @@ def prune_before(date_text: str, home: str | Path | None = None) -> list[str]:
     for sid in matched:
         delete_session(sid, home)
     return matched
+
+
+def conversation_events_path(session_id: str, home: str | Path | None = None) -> Path:
+    sid = validate_session_id(session_id)
+    return sessions_dir(home) / f"{sid}.conversation-events.jsonl"
+
+
+def conversation_snapshot_path(session_id: str, home: str | Path | None = None) -> Path:
+    sid = validate_session_id(session_id)
+    return sessions_dir(home) / f"{sid}.conversation-snapshot.json"
+
+
+def resume_conversation_state(session_id: str, home: str | Path | None = None):
+    """Resolves the `ConversationState` to resume `session_id` from.
+
+    Prefers the new conversation-runtime events/snapshot pair (see
+    `agentos.conversation.persistence`) if either exists. If neither
+    exists but a legacy `agentos.session/v1` `.jsonl`/`.meta.json` pair
+    exists, migrates it read-only (never writes back to the legacy files).
+    Returns a brand new empty state if this is a session id AgentOS has
+    never persisted conversation-runtime state for.
+    """
+    from agentos.conversation.persistence import empty_state, migrate_legacy_state, rebuild_state
+
+    sid = validate_session_id(session_id)
+    events_path = conversation_events_path(sid, home)
+    snapshot_path = conversation_snapshot_path(sid, home)
+
+    rebuilt = rebuild_state(events_path, snapshot_path)
+    if rebuilt is not None:
+        return rebuilt
+
+    legacy_jsonl = sessions_dir(home) / f"{sid}.jsonl"
+    legacy_meta = sessions_dir(home) / f"{sid}.meta.json"
+    if legacy_jsonl.is_file() and legacy_meta.is_file():
+        _meta, legacy_events = read_session(sid, home)
+        # `create_session()` always creates an empty `.jsonl` up front, so
+        # file *existence* alone does not mean there is prior conversation
+        # content to migrate — only non-empty legacy events do.
+        if legacy_events:
+            return migrate_legacy_state(sid, legacy_events)
+
+    return empty_state(sid)

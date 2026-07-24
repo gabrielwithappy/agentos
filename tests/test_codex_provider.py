@@ -8,9 +8,16 @@ from typer.testing import CliRunner
 
 from agentos.cli import app
 from agentos.llm.providers.codex_cli import CodexCliProvider
+from agentos.llm.types import ProviderCapabilities
 
 
 runner = CliRunner()
+
+
+def test_codex_cli_provider_declares_context_aware_false_capability():
+    capabilities = CodexCliProvider().capabilities()
+
+    assert capabilities == ProviderCapabilities(context_aware=False, supports_continuation=False)
 
 
 def json_lines(output: str) -> list[dict]:

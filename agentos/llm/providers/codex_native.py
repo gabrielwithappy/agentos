@@ -6,11 +6,16 @@ from typing import Any
 from agentos.llm.auth import openai_codex as auth
 from agentos.llm.auth.store import AuthFileStore
 from agentos.llm.redaction import redact_text, sanitize
-from agentos.llm.transports.base import ProviderEvent, TransportError, TransportRequest
+from agentos.llm.transports.base import (
+    ProviderEvent,
+    TransportError,
+    TransportRequest,
+    build_transport_request,
+)
 from agentos.llm.transports.openai_codex_responses import CodexNativeTransport
-from agentos.llm.types import LLMEvent, ProviderStatus
+from agentos.llm.types import InvocationRequest, LLMEvent, ProviderCapabilities, ProviderStatus
 
-DEFAULT_MODEL = "gpt-5-codex"
+DEFAULT_MODEL = "gpt-5.5"
 NATIVE_MODE = "account-login"
 RECOVERY_LOGIN = "Run: agentos llm login --provider codex"
 
@@ -35,7 +40,10 @@ class CodexNativeProvider:
     ):
         self._store = store or AuthFileStore()
         self._transport_factory = transport_factory or (
-            lambda token: CodexNativeTransport(access_token_provider=lambda: token)
+            lambda token, account_id: CodexNativeTransport(
+                access_token_provider=lambda: token,
+                account_id_provider=lambda: account_id,
+            )
         )
         self._model = model
 
@@ -64,33 +72,71 @@ class CodexNativeProvider:
         )
 
     def login(self) -> ProviderStatus:
-        try:
-            tokens = auth.run_browser_login()
-        except auth.BrowserLaunchFailedError:
-            tokens = self._device_code_login()
-        except auth.AuthError as exc:
-            return self._login_failed_status(exc)
-
-        auth.persist_tokens(tokens, store=self._store)
-        return ProviderStatus(
-            provider=self.name,
-            mode=self.mode,
-            credential_present=True,
-            authenticated=True,
-            persistent_credential=True,
-            status="authenticated",
-            message="Codex sign-in completed.",
-        )
+        status: ProviderStatus | None = None
+        for kind, value in self._login_steps():
+            if kind == "status":
+                status = value
+        assert status is not None  # _login_steps() always yields exactly one "status"
+        return status
 
     def login_updates(self) -> Iterator[dict[str, Any]]:
-        """Same login lifecycle as `login()`, emitting a hint before the
-        browser attempt so CLI/TUI callers show progress."""
-        yield {"type": "hint", "text": "Complete sign-in in the browser, then return here."}
-        yield {"type": "result", "payload": self.login().to_dict()}
+        """Same login lifecycle as `login()`, but streams a `hint` for every
+        actionable URL/code as soon as it is known — the browser sign-in
+        URL immediately (shown regardless of whether auto-launch succeeds,
+        since the caller has no way to know that in advance), and the
+        device-code verification URL/code if browser auto-launch fails and
+        AgentOS falls back to device sign-in."""
+        for kind, value in self._login_steps():
+            if kind == "hint":
+                yield {"type": "hint", "text": value}
+            else:
+                yield {"type": "result", "payload": value.to_dict()}
 
-    def _device_code_login(self):
-        device_code = auth.request_device_code()
-        return auth.poll_device_code(device_code)
+    def _login_steps(self) -> Iterator[tuple[str, Any]]:
+        """Shared implementation for `login()` and `login_updates()`. Yields
+        `("hint", text)` tuples as progress becomes known, and exactly one
+        `("status", ProviderStatus)` as the final item."""
+        prepared = auth.prepare_browser_login()
+        yield ("hint", f"Open this URL to sign in:\n{prepared.auth_url}")
+        try:
+            tokens = auth.complete_browser_login(prepared)
+        except auth.BrowserLaunchFailedError:
+            try:
+                device_code = auth.request_device_code()
+            except auth.AuthError as exc:
+                # The device-code fallback is itself a network call and can
+                # fail independently of the browser attempt (e.g. no network
+                # access to the auth issuer) — this must not propagate as an
+                # unhandled exception out of a Textual worker thread.
+                yield ("status", self._login_failed_status(exc))
+                return
+            yield (
+                "hint",
+                "Could not open a browser automatically.\n"
+                f"Open {device_code.verification_url} and enter code: {device_code.user_code}",
+            )
+            try:
+                tokens = auth.poll_device_code(device_code)
+            except auth.AuthError as exc:
+                yield ("status", self._login_failed_status(exc))
+                return
+        except auth.AuthError as exc:
+            yield ("status", self._login_failed_status(exc))
+            return
+
+        auth.persist_tokens(tokens, store=self._store)
+        yield (
+            "status",
+            ProviderStatus(
+                provider=self.name,
+                mode=self.mode,
+                credential_present=True,
+                authenticated=True,
+                persistent_credential=True,
+                status="authenticated",
+                message="Codex sign-in completed.",
+            ),
+        )
 
     def _login_failed_status(self, exc: auth.AuthError) -> ProviderStatus:
         return ProviderStatus(
@@ -121,45 +167,71 @@ class CodexNativeProvider:
             ),
         )
 
+    def capabilities(self) -> ProviderCapabilities:
+        return ProviderCapabilities(context_aware=True, supports_continuation=True)
+
     def stream_once(self, prompt: str) -> Iterator[LLMEvent]:
         """Stateless compatibility shim: wraps `prompt` as a single-message
-        request with no continuation. The canonical multi-turn path is the
-        request-context invocation protocol added in a later task."""
-        resolved = auth.resolve_status(self._store)
-        if not resolved.authenticated:
-            yield self._error_event(
-                code="unauthenticated",
-                message="AgentOS-owned Codex sign-in is required.",
-                recovery=RECOVERY_LOGIN,
-                retryable=False,
-            )
+        request with no continuation. The canonical multi-turn path is
+        `stream_context()`."""
+        credentials = self._authenticated_credentials()
+        if credentials is None:
+            yield self._unauthenticated_event()
             return
+        access_token, account_id = credentials
 
-        record = self._store.get(auth.AUTH_PROVIDER_NAME)
-        access_token = record.secrets.get("access_token") if record else None
-        if not access_token:
-            yield self._error_event(
-                code="unauthenticated",
-                message="AgentOS-owned Codex sign-in is required.",
-                recovery=RECOVERY_LOGIN,
-                retryable=False,
-            )
-            return
-
-        transport = self._transport_factory(access_token)
-        request = TransportRequest(
+        transport_request = TransportRequest(
             model=self._model,
             messages=[{"role": "user", "content": redact_text(prompt)}],
         )
+        yield from self._stream_via_transport(access_token, account_id, transport_request)
+
+    def stream_context(self, request: InvocationRequest) -> Iterator[LLMEvent]:
+        """Canonical multi-turn path: sends the caller-ordered conversation
+        context plus an opaque continuation handle (if any) to the
+        transport. The handle is passed through verbatim — never inspected,
+        logged, or exposed raw outside `LLMEvent.metadata`."""
+        credentials = self._authenticated_credentials()
+        if credentials is None:
+            yield self._unauthenticated_event()
+            return
+        access_token, account_id = credentials
+
+        transport_request = build_transport_request(model=self._model, invocation_request=request)
+        yield from self._stream_via_transport(access_token, account_id, transport_request)
+
+    def _authenticated_credentials(self) -> tuple[str, str | None] | None:
+        resolved = auth.resolve_status(self._store)
+        if not resolved.authenticated:
+            return None
+        record = self._store.get(auth.AUTH_PROVIDER_NAME)
+        if record is None:
+            return None
+        access_token = record.secrets.get("access_token")
+        if not access_token:
+            return None
+        id_token = record.secrets.get("id_token")
+        account_id = auth.chatgpt_account_id_from_id_token(id_token) if id_token else None
+        return access_token, account_id
+
+    def _unauthenticated_event(self) -> LLMEvent:
+        return self._error_event(
+            code="unauthenticated",
+            message="AgentOS-owned Codex sign-in is required.",
+            recovery=RECOVERY_LOGIN,
+            retryable=False,
+        )
+
+    def _stream_via_transport(
+        self, access_token: str, account_id: str | None, transport_request: TransportRequest
+    ) -> Iterator[LLMEvent]:
+        transport = self._transport_factory(access_token, account_id)
 
         started = False
-        output_chars = 0
         try:
-            for event in transport.stream(request):
+            for event in transport.stream(transport_request):
                 if event.type == "start":
                     started = True
-                if event.type == "message_delta" and event.text:
-                    output_chars += len(event.text)
                 yield self._to_llm_event(event)
         except TransportError as exc:
             if not started:
@@ -172,14 +244,17 @@ class CodexNativeProvider:
             )
 
     def _to_llm_event(self, event: ProviderEvent) -> LLMEvent:
+        metadata = dict(event.metadata) if event.metadata else {}
+        if event.response_id:
+            metadata["continuation"] = event.response_id
         return LLMEvent(
             type=event.type,
             provider=self.name,
             mode=self.mode,
-            text=event.text,
+            text=redact_text(event.text) if event.text is not None else None,
             usage=event.usage,
             error=sanitize(event.error) if event.error else None,
-            metadata=sanitize(event.metadata) if event.metadata else {},
+            metadata=sanitize(metadata) if metadata else {},
         )
 
     def _error_event(self, *, code: str, message: str, recovery: str, retryable: bool) -> LLMEvent:

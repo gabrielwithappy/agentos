@@ -3,15 +3,55 @@ import json
 import typer
 from rich.console import Console
 
+from agentos.runtime.bench import PASS_THRESHOLD_MS
+from agentos.runtime.launcher import resolve_agentos_launcher
 from agentos.terminal.paths import state_status
 
 app = typer.Typer(help="Check system dependencies and state")
 console = Console()
 
+
+def runtime_status() -> dict[str, object]:
+    return {
+        "schema_version": "agentos.runtime-health/v1",
+        "status": "ok",
+        "phase_timings": "available",
+        "stale_runtime_cleanup": "not_required",
+        "benchmark_command": (
+            'uv run python -m agentos.runtime.bench --prompt "Reply with OK only." '
+            "--provider codex --assert-warm-faster"
+        ),
+        "pass_threshold_ms": PASS_THRESHOLD_MS,
+    }
+
+
+def launcher_status() -> dict[str, object]:
+    payload = resolve_agentos_launcher().to_dict()
+    payload.update({
+        "schema_version": "agentos.launcher-health/v1",
+    })
+    return payload
+
+
+def recovery_status(configured: bool) -> dict[str, str]:
+    if not configured:
+        return {
+            "status": "state_not_configured",
+            "next_action": "Run: agentos setup",
+        }
+    return {
+        "status": "ready",
+        "next_action": "Run benchmark before proposing daemon/server-client migration.",
+    }
+
 @app.callback(invoke_without_command=True)
 def main(json_output: bool = typer.Option(False, "--json", help="Emit sanitized JSON status.")):
     """Diagnose the AgentOS installation."""
     status = state_status()
+    status["launcher"] = launcher_status()
+    status["runtime"] = runtime_status()
+    status["recovery"] = recovery_status(bool(status["configured"]))
+    status["next_action"] = status["recovery"]["next_action"]
     if json_output:
         typer.echo(json.dumps(status, sort_keys=True))
         raise typer.Exit(0 if status["configured"] else 1)

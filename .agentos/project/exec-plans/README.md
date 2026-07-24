@@ -3,13 +3,15 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-23T16:20:00Z
+> Generated at: 2026-07-24T04:02:56Z
 
 ## Active Plans
 - older active plans omitted=0
+- `완료` [AgentOS PI형 세션 런타임 TUI 아키텍처 구현 계획](.agentos/project/exec-plans/active/2026-07-24-agentos-pi-session-runtime-tui-architecture.md) | reviewed_evidence=invalid | outcome: 사용자는 TUI에서 이전 대화를 실제 다음 답변의 문맥으로 유지하고, 세션 재개와 branch가 올바른 대화 경로를 이어가며, provider 지연/실패 시 명확한 복구를 받는다. | progress: native predecessor(2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport)가 완료되어 `predecessor_completion_commit: 923d35e`가 기록되었고 sha…
 - `구현 계획 (리뷰 대기)` [AgentOS TUI — pi TUI 클로닝 Phase 6: 입력 상호작용 기반 구현 계획](.agentos/project/exec-plans/active/2026-07-23-tui-pi-clone-phase6.md) | outcome: 사용자는 `/capabilities`에서 이식 기능의 준비 상태를 확인하고, slash command와 지원하는 argument를 Tab으로 완성하며, 기존 메시지 포커스 이동과 충돌 없는 단축키 안내를 받는다. | progress: 계획 초안 작성 완료, Gate 2 리뷰 대기. Phase 5가 완료 전이면 Task 0에서 중단한다.
 - `리뷰 대기 (완료 후 '완료'로 변경)` [AgentOS TUI — pi/hermes TUI 클론 (Phase 5: 설정 관리 UI `/settings`) 구현 계획](.agentos/project/exec-plans/active/2026-07-23-tui-pi-clone-phase5.md) | progress: 계획 초안 작성, Gate 2 리뷰 대기 중 (아직 서브에이전트 리뷰를 요청하지 않음 — 이 세션의 목적은 계획 문서 작성까지)
-- `구현 계획 (리뷰 대기)` [AgentOS pi-style LLM runtime native auth/transport 구현 계획](.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport.md) | reviewed | progress: core foundation은 완료됐고, native OAuth/transport 범위는 아직 구현되지 않았다. 이번 계획은 deferred 범위를 implementation-ready execution plan으로 구체화하는 단계다.
+- `완료` [AgentOS pi-style LLM runtime native auth/transport 구현 계획](.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport.md) | reviewed_evidence=invalid | progress: core foundation은 완료됐고, native OAuth/transport 범위는 아직 구현되지 않았다. 이번 계획은 deferred 범위를 implementation-ready execution plan으로 구체화하는 단계다.
+- `완료` [AgentOS LLM 호출 런타임 아키텍처 개선 구현 계획](.agentos/project/exec-plans/active/2026-07-23-agentos-llm-invocation-runtime-architecture.md) | reviewed_evidence=invalid | outcome: 사용자는 설치된 `agentos` command를 기본 경로로 써야 하는지, `uv run`이 실제 병목인지, 후속 daemon 분리를 진행해도 되는지를 benchmark와 복구 절차로 명확히 판단할 수 있다. 바뀌지 않는 경계는 현재 `codex`… | progress: 측정 우선의 invocation runtime surface, typed invocation contract, launcher/recovery guidance, docs/project boundary, focused tests, isolated in…
 - `완료` [AgentOS LLM Codex Streaming Structure 구현 계획](.agentos/project/exec-plans/active/2026-07-23-agentos-llm-codex-streaming-structure.md) | reviewed_evidence=invalid | outcome: 사용자는 `agentos run --once --provider codex --json`과 TUI에서 Codex 응답이 프로세스 종료 후 한꺼번에 나타나는 대신, 생각 중 표시와 도구 실행 표시, 답변 텍스트를 더 빨리 보게 된다. 바뀌지 않는 경계… | progress: Gate 2 리뷰를 현재 plan hash 기준으로 재기록해 닫은 뒤, `CodexCliProvider`를 live stdout streaming 구조로 전환하고 focused/full verification까지 완료했다.
 
 ## Archived Plans

@@ -5,6 +5,7 @@ import os
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
+from dataclasses import replace
 from typing import Any, Protocol
 
 from agentos.llm.redaction import redact_text
@@ -54,8 +55,17 @@ class UrllibSseHttpClient:
             with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310
                 for raw_line in response:
                     yield raw_line.decode("utf-8", errors="replace").rstrip("\n")
+        except urllib.error.HTTPError as exc:
+            detail = redact_text(exc.read().decode("utf-8", errors="replace"))[:500]
+            raise TransportError(
+                "sse_http_error",
+                f"Streaming request failed (HTTP {exc.code}): {detail}",
+                retryable=exc.code in (429, 500, 502, 503, 504),
+            ) from exc
         except urllib.error.URLError as exc:
-            raise TransportError("sse_connection_failed", "Streaming connection failed.", retryable=True) from exc
+            raise TransportError(
+                "sse_connection_failed", f"Streaming connection failed: {exc.reason}", retryable=True
+            ) from exc
 
 
 class WebSocketClient(Protocol):
@@ -185,12 +195,14 @@ class CodexNativeTransport:
         self,
         *,
         access_token_provider,
+        account_id_provider=lambda: None,
         base_url: str | None = None,
         sse_client: SseHttpClient | None = None,
         websocket_client: WebSocketClient | None = None,
         force_sse: bool = False,
     ):
         self._access_token_provider = access_token_provider
+        self._account_id_provider = account_id_provider
         self._base_url = base_url
         self._sse_client = sse_client or UrllibSseHttpClient()
         self._websocket_client = websocket_client if not force_sse else None
@@ -198,14 +210,27 @@ class CodexNativeTransport:
 
     def _headers(self) -> dict[str, str]:
         token = self._access_token_provider()
-        return {
+        headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}",
             "Accept": "text/event-stream",
+            "originator": "codex_cli_rs",
         }
+        account_id = self._account_id_provider()
+        if account_id:
+            headers["ChatGPT-Account-Id"] = account_id
+        return headers
 
     def stream(self, request: TransportRequest) -> Iterator[ProviderEvent]:
         body = request.to_request_body()
+        # The ChatGPT-account Codex backend runs with `store: false` and
+        # rejects `previous_response_id` outright ("Unsupported parameter:
+        # previous_response_id") since a response that was never stored
+        # cannot be resumed server-side. Every turn must replay full
+        # conversation history in `input` instead — drop the field here
+        # (rather than upstream) so this constraint stays local to the one
+        # transport it actually applies to.
+        body.pop("previous_response_id", None)
         client = self._websocket_client if not self._force_sse else None
         if client is not None:
             frames_source = client.send_and_stream(
@@ -219,7 +244,11 @@ class CodexNativeTransport:
         for frame in _iter_sse_frames(frames_source) if client is None else _iter_websocket_frames(frames_source):
             event = map_codex_frame(frame)
             if event is not None:
-                yield event
+                # Suppress the response id as a continuation handle: since
+                # `previous_response_id` is never sent (see above), a saved
+                # handle would only mislead `ConversationRuntime` into
+                # thinking a cheaper continuation-based turn is available.
+                yield replace(event, response_id=None)
 
 
 def _iter_websocket_frames(lines: Iterator[str]) -> Iterator[dict[str, Any]]:
