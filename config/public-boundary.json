@@ -324,6 +324,7 @@
     "tests/test_conversation_runtime.py",
     "tests/test_events.py",
     "tests/test_runtime_bench.py",
+    "tests/test_runtime_protocol.py",
     "tests/test_interactive_cli.py",
     "tests/test_llm_core.py",
     "tests/test_tui_cli.py",
