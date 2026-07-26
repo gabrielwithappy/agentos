@@ -164,7 +164,11 @@ def test_assistant_message_finalizes_as_markdown(tmp_path, monkeypatch):
             composer = pilot.app.query_one("#composer")
             composer.value = "markdown"
             await pilot.press("enter")
-            await pilot.pause()
+            # The mock provider now issues a read-only tool call before its
+            # final response (the TUI offers the full tool set), so the turn
+            # takes an extra worker round trip. A bare `pilot.pause()` isn't
+            # guaranteed to span that, so wait for the reply text instead.
+            await await_transcript(pilot, "Mock response from AgentOS")
 
             assistant_messages = [
                 message
