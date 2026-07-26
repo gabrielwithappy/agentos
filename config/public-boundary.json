@@ -359,6 +359,7 @@
     "tests/test_llm_core.py",
     "tests/test_threat_patterns.py",
     "tests/test_tui_cli.py",
+    "tests/test_tui_visual_contract.py",
     "tests/test_tool_execution_loop.py",
     "tests/test_project_command.py",
     "uv.lock"

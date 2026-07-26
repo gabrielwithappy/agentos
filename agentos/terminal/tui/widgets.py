@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import re
 
+from rich.console import Group
 from rich.markdown import Markdown
+from rich.text import Text
 from textual.timer import Timer
 from textual.widgets import ListView, Static, OptionList, Label, TextArea, Input
 from textual.message import Message
@@ -208,13 +210,24 @@ class ChatMessage(Static):
 
     can_focus = True
 
-    def __init__(self, role: str, text: str = "", turn_id: str | None = None) -> None:
-        super().__init__(text)
+    def __init__(
+        self,
+        role: str,
+        text: str = "",
+        turn_id: str | None = None,
+        presentation_status: str | None = None,
+    ) -> None:
+        super().__init__("")
         self.role = role
+        # `text` is the source message body.  Role labels, borders, and turn
+        # state are presentation-only so copy/fork/persistence never acquire
+        # UI decoration.
         self.text = text
         self.turn_id = turn_id
+        self.presentation_status = presentation_status
         self.rendered_as_markdown = False
         self.add_class(role)
+        self._render_presentation()
 
     class ForkRequested(Message):
         """Posted when the user requests a fork from this message's turn."""
@@ -246,14 +259,42 @@ class ChatMessage(Static):
             self.action_copy_message()
             event.stop()
 
+    @property
+    def presentation_text(self) -> str:
+        """Human-visible role/status framing, kept separate from ``text``."""
+        header = self._presentation_header()
+        if header is None:
+            return self.text
+        return f"{header}\n│ {self.text}" if self.text else header
+
+    def _presentation_header(self) -> str | None:
+        if self.role == "user":
+            return "You"
+        if self.role == "assistant":
+            return f"AgentOS · {self.presentation_status or 'responding'}"
+        if self.role == "reasoning":
+            return "Activity · Thinking"
+        if self.role == "tool":
+            return "Activity · Tool"
+        return None
+
+    def _render_presentation(self) -> None:
+        header = self._presentation_header()
+        if header is None:
+            self.update(self.text)
+        elif self.rendered_as_markdown and self.text.strip():
+            self.update(Group(Text(header), Text("│"), Markdown(self.text)))
+        else:
+            self.update(self.presentation_text)
+
+    def set_presentation_status(self, status: str) -> None:
+        self.presentation_status = status
+        self._render_presentation()
+
     def update_text(self, text: str, *, markdown: bool = False) -> None:
         self.text = text
-        if markdown and text.strip():
-            self.rendered_as_markdown = True
-            self.update(Markdown(text))
-            return
-        self.rendered_as_markdown = False
-        self.update(text)
+        self.rendered_as_markdown = markdown and bool(text.strip())
+        self._render_presentation()
 
 
 # Spinner frame sets for each style
@@ -346,7 +387,7 @@ class Transcript(VerticalScroll):
         if role in ("spinner", "loading"):
             message = SpinnerMessage(style=style, turn_id=turn_id)
         else:
-            message = ChatMessage(role, self._format_message(role, text), turn_id=turn_id)
+            message = ChatMessage(role, text, turn_id=turn_id)
         self._messages.append(message)
         self.mount(message)
         self._scroll_to_end()
@@ -362,13 +403,6 @@ class Transcript(VerticalScroll):
             if message.is_mounted:
                 message.remove()
 
-
-    def _format_message(self, role: str, text: str) -> str:
-        if role == "user":
-            return f"You: {text}"
-        if role == "assistant":
-            return text
-        return text
 
     def _scroll_to_end(self) -> None:
         if self.is_mounted:

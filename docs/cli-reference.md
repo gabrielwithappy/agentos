@@ -88,24 +88,37 @@ Type `/` or `/help` to show the command palette. The MVP commands are:
 none happened yet. `/usage` shows the last turn's input/output character
 count, or `No usage yet. Next: send a message.` if no turn has completed yet.
 
+Every ordinary conversation turn has an explicit request/result boundary that
+does not depend on colour: the request is headed `You`, and the final result
+is headed `AgentOS · responding`, then `AgentOS · complete`,
+`AgentOS · cancelled`, or `AgentOS · failed`. Both regions use a visible `│`
+left boundary. The labels are presentation only: copied text, persisted
+conversation messages, and forked turns retain the original message body
+without a `You:` or `AgentOS` prefix.
+
 While a turn is waiting for the first response chunk, the transcript shows a
-`Thinking…` line. Pressing `Esc` at that point cancels the turn immediately
-and replaces the `Thinking…` line with `Turn cancelled.`; the composer is
-already focused, ready for the next message.
+`Thinking…` line. Pressing `Esc` at that point removes that indicator and
+shows `Turn cancelled.`; the composer is already focused, ready for the next
+message. If an answer has started, its partial body remains visible under
+`AgentOS · cancelled`; it is not committed to conversation state. A completed
+turn that contains no assistant text instead shows
+`No response content was returned.` under `AgentOS · complete`.
 
 Before the final answer, the transcript may show process entries describing
 what the provider did before answering:
 
-- `Thinking: ...` lines — reasoning steps, displayed in a muted style.
-- `Tool call: name(args)` lines — tool invocations, displayed in a **warning
+- `Activity · Thinking` — reasoning steps, displayed in a muted secondary
+  region belonging to the current turn.
+- `Activity · Tool` — tool invocations, displayed in a **warning
   colour** to visually separate them from reasoning and the final answer.
-- `Tool result: ...` lines — the default rendering of a tool's result. Some
+- Tool results also appear as `Activity · Tool`. Some
   tools have a registered custom renderer instead of this plain-text line;
   today the mock provider's `mock_tool` result renders as a
   `| field | value |` table. Tools without a registered renderer keep the
   plain-text `Tool result: ...` line unchanged.
 
-Neither type changes the final assistant answer, which is rendered last.
+Activity preserves provider event order and is not part of the final assistant
+result; the final answer is rendered last.
 
 Unknown commands show `Unknown command. Next: /help` and return focus to the
 composer. `/session resume` opens the session-and-branch picker: with no
@@ -128,8 +141,8 @@ TUI's `/session resume` picker (above) to actually resume one.
 Keyboard behavior:
 
 - `Ctrl-C` cancels an active turn and returns to the composer.
-- `Esc` cancels a turn that is still waiting for its first response chunk
-  (shows `Turn cancelled.`), or closes overlays such as command or session
+- `Esc` cancels a turn (shows `Turn cancelled.` and, after a first response
+  chunk, marks its visible result `AgentOS · cancelled`), or closes overlays such as command or session
   picker views when no turn is waiting. An open overlay always takes
   priority, so `Esc` never cancels a turn while an overlay (for example the
   session resume picker) is on screen.

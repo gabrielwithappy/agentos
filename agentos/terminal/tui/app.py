@@ -130,6 +130,7 @@ class AgentOSTui(App[None]):
         self.last_usage: dict[str, int] | None = None
         self._active_turn_worker: Worker | None = None
         self._loading_message: ChatMessage | None = None
+        self._active_assistant_message: ChatMessage | None = None
         self._last_turn_id: str | None = None
         self._indicator_style: str = "ascii"  # ascii | unicode | emoji | kaomoji
         self._pending_parent_turn_id: str | None = None  # set by fork action
@@ -382,6 +383,7 @@ class AgentOSTui(App[None]):
         pending_parent = self._pending_parent_turn_id
         self._pending_parent_turn_id = None
         transcript.add_message("user", text)
+        self._active_assistant_message = None
         self._loading_message = transcript.add_message("spinner", "", style=self._indicator_style)
         self._active_turn_worker = self.run_stream(runtime, prompt, turn_id, self.session_id, self.provider, pending_parent)
         self._focus_composer()
@@ -672,16 +674,18 @@ class AgentOSTui(App[None]):
         parent_turn_id = pending_parent_turn_id if pending_parent_turn_id is not None else self._last_turn_id
 
         def add_reasoning_message(text_content: str) -> None:
-            self.query_one("#transcript", Transcript).add_message("reasoning", text_content)
+            self.query_one("#transcript", Transcript).add_message("reasoning", text_content, turn_id=turn_id)
 
         def add_tool_message(text_content: str) -> None:
-            self.query_one("#transcript", Transcript).add_message("tool", text_content)
+            self.query_one("#transcript", Transcript).add_message("tool", text_content, turn_id=turn_id)
 
         def add_system_message(text_content: str) -> None:
             self.query_one("#transcript", Transcript).add_message("system", text_content)
 
         def add_assistant_message() -> ChatMessage:
-            return self.query_one("#transcript", Transcript).add_message("assistant", "", turn_id=turn_id)
+            message = self.query_one("#transcript", Transcript).add_message("assistant", "", turn_id=turn_id)
+            self._active_assistant_message = message
+            return message
 
         def update_assistant(text_content: str, *, markdown: bool = False) -> None:
             if assistant_message is not None:
@@ -762,6 +766,8 @@ class AgentOSTui(App[None]):
                         self.call_from_thread(self._clear_loading_message)
                         loading_active = False
                     error_payload = payload.get("error") or {}
+                    if assistant_message is not None:
+                        self.call_from_thread(assistant_message.set_presentation_status, "failed")
                     if error_payload.get("code") == "unauthenticated":
                         self.call_from_thread(add_system_message, SHELL_LOGIN_RECOVERY_TEXT)
                     else:
@@ -785,7 +791,12 @@ class AgentOSTui(App[None]):
             self.call_from_thread(self._set_last_turn_id, turn_id)
             if not has_error:
                 if assistant_message is not None:
+                    self.call_from_thread(assistant_message.set_presentation_status, "complete")
                     self.call_from_thread(update_assistant, response_text, markdown=True)
+                else:
+                    assistant_message = self.call_from_thread(add_assistant_message)
+                    self.call_from_thread(assistant_message.set_presentation_status, "complete")
+                    self.call_from_thread(update_assistant, "No response content was returned.", markdown=False)
                 self.call_from_thread(self._record_turn_results, tool_calls, usage)
                 self.call_from_thread(
                     self._update_status,
@@ -803,6 +814,7 @@ class AgentOSTui(App[None]):
                 loading_active = False
             if assistant_message is None:
                 assistant_message = self.call_from_thread(add_assistant_message)
+            self.call_from_thread(assistant_message.set_presentation_status, "failed")
             self.call_from_thread(update_assistant, response_text)
             self.call_from_thread(self._set_last_turn_id, turn_id)
             self.call_from_thread(
@@ -916,6 +928,8 @@ class AgentOSTui(App[None]):
         if self._active_turn_worker is not None and self._active_turn_worker.is_running:
             self._active_turn_worker.cancel()
             self._clear_loading_message()
+            if self._active_assistant_message is not None:
+                self._active_assistant_message.set_presentation_status("cancelled")
             self.query_one("#transcript", Transcript).add_message("system", "Turn cancelled.")
             self.query_one("#composer", Composer).focus()
             return
