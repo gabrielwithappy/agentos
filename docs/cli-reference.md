@@ -63,6 +63,12 @@ above; shown once a turn has run, and updated immediately after a fork or a
 branch switch), and `total in/out N/M chars` (starts at `0/0` and accumulates
 across turns in the session).
 
+In the full-screen TUI, that detailed footer is compacted to one line using
+`cwd:`, `pm:`, `sid:`, `git:`, `convo:`, `turn:`, `in:`, and `out:` labels.
+On narrow terminals optional location and branch fields may be omitted and
+values shortened with `…`; `turn`, provider/model, session, and usage remain.
+Use `/status` whenever the complete, untruncated status is needed.
+
 Type `/` or `/help` to show the command palette. The MVP commands are:
 
 - `/help`
@@ -91,17 +97,17 @@ count, or `No usage yet. Next: send a message.` if no turn has completed yet.
 Every ordinary conversation turn has an explicit request/result boundary that
 does not depend on colour: the request is headed `You`, and the final result
 is headed `AgentOS · responding`, then `AgentOS · complete`,
-`AgentOS · cancelled`, or `AgentOS · failed`. Both regions use a visible `│`
-left boundary. The labels are presentation only: copied text, persisted
-conversation messages, and forked turns retain the original message body
-without a `You:` or `AgentOS` prefix.
+`AgentOS · cancelled`, or `AgentOS · failed`. The labels are presentation
+only: copied text, persisted conversation messages, and forked turns retain
+the original message body without a `You:` or `AgentOS` prefix.
 
 In colour-capable terminals, the whole `You` request region also uses a subtle
 background block so requests remain easy to locate while scrolling. AgentOS
-answers and `Activity` entries keep their plain background (tool entries keep
-their existing warning border). With `NO_COLOR=1` or a terminal that omits
-background colours, the `You`/`AgentOS` headers and `│` boundaries above
-remain the role distinction.
+answers and `Activity` entries keep their plain background (tool entries use
+a theme-adaptive emphasis border). With `NO_COLOR=1` or a terminal that omits
+background colours, the `You`/`AgentOS` headers above remain the role
+distinction. `Activity` entries (reasoning and tool calls) keep a visible `│`
+left boundary to separate multiple activity rows from each other.
 
 While a turn is waiting for the first response chunk, the transcript shows a
 `Thinking…` line. Pressing `Esc` at that point removes that indicator and
@@ -116,8 +122,8 @@ what the provider did before answering:
 
 - `Activity · Thinking` — reasoning steps, displayed in a muted secondary
   region belonging to the current turn.
-- `Activity · Tool` — tool invocations, displayed in a **warning
-  colour** to visually separate them from reasoning and the final answer.
+- `Activity · Tool` — tool invocations, displayed with a theme-adaptive
+  emphasis colour to visually separate them from reasoning and the final answer.
 - Tool results also appear as `Activity · Tool`. Some
   tools have a registered custom renderer instead of this plain-text line;
   today the mock provider's `mock_tool` result renders as a

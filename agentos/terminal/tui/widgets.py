@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from rich.console import Group
 from rich.markdown import Markdown
@@ -16,6 +17,9 @@ from textual.reactive import reactive
 
 from agentos.terminal.tui.commands import SlashCommand, matching_commands
 
+if TYPE_CHECKING:
+    from agentos.terminal.tui.state import TuiStatus
+
 
 class MenuScreen(ModalScreen[str]):
     DEFAULT_CSS = """
@@ -25,7 +29,7 @@ class MenuScreen(ModalScreen[str]):
     #menu-container {
         width: 50;
         height: auto;
-        border: solid $accent;
+        border: solid $text-primary;
         background: $surface;
         padding: 1 2;
     }
@@ -70,7 +74,7 @@ class CommandPaletteScreen(ModalScreen[str]):
         max-width: 90%;
         height: auto;
         max-height: 18;
-        border: solid $accent;
+        border: solid $text-primary;
         background: $surface;
         padding: 1 2;
     }
@@ -140,7 +144,7 @@ class ThemeScreen(ModalScreen[str]):
         width: 50;
         height: auto;
         max-height: 24;
-        border: solid $accent;
+        border: solid $text-primary;
         background: $surface;
         padding: 1 2;
     }
@@ -194,10 +198,10 @@ class ChatMessage(Static):
         margin-bottom: 0;
     }
     ChatMessage.tool {
-        color: $warning;
+        color: $text-primary;
         padding-left: 1;
         margin-bottom: 0;
-        border: round $warning;
+        border: round $text-primary;
     }
     ChatMessage.loading {
         color: $text-muted;
@@ -205,7 +209,7 @@ class ChatMessage(Static):
         margin-bottom: 0;
     }
     ChatMessage:focus {
-        border: round $accent;
+        border: round $text-primary;
         background: $boost;
     }
     """
@@ -267,7 +271,11 @@ class ChatMessage(Static):
         header = self._presentation_header()
         if header is None:
             return self.text
-        return f"{header}\n│ {self.text}" if self.text else header
+        if not self.text:
+            return header
+        if self._uses_left_border():
+            return f"{header}\n│ {self.text}"
+        return f"{header}\n{self.text}"
 
     def _presentation_header(self) -> str | None:
         if self.role == "user":
@@ -280,12 +288,22 @@ class ChatMessage(Static):
             return "Activity · Tool"
         return None
 
+    def _uses_left_border(self) -> bool:
+        """User/assistant already read clearly from their header text (and,
+        for user, the background block); the `│` border is kept only for
+        Activity (reasoning/tool) rows, where it visually separates
+        multiple activity entries from each other."""
+        return self.role in ("reasoning", "tool")
+
     def _render_presentation(self) -> None:
         header = self._presentation_header()
         if header is None:
             self.update(self.text)
         elif self.rendered_as_markdown and self.text.strip():
-            self.update(Group(Text(header), Text("│"), Markdown(self.text)))
+            if self._uses_left_border():
+                self.update(Group(Text(header), Text("│"), Markdown(self.text)))
+            else:
+                self.update(Group(Text(header), Markdown(self.text)))
         else:
             self.update(self.presentation_text)
 
@@ -355,6 +373,7 @@ class Transcript(VerticalScroll):
     Transcript {
         height: 1fr;
         padding: 1 2;
+        scrollbar-size-vertical: 1;
     }
     """
 
@@ -418,9 +437,10 @@ class Composer(TextArea):
         height: auto;
         max-height: 15;
         min-height: 3;
-        border: round $accent;
+        border: round $text-primary;
         padding: 0 1;
         margin: 1 2;
+        width: 100%;
     }
     """
 
@@ -524,9 +544,20 @@ class Composer(TextArea):
             self.post_message(self.CompletionRequested(self.text, self))
             event.stop()
 
-    def on_paste(self, event: Paste) -> None:
-        self.insert_paste(event.text)
-        event.stop()
+    async def on_event(self, event: object) -> None:
+        """Handle paste before Textual dispatches the TextArea MRO handlers.
+
+        Textual dispatches event handlers across the full MRO, so overriding
+        ``_on_paste`` still invokes ``TextArea._on_paste`` as well. Intercepting
+        at ``on_event`` guarantees a single insertion, which is important for
+        Unicode IME commits and bracketed terminal paste.
+        """
+        if isinstance(event, Paste):
+            if not self.read_only:
+                self.insert_paste(event.text)
+            event.stop()
+            return
+        await super().on_event(event)
 
     def insert_paste(self, pasted_text: str) -> None:
         normalized = self._normalize_paste(pasted_text)
@@ -609,8 +640,21 @@ class StatusFooter(Static):
     StatusFooter {
         dock: bottom;
         height: 1;
+        color: $text-muted;
     }
     """
+
+    def update_status(self, status: "TuiStatus") -> None:
+        """Render compact status with theme-resolved muted labels."""
+        max_width = max(1, self.app.size.width)
+        text = Text()
+        value_style = self.app.get_css_variables()["text-primary"]
+        for index, (label, value) in enumerate(status.compact_footer_parts(max_width)):
+            if index:
+                text.append(" ")
+            text.append(label, style=self.rich_style)
+            text.append(value, style=value_style)
+        self.update(text)
 
 
 class SessionPicker(ListView):
