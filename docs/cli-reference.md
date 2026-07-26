@@ -309,8 +309,10 @@ before any turn is submitted:
   what ancestor directories exist above any project you run `agentos` from if
   this matters to you.
 - **Installed skills**: name/description/location metadata for every skill
-  under `AGENTOS_HOME/core/.agents/skills/` (installed via `agentos skill
-  install`) is listed — never the full skill body.
+  under `AGENTOS_HOME/core/.agents/skills/` is listed — never the full skill
+  body. When a task needs one, the `read` tool can load only that listed
+  skill's `SKILL.md`; manifests, companion assets, and other global paths are
+  not readable through the tool.
 
 Unreadable files (permission error, bad encoding, broken symlink) never block
 session start: they are silently skipped, and the skip count is shown in the
