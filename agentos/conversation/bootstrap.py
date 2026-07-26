@@ -10,6 +10,14 @@ from agentos.conversation.types import TRUSTED_SYSTEM_SOURCE, ConversationMessag
 from agentos.llm.redaction import redact_text
 
 CONTEXT_FILENAMES = ("AGENTS.md", "AGENTS.MD", "CLAUDE.md", "CLAUDE.MD")
+CORE_KNOWLEDGE_PATHS = (
+    ".agents/AGENTS.md",
+    "HISTORY.md",
+    ".agents/skills/harness/brain/lessons-learned.md",
+    ".agents/vendors/codex.md",
+    ".agents/vendors/claude.md",
+    ".agents/vendors/gemini.md",
+)
 
 SKIP_ENV_VAR = "AGENTOS_SKIP_CONTEXT_BOOTSTRAP"
 
@@ -225,6 +233,21 @@ def discover_context_files(cwd: str | Path, agent_home: str | Path | None = None
 
     ancestors.reverse()
     results.extend(ancestors)
+    # A repository's root AGENTS.md defines mandatory operating knowledge.
+    # Load the bounded, versioned knowledge graph explicitly rather than
+    # following arbitrary prose links from untrusted project context files.
+    project_root = next((item.path.parent for item in results if item.path.name.lower() == "agents.md"), None)
+    if project_root is not None:
+        for relative in CORE_KNOWLEDGE_PATHS:
+            candidate = project_root / relative
+            if candidate in seen_paths or candidate.is_symlink() or not candidate.is_file():
+                continue
+            content, error = _read_file_safely(candidate)
+            if error is not None:
+                results.append(ContextFile(path=candidate, content="", skipped=True, skip_reason=error))
+            else:
+                results.append(ContextFile(path=candidate, content=content or ""))
+            seen_paths.add(candidate)
     return results
 
 

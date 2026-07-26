@@ -54,6 +54,20 @@ def test_discover_context_files_includes_global_agent_home(tmp_path):
     assert any(f.content == "global guidance" for f in results)
 
 
+def test_discover_context_files_loads_declared_core_knowledge(tmp_path):
+    (tmp_path / "AGENTS.md").write_text("root guidance", encoding="utf-8")
+    (tmp_path / ".agents" / "skills" / "harness" / "brain").mkdir(parents=True)
+    (tmp_path / ".agents" / "vendors").mkdir()
+    (tmp_path / ".agents" / "AGENTS.md").write_text("nested guidance", encoding="utf-8")
+    (tmp_path / "HISTORY.md").write_text("history", encoding="utf-8")
+    (tmp_path / ".agents" / "skills" / "harness" / "brain" / "lessons-learned.md").write_text("lessons", encoding="utf-8")
+    (tmp_path / ".agents" / "vendors" / "codex.md").write_text("codex guide", encoding="utf-8")
+
+    contents = [item.content for item in discover_context_files(tmp_path)]
+
+    assert {"root guidance", "nested guidance", "history", "lessons", "codex guide"}.issubset(contents)
+
+
 def test_discover_context_files_skips_unreadable_file(tmp_path):
     bad_file = tmp_path / "AGENTS.md"
     bad_file.write_text("secret", encoding="utf-8")
