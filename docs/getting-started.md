@@ -16,7 +16,7 @@ uv run agentos hook list
 bash scripts/verify-public-test-suite.sh
 ```
 
-- `uv run agentos setup`: `AGENTOS_HOME` 또는 `~/.agentos` 아래에 CLI 사용자 상태만 초기화합니다.
+- `uv run agentos setup`: `AGENTOS_HOME` 또는 `~/.agentos` 아래에 CLI 사용자 상태와 기본 카탈로그 스킬을 설치합니다.
 - `uv run agentos doctor`: state manifest와 Python 런타임을 점검합니다.
 - `uv run agentos run --once "..."`: 자동화 가능한 단발 turn을 실행합니다. JSONL이 필요하면 `--json`을 붙입니다.
 - `uv run agentos hook list`: 활성 built-in hook 정책을 보여 줍니다.
@@ -54,11 +54,10 @@ Session은 `AGENTOS_HOME/sessions`에 사용자 데이터로 저장됩니다. �
 
 ```bash
 agentos setup
-agentos skill install /path/to/my-skill
 agentos skill status
 agentos project init
 agentos project status
 agentos doctor --json
 ```
 
-`setup`은 사용자 상태와 전역 스킬 저장소를 준비할 뿐 스킬·LLM 로그인을 자동 설치하지 않습니다. `project init`은 현재 프로젝트의 `.agentos/agentos-project/`에 전역 스킬 snapshot과 전역 hook 설정의 digest reference만 만듭니다. 프로젝트의 hook이나 설정을 실행하지 않으며, 다시 실행해도 관리되는 AgentOS 경로만 갱신합니다.
+`setup`은 사용자 상태와 기본 전역 카탈로그 스킬을 설치합니다. LLM 로그인은 별도입니다. 추가 외부 스킬이 필요할 때만 `agentos skill install /path/to/my-skill`을 사용합니다. `project init`은 현재 프로젝트의 `.agentos/agentos-project/`에 전역 스킬 snapshot과 전역 hook 설정의 digest reference만 만듭니다. 프로젝트의 hook이나 설정을 실행하지 않으며, 다시 실행해도 관리되는 AgentOS 경로만 갱신합니다.

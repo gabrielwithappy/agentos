@@ -26,13 +26,13 @@ def test_project_init_is_opt_in_and_status_is_cwd_scoped(tmp_path):
     assert not (project / ".agentos" / "config.toml").exists()
 
 
-def test_project_init_requires_installed_skills(tmp_path):
+def test_setup_installs_default_skills_for_project_init(tmp_path):
     home, project = tmp_path / "home", tmp_path / "project"
     project.mkdir()
     assert runner.invoke(app, ["setup"], env={"AGENTOS_HOME": str(home)}).exit_code == 0
     result = runner.invoke(app, ["project", "init", "--path", str(project)], env={"AGENTOS_HOME": str(home)})
-    assert result.exit_code == 2
-    assert "agentos skill install" in result.stderr
+    assert result.exit_code == 0
+    assert (home / "core" / ".agents" / "skills" / "xlsx" / "SKILL.md").is_file()
 
 
 def test_project_status_detects_stale_global_skill(tmp_path):

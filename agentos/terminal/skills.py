@@ -6,12 +6,19 @@ import os
 import shutil
 import tempfile
 from dataclasses import dataclass
+from importlib.resources import files
 from pathlib import Path
 
 from agentos.terminal.paths import StateError, agentos_home, atomic_write_json, set_user_only_permissions
 
 SKILL_MANIFEST_SCHEMA = "agentos.skills/v1"
 MANIFEST_NAME = ".agentos-skills.json"
+DEFAULT_SKILL_NAMES = (
+    "architecture-diagram", "ascii-art", "baoyu-comic", "baoyu-infographic", "claude-design",
+    "codebase-inspection", "design-md", "frontend-design", "future-slide", "humanizer", "p5js",
+    "popular-web-designs", "pretext", "requesting-code-review", "sketch", "spike",
+    "systematic-debugging", "xlsx",
+)
 
 
 @dataclass(frozen=True)
@@ -20,6 +27,27 @@ class SkillStatus:
     state: str
     digest: str | None
     source_digest: str | None
+
+
+@dataclass(frozen=True)
+class BundledInstallSummary:
+    installed: int = 0
+    already_current: int = 0
+    bundled_updated: int = 0
+    bundled_update_available: int = 0
+    custom_preserved: int = 0
+    failed: int = 0
+
+
+def bundled_skill_sources() -> list[Path]:
+    root = Path(str(files("catalog").joinpath("skills")))
+    sources = {path.name: path for path in root.iterdir() if path.is_dir() and (path / "SKILL.md").is_file()}
+    if set(sources) != set(DEFAULT_SKILL_NAMES):
+        raise StateError("Bundled skill catalog is malformed. Next: reinstall AgentOS")
+    ordered = [sources[name] for name in DEFAULT_SKILL_NAMES]
+    for source in ordered:
+        _require_regular_tree(source)
+    return ordered
 
 
 def global_skills_dir(home: str | Path | None = None) -> Path:
@@ -60,7 +88,7 @@ def _manifest(home: str | Path | None = None) -> dict:
     return data
 
 
-def install_skill(source: str | Path, home: str | Path | None = None) -> str:
+def install_skill(source: str | Path, home: str | Path | None = None, *, origin: str = "external") -> str:
     source_path = Path(source).expanduser().resolve()
     if not (source_path / "SKILL.md").is_file():
         raise StateError("Skill source must contain SKILL.md.")
@@ -97,9 +125,42 @@ def install_skill(source: str | Path, home: str | Path | None = None) -> str:
         if stage.exists():
             shutil.rmtree(stage)
     manifest = _manifest(home)
-    manifest["skills"][name] = {"digest": source_digest, "source": str(source_path), "source_digest": source_digest}
+    manifest["skills"][name] = {"digest": source_digest, "source": str(source_path), "source_digest": source_digest, "origin": origin}
     atomic_write_json(_manifest_path(home), manifest)
     return name
+
+
+def install_bundled_skills(home: str | Path | None = None, *, refresh: bool = False) -> BundledInstallSummary:
+    result = BundledInstallSummary()
+    manifest = _manifest(home)
+    root = global_skills_dir(home)
+    for source in bundled_skill_sources():
+        name = source.name
+        try:
+            bundle_digest = skill_digest(source)
+            dest = root / name
+            record = manifest["skills"].get(name, {})
+            if not dest.exists():
+                install_skill(source, home, origin="bundled")
+                result = BundledInstallSummary(**{**result.__dict__, "installed": result.installed + 1})
+                continue
+            actual = skill_digest(dest)
+            if record.get("origin") == "bundled" and actual == record.get("digest"):
+                if actual == bundle_digest:
+                    result = BundledInstallSummary(**{**result.__dict__, "already_current": result.already_current + 1})
+                else:
+                    install_skill(source, home, origin="bundled")
+                    result = BundledInstallSummary(**{**result.__dict__, "bundled_updated": result.bundled_updated + 1})
+            elif refresh:
+                install_skill(source, home, origin="bundled")
+                result = BundledInstallSummary(**{**result.__dict__, "bundled_updated": result.bundled_updated + 1})
+            elif record.get("origin") == "bundled":
+                result = BundledInstallSummary(**{**result.__dict__, "bundled_update_available": result.bundled_update_available + 1})
+            else:
+                result = BundledInstallSummary(**{**result.__dict__, "custom_preserved": result.custom_preserved + 1})
+        except (OSError, StateError):
+            result = BundledInstallSummary(**{**result.__dict__, "failed": result.failed + 1})
+    return result
 
 
 def statuses(home: str | Path | None = None) -> list[SkillStatus]:
