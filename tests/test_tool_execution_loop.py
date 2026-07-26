@@ -68,6 +68,24 @@ def test_execute_read_missing_file_returns_error(tmp_path):
     assert "not found" in result.content.lower()
 
 
+def test_execute_read_allows_exact_global_skill_file_only(tmp_path):
+    cwd, skills = tmp_path / "cwd", tmp_path / "skills"
+    cwd.mkdir()
+    skill = skills / "demo" / "SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("skill body", encoding="utf-8")
+    manifest = skills / ".agentos-skills.json"
+    manifest.write_text("SENTINEL_SOURCE_PATH", encoding="utf-8")
+
+    allowed = execute_read(str(skill), cwd=cwd, allowed_paths=(skill,))
+    blocked = execute_read(str(manifest), cwd=cwd, allowed_paths=(skill,))
+
+    assert allowed.content == "skill body"
+    assert not allowed.is_error
+    assert blocked.is_error
+    assert "SENTINEL_SOURCE_PATH" not in blocked.content
+
+
 def test_execute_read_sanitizes_secret(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTOS_TEST_SECRET", "s3cr3t")
     (tmp_path / "secret.txt").write_text("token: s3cr3t\n", encoding="utf-8")

@@ -7,6 +7,7 @@ from rich.console import Console
 
 from agentos.commands import hook as hook_command
 from agentos.conversation.bootstrap import find_bootstrap_message
+from agentos.terminal.skills import global_skills_dir
 from agentos.conversation.persistence import commit_turn, next_sequence
 from agentos.conversation.runtime import ConversationRuntime
 from agentos.llm.session import UnsupportedProviderError, unsupported_provider_event
@@ -48,6 +49,19 @@ def _confirm_tool_call(name: str, arguments: dict) -> bool:
     path = arguments.get("path", "")
     answer = console.input(f"도구 실행 승인 필요: {name}({path}) — 실행할까요? [y/N] ")
     return answer.strip().lower() in ("y", "yes")
+
+
+def _global_skill_read_paths() -> tuple[Path, ...]:
+    root = global_skills_dir()
+    if root.is_symlink() or not root.is_dir():
+        return ()
+    paths: list[Path] = []
+    for entry in root.iterdir():
+        skill_file = entry / "SKILL.md"
+        if entry.is_symlink() or not entry.is_dir() or skill_file.is_symlink() or not skill_file.is_file():
+            continue
+        paths.append(skill_file.resolve())
+    return tuple(paths)
 
 
 def _print_bootstrap_banner(runtime: ConversationRuntime) -> None:
@@ -169,7 +183,11 @@ def run_interactive(provider: str = "mock") -> int:
         has_error = False
         try:
             for event in runtime.submit_turn(
-                prompt, cwd=Path.cwd(), tool_names=["read"], confirm_tool_call=_confirm_tool_call
+                prompt,
+                cwd=Path.cwd(),
+                tool_names=["read"],
+                allowed_read_paths=_global_skill_read_paths(),
+                confirm_tool_call=_confirm_tool_call,
             ):
                 payload = event.to_dict()
                 append_event(
