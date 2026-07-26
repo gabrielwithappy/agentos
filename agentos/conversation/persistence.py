@@ -45,6 +45,26 @@ def empty_state(session_id: str, *, branch_id: str = DEFAULT_BRANCH_ID) -> Conve
     )
 
 
+def empty_state_with_bootstrap(
+    session_id: str,
+    *,
+    branch_id: str = DEFAULT_BRANCH_ID,
+    bootstrap_message: ConversationMessage | None,
+) -> ConversationState:
+    """Same as `empty_state()`, but if `bootstrap_message` is not `None` it is
+    committed as the branch's first message before any turn is submitted.
+
+    Only used on the "never persisted before" path (`resume_conversation_state`
+    finding no prior events/snapshot/legacy session) — resumed sessions never
+    call this, so a bootstrap message is never re-injected into an existing
+    branch history.
+    """
+    state = empty_state(session_id, branch_id=branch_id)
+    if bootstrap_message is None:
+        return state
+    return _append_message(state, branch_id, bootstrap_message)
+
+
 def append_turn_committed_event(events_path: Path, *, sequence: int, state: ConversationState) -> None:
     """Durable step 1 of the commit protocol: append one
     `turn_committed(sequence=N)` line carrying the full post-turn state and

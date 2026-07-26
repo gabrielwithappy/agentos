@@ -67,6 +67,12 @@ def render_event(event: dict[str, Any]) -> str:
         return f"{message} Next: /status"
     if event_type == "hook_error":
         return "Hook failed. Next: /hooks"
+    if event_type == "tool_call_limit_reached":
+        metadata = safe.get("metadata") or {}
+        limit = metadata.get("limit", "")
+        return f"도구 호출 한도 초과({limit}회) — 현재까지의 응답으로 종료합니다."
+    if event_type == "tool_call_denied":
+        return "도구 호출이 거부되어 실행되지 않았습니다."
     return event_type
 
 

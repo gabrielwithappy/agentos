@@ -224,7 +224,9 @@ def test_resume_conversation_state_returns_a_brand_new_empty_state_for_an_unknow
     from agentos.terminal.sessions import resume_conversation_state
 
     monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
-    state = resume_conversation_state(str(__import__("uuid").uuid4()))
+    isolated_cwd = tmp_path / "isolated-project"
+    isolated_cwd.mkdir()
+    state = resume_conversation_state(str(__import__("uuid").uuid4()), cwd=isolated_cwd)
     assert state.messages == {}
 
 

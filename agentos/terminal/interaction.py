@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from rich.console import Console
 
 from agentos.commands import hook as hook_command
+from agentos.conversation.bootstrap import find_bootstrap_message
+from agentos.terminal.skills import global_skills_dir
 from agentos.conversation.persistence import commit_turn, next_sequence
 from agentos.conversation.runtime import ConversationRuntime
 from agentos.llm.session import UnsupportedProviderError, unsupported_provider_event
@@ -39,6 +42,37 @@ def _default_model_for_provider(provider: str) -> str:
     return f"{provider}-default"
 
 
+def _confirm_tool_call(name: str, arguments: dict) -> bool:
+    """Only invoked when `AGENTOS_TOOL_READ_CONFIRM` is truthy — see
+    `ConversationRuntime.submit_turn()`. Blocks on a synchronous prompt
+    since this CLI path is single-threaded."""
+    path = arguments.get("path", "")
+    answer = console.input(f"도구 실행 승인 필요: {name}({path}) — 실행할까요? [y/N] ")
+    return answer.strip().lower() in ("y", "yes")
+
+
+def _global_skill_read_paths() -> tuple[Path, ...]:
+    root = global_skills_dir()
+    if root.is_symlink() or not root.is_dir():
+        return ()
+    paths: list[Path] = []
+    for entry in root.iterdir():
+        skill_file = entry / "SKILL.md"
+        if entry.is_symlink() or not entry.is_dir() or skill_file.is_symlink() or not skill_file.is_file():
+            continue
+        paths.append(skill_file.resolve())
+    return tuple(paths)
+
+
+def _print_bootstrap_banner(runtime: ConversationRuntime) -> None:
+    message = find_bootstrap_message(runtime.state)
+    if message is None:
+        return
+    file_count = len(message.metadata.get("bootstrap_context_paths", []))
+    skill_count = len(message.metadata.get("bootstrap_skill_names", []))
+    console.print(f"부트스트랩 컨텍스트: {file_count}개 파일, {skill_count}개 스킬 로드됨 — /status로 확인")
+
+
 def run_interactive(provider: str = "mock") -> int:
     initialize_state()
     session_id = create_session(provider=provider, mode="interactive")
@@ -46,6 +80,7 @@ def run_interactive(provider: str = "mock") -> int:
         resume_conversation_state(session_id), provider=provider, model=_default_model_for_provider(provider)
     )
     console.print(f"AgentOS interactive session {session_id}. Type /help or /exit.")
+    _print_bootstrap_banner(runtime)
     cancelling = False
     while True:
         try:
@@ -69,6 +104,27 @@ def run_interactive(provider: str = "mock") -> int:
             continue
         if raw.strip() == "/status":
             console.print(f"provider={provider} session={session_id}")
+            bootstrap_message = find_bootstrap_message(runtime.state)
+            if bootstrap_message is None:
+                console.print("bootstrap_context: none")
+            else:
+                paths = bootstrap_message.metadata.get("bootstrap_context_paths", [])
+                skill_names = bootstrap_message.metadata.get("bootstrap_skill_names", [])
+                blocked_files = bootstrap_message.metadata.get("bootstrap_blocked_files", [])
+                truncated_files = bootstrap_message.metadata.get("bootstrap_truncated_files", [])
+                console.print(f"bootstrap_context_files ({len(paths)}):")
+                for path in paths:
+                    console.print(f"  {path}")
+                console.print(f"bootstrap_skills ({len(skill_names)}):")
+                for name in skill_names:
+                    console.print(f"  {name}")
+                console.print(f"bootstrap_blocked_files ({len(blocked_files)}):")
+                for blocked in blocked_files:
+                    reasons = ", ".join(blocked.get("reasons", []))
+                    console.print(f"  {blocked.get('path')} ({reasons})")
+                console.print(f"bootstrap_truncated_files ({len(truncated_files)}):")
+                for path in truncated_files:
+                    console.print(f"  {path}")
             continue
         if raw.strip() == "/session":
             console.print(f"session_id={session_id}")
@@ -101,6 +157,7 @@ def run_interactive(provider: str = "mock") -> int:
                     model=_default_model_for_provider(provider),
                 )
                 console.print(f"Resumed session {session_id}.")
+                _print_bootstrap_banner(runtime)
             except SessionError as exc:
                 print(str(exc), file=sys.stderr)
             continue
@@ -125,7 +182,14 @@ def run_interactive(provider: str = "mock") -> int:
         )
         has_error = False
         try:
-            for event in runtime.submit_turn(prompt):
+            for event in runtime.submit_turn(
+                prompt,
+                cwd=Path.cwd(),
+                tool_names=["read"],
+                allowed_read_paths=_global_skill_read_paths(),
+                blocked_read_roots=(global_skills_dir(),),
+                confirm_tool_call=_confirm_tool_call,
+            ):
                 payload = event.to_dict()
                 append_event(
                     session_id,
@@ -138,6 +202,12 @@ def run_interactive(provider: str = "mock") -> int:
                         branch_id=runtime.state.active_branch_id,
                     ),
                 )
+                if payload["type"] == "tool_call":
+                    metadata = payload.get("metadata") or {}
+                    path = (metadata.get("arguments") or {}).get("path", "")
+                    console.print(f"읽는 중: {path}")
+                if payload["type"] == "tool_call_limit_reached":
+                    console.print("도구 호출 한도 초과 — 현재까지의 응답으로 종료합니다.")
                 if payload["type"] == "message_delta" and payload.get("text"):
                     console.print(payload["text"])
                 if payload["type"] == "error":

@@ -204,6 +204,16 @@ def test_invocation_request_holds_ordered_messages_and_continuation_handle():
     assert request.messages == messages
     assert request.continuation == "opaque-handle-1"
     assert request.metadata == {}
+    assert request.tools is None
+
+
+def test_invocation_request_tools_field_defaults_to_none_and_accepts_schema_list():
+    default_request = InvocationRequest(messages=[])
+    assert default_request.tools is None
+
+    tool_spec = {"name": "read", "description": "Read a file", "parameters": {"type": "object", "properties": {}}}
+    request_with_tools = InvocationRequest(messages=[], tools=[tool_spec])
+    assert request_with_tools.tools == [tool_spec]
 
 
 def test_stream_once_is_a_stateless_compatibility_shim():

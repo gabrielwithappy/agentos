@@ -6,6 +6,8 @@ from rich.console import Console
 from agentos.runtime.bench import PASS_THRESHOLD_MS
 from agentos.runtime.launcher import resolve_agentos_launcher
 from agentos.terminal.paths import state_status
+from agentos.terminal.skills import statuses
+from agentos.commands.project import _payload, _root
 
 app = typer.Typer(help="Check system dependencies and state")
 console = Console()
@@ -50,6 +52,13 @@ def main(json_output: bool = typer.Option(False, "--json", help="Emit sanitized 
     status = state_status()
     status["launcher"] = launcher_status()
     status["runtime"] = runtime_status()
+    try:
+        skill_rows = statuses()
+        status["skills"] = {"installed": len(skill_rows), "states": {row.name: row.state for row in skill_rows}}
+        status["project"] = _payload(_root(None))
+    except Exception:
+        status["skills"] = {"installed": 0, "states": {}}
+        status["project"] = {"state": "not_initialized"}
     status["recovery"] = recovery_status(bool(status["configured"]))
     status["next_action"] = status["recovery"]["next_action"]
     if json_output:

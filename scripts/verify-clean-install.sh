@@ -18,5 +18,8 @@ HOME="$TMP_HOME" AGENTOS_HOME="$TMP_HOME/.agentos" "$PY" "$ROOT/agentos/cli.py" 
 test -f "$TMP_HOME/.agentos/state-manifest.json"
 test -d "$TMP_HOME/.agentos/sessions"
 test -d "$TMP_HOME/.agentos/context"
-test ! -e "$TMP_HOME/.agentos/core/.agents"
+test -f "$TMP_HOME/.agentos/core/.agents/skills/.agentos-skills.json"
+test -f "$TMP_HOME/.agentos/core/.agents/skills/xlsx/SKILL.md"
+skill_count=$(find "$TMP_HOME/.agentos/core/.agents/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -type f | wc -l | tr -d ' ')
+test "$skill_count" = 18
 echo 'PASS agentos-clean-install'

@@ -20,7 +20,7 @@ def test_setup_command(tmp_path):
         assert (tmp_path / "sessions").is_dir()
         assert (tmp_path / "context").is_dir()
         assert (tmp_path / "state-manifest.json").is_file()
-        assert not (tmp_path / "core" / ".agents").exists()
+        assert (tmp_path / "core" / ".agents" / "skills").is_dir()
 
 def test_doctor_command_success(tmp_path):
     # Set up a healthy environment

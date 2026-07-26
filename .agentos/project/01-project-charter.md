@@ -8,11 +8,11 @@
 
 ## 가치
 
-- 가치: 개발자가 별도 프론트엔드 없이도 AgentOS를 설치, 대화, 자동화, 진단할 수 있는 독립 터미널 경험을 제공한다.
-- 사용자/비즈니스 문제: 현재 CLI는 최소 명령군은 있으나 source checkout/CWD에 의존하고 대화형 입력과 hook lifecycle의 계약이 없어 일관된 사용자 워크플로우를 제공하지 못한다.
-- 아무것도 하지 않을 때의 비용: 사용자는 command semantics와 상태 복구를 추측해야 하며, harness 개선에 유용한 입력·hook 관측을 안전하게 축적할 수 없다.
-- 기대 프로젝트 결과: TTY 대화형 CLI, 명시적 command family, JSONL automation mode, 안전한 hook/input lifecycle, session·diagnostic UX를 갖춘 AgentOS CLI.
-- 완료 신호: reviewed implementation plan의 focused tests, isolated-install smoke, pseudo-TTY interaction checks, secret-redaction regression, public suite가 모두 통과한다.
+- 가치: AgentOS는 vendor-neutral project work harness다 — Codex·Claude·OpenCode 등 여러 vendor coding-agent를 넘나들며 한 프로젝트의 작업 계약, 검증, 이력을 유지한다. 개발자가 별도 프론트엔드 없이도 AgentOS를 설치, 대화, 자동화, 진단할 수 있는 독립 터미널 경험도 그 위에서 계속 제공된다.
+- 사용자/비즈니스 문제: 현재 CLI는 최소 명령군은 있으나 source checkout/CWD에 의존하고 대화형 입력과 hook lifecycle의 계약이 없어 일관된 사용자 워크플로우를 제공하지 못한다. 더 근본적으로는, 여러 vendor coding-agent를 오가며 작업할 때 프로젝트의 목표·검증·이력이 하나로 유지되지 않는다.
+- 아무것도 하지 않을 때의 비용: 사용자는 command semantics와 상태 복구를 추측해야 하며, harness 개선에 유용한 입력·hook 관측을 안전하게 축적할 수 없다. agent를 교체할 때마다 작업 계약과 완료 근거를 다시 만들어야 한다.
+- 기대 프로젝트 결과: TTY 대화형 CLI, 명시적 command family, JSONL automation mode, 안전한 hook/input lifecycle, session·diagnostic UX를 갖춘 AgentOS control plane. AgentOS는 Work Contract, Context Compiler, lifecycle/evidence, Verification Runner, vendor adapter 상태를 소유하고, 실제 대화와 tool loop는 원본 vendor CLI가 소유한다. 향후 기본 UX와 투자 방향은 이 control/execution 분리를 우선한다.
+- 완료 신호: reviewed implementation plan의 focused tests, isolated-install smoke, pseudo-TTY interaction checks, secret-redaction regression, public suite가 모두 통과한다. 문서 전환 자체의 완료 신호는 root docs가 vendor-neutral project work harness 방향으로 정합되고 별도 reviewed implementation plan 없이는 후속 runtime 구현을 시작하지 않는다는 경계가 명시되는 것이다.
 
 ## 이해관계자 맵
 

@@ -23,6 +23,7 @@ class TransportRequest:
     instructions: str | None = None
     previous_response_id: str | None = None
     session_id: str = field(default_factory=lambda: str(uuid4()))
+    tools: list[dict[str, Any]] | None = None
 
     def to_request_body(self) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -35,6 +36,16 @@ class TransportRequest:
             body["instructions"] = self.instructions
         if self.previous_response_id:
             body["previous_response_id"] = self.previous_response_id
+        if self.tools:
+            body["tools"] = [
+                {
+                    "type": "function",
+                    "name": tool["name"],
+                    "description": tool.get("description", ""),
+                    "parameters": tool.get("parameters", {"type": "object", "properties": {}}),
+                }
+                for tool in self.tools
+            ]
         return body
 
 
@@ -91,6 +102,8 @@ def build_transport_request(
     kwargs: dict[str, Any] = {}
     if session_id is not None:
         kwargs["session_id"] = session_id
+    if invocation_request.tools:
+        kwargs["tools"] = invocation_request.tools
     return TransportRequest(
         model=model,
         messages=messages,

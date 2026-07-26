@@ -4,7 +4,7 @@ import os
 from unittest import mock
 
 from agentos.conversation import runtime as runtime_module
-from agentos.conversation.runtime import ConversationRuntime
+from agentos.conversation.runtime import MAX_TOOL_CALLS_PER_TURN, ConversationRuntime
 from agentos.conversation.types import BranchHead, ConversationState, ProviderContinuation
 from agentos.llm.types import LLMEvent
 from agentos.terminal.events import wrap_provider_event
@@ -345,3 +345,161 @@ def test_submit_turn_force_full_replay_ignores_a_valid_continuation(monkeypatch)
     list(runtime.submit_turn("hi", force_full_replay=True))
 
     assert captured["continuation"] is None
+
+
+# --- Milestone 4/5/6: tool_call -> execute -> re-invoke agentic loop ---
+
+
+def test_submit_turn_tool_call_loop_executes_read_and_reinvokes(tmp_path, monkeypatch):
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    (tmp_path / "AGENTS.md").write_text("hello from agents md", encoding="utf-8")
+
+    call_count = {"n": 0}
+
+    def fake_stream_context(request, provider="mock"):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            assert request.tools is not None
+            yield LLMEvent(type="start", provider="mock", mode="mock")
+            yield LLMEvent(
+                type="tool_call",
+                provider="mock",
+                mode="mock",
+                metadata={"name": "read", "arguments": {"path": "AGENTS.md"}},
+            )
+            return
+        assert any(m.role == "tool" for m in request.messages)
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="final answer")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    events = list(runtime.submit_turn("read AGENTS.md", cwd=tmp_path, tool_names=["read"]))
+
+    assert "tool_call" in [e.type for e in events]
+    assert "tool_result" in [e.type for e in events]
+    assert call_count["n"] == 2
+
+    branch = runtime.state.active_branch()
+    messages = runtime.state.branch_messages(branch.branch_id)
+    assert [m.role for m in messages] == ["user", "tool", "assistant"]
+    assert "hello from agents md" in messages[1].text
+    assert messages[1].tool_name == "read"
+    assert messages[2].text == "final answer"
+
+
+def test_submit_turn_without_tool_names_runs_a_single_provider_call(monkeypatch):
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    call_count = {"n": 0}
+
+    def fake_stream_context(request, provider="mock"):
+        call_count["n"] += 1
+        assert request.tools is None
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="hi")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    list(runtime.submit_turn("hello"))
+
+    assert call_count["n"] == 1
+
+
+def test_submit_turn_tool_call_limit_stops_loop_and_annotates_assistant_text(tmp_path, monkeypatch):
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    (tmp_path / "AGENTS.md").write_text("content", encoding="utf-8")
+
+    call_count = {"n": 0}
+
+    def fake_stream_context(request, provider="mock"):
+        call_count["n"] += 1
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(
+            type="tool_call",
+            provider="mock",
+            mode="mock",
+            metadata={"name": "read", "arguments": {"path": "AGENTS.md"}},
+        )
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    events = list(runtime.submit_turn("loop forever", cwd=tmp_path, tool_names=["read"]))
+
+    assert call_count["n"] == MAX_TOOL_CALLS_PER_TURN + 1
+    assert "tool_call_limit_reached" in [e.type for e in events]
+
+    branch = runtime.state.active_branch()
+    messages = runtime.state.branch_messages(branch.branch_id)
+    assistant_message = messages[-1]
+    assert assistant_message.role == "assistant"
+    assert "도구 호출 한도 초과" in assistant_message.text
+    tool_messages = [m for m in messages if m.role == "tool"]
+    assert len(tool_messages) == MAX_TOOL_CALLS_PER_TURN
+
+
+def test_submit_turn_read_confirm_env_var_off_executes_without_confirmation(tmp_path, monkeypatch):
+    monkeypatch.delenv("AGENTOS_TOOL_READ_CONFIRM", raising=False)
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    (tmp_path / "AGENTS.md").write_text("content", encoding="utf-8")
+    confirm_calls = []
+
+    def fake_stream_context(request, provider="mock"):
+        if not any(m.role == "tool" for m in request.messages):
+            yield LLMEvent(type="start", provider="mock", mode="mock")
+            yield LLMEvent(
+                type="tool_call",
+                provider="mock",
+                mode="mock",
+                metadata={"name": "read", "arguments": {"path": "AGENTS.md"}},
+            )
+            return
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="done")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    def confirm(name, arguments):
+        confirm_calls.append((name, arguments))
+        return True
+
+    list(runtime.submit_turn("read it", cwd=tmp_path, tool_names=["read"], confirm_tool_call=confirm))
+
+    assert confirm_calls == []
+
+
+def test_submit_turn_read_confirm_env_var_on_waits_for_approval(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTOS_TOOL_READ_CONFIRM", "1")
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    (tmp_path / "AGENTS.md").write_text("content", encoding="utf-8")
+    confirm_calls = []
+
+    def fake_stream_context(request, provider="mock"):
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(
+            type="tool_call",
+            provider="mock",
+            mode="mock",
+            metadata={"name": "read", "arguments": {"path": "AGENTS.md"}},
+        )
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    def deny(name, arguments):
+        confirm_calls.append((name, arguments))
+        return False
+
+    events = list(runtime.submit_turn("read it", cwd=tmp_path, tool_names=["read"], confirm_tool_call=deny))
+
+    assert confirm_calls == [("read", {"path": "AGENTS.md"})]
+    assert "tool_call_denied" in [e.type for e in events]
+    branch = runtime.state.active_branch()
+    messages = runtime.state.branch_messages(branch.branch_id)
+    assert all(m.role != "tool" for m in messages)

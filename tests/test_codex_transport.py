@@ -103,6 +103,49 @@ def test_build_transport_request_uses_message_replay_when_continuation_is_none()
     assert len(transport_request.messages) == 3
 
 
+# --- tools ---
+
+
+def test_request_body_omits_tools_when_absent():
+    request = TransportRequest(model="gpt-5-codex", messages=[])
+    body = request.to_request_body()
+    assert "tools" not in body
+
+
+def test_request_body_includes_tools_when_present():
+    request = TransportRequest(
+        model="gpt-5-codex",
+        messages=[],
+        tools=[{"name": "read", "description": "Read a file", "parameters": {"type": "object", "properties": {}}}],
+    )
+    body = request.to_request_body()
+    assert body["tools"] == [
+        {
+            "type": "function",
+            "name": "read",
+            "description": "Read a file",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
+
+
+def test_build_transport_request_omits_tools_when_invocation_request_has_none():
+    invocation_request = InvocationRequest(messages=[InvocationMessage(role="user", text="hi")])
+    transport_request = build_transport_request(model="gpt-5-codex", invocation_request=invocation_request)
+    assert transport_request.tools is None
+    assert "tools" not in transport_request.to_request_body()
+
+
+def test_build_transport_request_forwards_tools_from_invocation_request():
+    tool_spec = {"name": "read", "description": "Read a file", "parameters": {"type": "object", "properties": {}}}
+    invocation_request = InvocationRequest(
+        messages=[InvocationMessage(role="user", text="hi")],
+        tools=[tool_spec],
+    )
+    transport_request = build_transport_request(model="gpt-5-codex", invocation_request=invocation_request)
+    assert transport_request.tools == [tool_spec]
+
+
 # --- continuation_expired / branch_change / provider_switch / restart / resume / transport_epoch / replay ---
 
 

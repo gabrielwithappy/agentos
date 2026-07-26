@@ -1,0 +1,1 @@
+"""Bundled AgentOS catalog resources."""
