@@ -3,16 +3,18 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-26T03:03:04Z
+> Generated at: 2026-07-26T06:37:18Z
 
 ## Active Plans
 - older active plans omitted=0
-- `완료` [AgentOS 프로젝트 작업 하네스 문서 전환 구현 계획](.agentos/project/exec-plans/active/2026-07-26-project-work-harness-document-pivot.md) | reviewed | progress: Intent Sheet와 문서 전환 계획을 작성했다. 계획 header의 Gate 2 상태와 reviewer artifact가 실행 가능 여부의 기준이며, root project 문서는 아직 변경하지 않았다.
-- `완료` [AgentOS read 도구 + 최소 에이전틱 루프 구현 계획](.agentos/project/exec-plans/active/2026-07-26-agentos-read-tool-execution-loop.md) | progress: 8개 마일스톤 구현·검증 완료, 전체 테스트 스위트 358 passed(회귀 없음)
+- `구현 완료 (closeout 재검토 대기)` [AgentOS TUI 요청·결과 분리 구현 계획](.agentos/project/exec-plans/active/2026-07-26-tui-request-result-separation.md) | progress: 마일스톤 0-6 구현 및 테스트 완료. closeout 본문 갱신으로 fresh Gate 2 재검토와 archive 결정만 남았다.
+- `구현 계획 (Gate 2 통과)` [executor-neutral writing-plans 계약 구현 계획](.agentos/project/exec-plans/active/2026-07-26-executor-neutral-writing-plans.md) | reviewed | progress: executor-neutral 실행 방식 계약 계획 초안 작성 완료, Gate 2 리뷰 대기 중. 실제 harness 계약 변경은 사용자 승인 후에만 실행한다.
 
 ## Archived Plans
-- archive summary: completed=24, parked=5
-- older archived plans omitted=9
+- archive summary: completed=26, parked=5
+- older archived plans omitted=11
+- `완료` [AgentOS 프로젝트 작업 하네스 문서 전환 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-project-work-harness-document-pivot.md) | reviewed_evidence=invalid | progress: Intent Sheet와 문서 전환 계획을 작성했다. 계획 header의 Gate 2 상태와 reviewer artifact가 실행 가능 여부의 기준이며, root project 문서는 아직 변경하지 않았다.
+- `완료` [AgentOS read 도구 + 최소 에이전틱 루프 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-agentos-read-tool-execution-loop.md) | progress: 8개 마일스톤 구현·검증 완료, 전체 테스트 스위트 358 passed(회귀 없음)
 - `완료` [AgentOS 부트스트랩 컨텍스트 안전장치 및 가시성 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-25-agentos-bootstrap-context-safety-and-visibility.md) | progress: 계획 초안 작성, Gate 2 리뷰 대기 중 (사용자 지시에 따라 하네스 에이전트 핵심 리뷰로 진행)
 - `완료` [AgentOS PI형 세션 런타임 TUI 아키텍처 구현 계획](.agentos/project/exec-plans/archive/2026-07-24-agentos-pi-session-runtime-tui-architecture.md) | reviewed_evidence=invalid | outcome: 사용자는 TUI에서 이전 대화를 실제 다음 답변의 문맥으로 유지하고, 세션 재개와 branch가 올바른 대화 경로를 이어가며, provider 지연/실패 시 명확한 복구를 받는다. | progress: native predecessor(2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport)가 완료되어 `predecessor_completion_commit: 923d35e`가 기록되었고 sha…
 - `완료` [AgentOS pi 스타일 부트스트랩 컨텍스트 주입 구현 계획](.agentos/project/exec-plans/archive/2026-07-24-agentos-pi-bootstrap-context.md) | progress: 계획 초안 작성, Gate 2 리뷰 대기 중 (핵심 하네스 서브에이전트만 최소 리뷰 — 사용자 지시에 따름)
@@ -31,8 +33,6 @@
 - `완료` [AgentOS TUI — pi TUI 격차 해소 (Phase 1) 구현 계획](.agentos/project/exec-plans/archive/2026-07-21-tui-pi-clone-phase1.md) | progress: 계획 초안 작성, Gate 2 리뷰 대기 중
 - `완료` [AgentOS TUI 개선 1차 반복: 스트리밍 응답 및 기본 메뉴 구현](.agentos/project/exec-plans/archive/2026-07-20-tui-improvement.md) | progress: 구현 완료 및 fresh verification PASS
 - `완료` [AgentOS TUI UX Architecture 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-tui-ux-architecture.md) | reviewed_evidence=invalid | progress: 구현 완료 및 fresh verification PASS
-- `완료` [AgentOS 독립 대화형 CLI 구현 계획](.agentos/project/exec-plans/archive/2026-07-19-agentos-independent-interactive-cli.md) | reviewed_evidence=invalid | outcome: 사용자는 설치한 `agentos` 한 명령으로 대화형 세션을 시작하거나 단발 자동화를 실행하고, hook과 입력 처리 결과를 이해 가능한 상태·복구 안내와 함께 사용할 수 있다. | progress: ADR-0005와 root project 문서는 갱신되었고, Gate 2 reviewer evidence가 PASS/CLEAN으로 확보되었다. 구현과 fresh verification이 완료되었다.
-- `완료` [프로젝트 문서 구조 리팩토링 구현 계획](.agentos/project/exec-plans/archive/2026-07-18-project-docs-refactoring.md) | reviewed_evidence=missing | progress: 진행 요약, 완료됨, 현재 위치, 다음 단계, 완료 신호를 간단히 보여줌
 
 ## Reference Docs
 - older reference docs omitted=0

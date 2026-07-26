@@ -24,6 +24,10 @@ def _transcript_text(pilot) -> str:
     return "\n".join(message.text for message in pilot.app.query(ChatMessage))
 
 
+def _presentation_text(pilot) -> str:
+    return "\n".join(message.presentation_text for message in pilot.app.query(ChatMessage))
+
+
 async def await_transcript(pilot, expected_text: str, timeout: float = 1.0) -> None:
     import time
     start = time.monotonic()
@@ -88,7 +92,8 @@ def test_composer_submit_updates_transcript_and_restores_focus(tmp_path, monkeyp
             composer.value = "hello"
             await pilot.press("enter")
             await await_transcript(pilot, "Mock response from AgentOS")
-            assert "You: hello" in _transcript_text(pilot)
+            assert "hello" in _transcript_text(pilot)
+            assert "You\n│ hello" in _presentation_text(pilot)
             assert "last turn done" in str(pilot.app.query_one("#status").render())
             session_files = [
                 path
@@ -111,7 +116,8 @@ def test_composer_submits_multiline_prompt(tmp_path, monkeypatch):
             composer.value = "hello\nworld"
             await pilot.press("enter")
             transcript = _transcript_text(pilot)
-            assert "You: hello\nworld" in transcript
+            assert "hello\nworld" in transcript
+            assert "You\n│ hello\nworld" in _presentation_text(pilot)
             assert composer.value == ""
             assert pilot.app.focused is composer
 
@@ -132,8 +138,10 @@ def test_transcript_accumulates_multiple_turns(tmp_path, monkeypatch):
             await await_transcript(pilot, "Mock response from AgentOS")
 
             transcript = _transcript_text(pilot)
-            assert "You: first" in transcript
-            assert "You: second" in transcript
+            assert "first" in transcript
+            assert "second" in transcript
+            assert "You\n│ first" in _presentation_text(pilot)
+            assert "You\n│ second" in _presentation_text(pilot)
             assert transcript.count("Mock response from AgentOS") == 2
 
     asyncio.run(run())
@@ -198,7 +206,8 @@ def test_composer_large_paste_marker_expands_on_submit(tmp_path, monkeypatch):
             await pilot.press("enter")
             await pilot.pause()
             transcript = _transcript_text(pilot)
-            assert "You: line 0" in transcript
+            assert "line 0" in transcript
+            assert "You\n│ line 0" in _presentation_text(pilot)
             assert "line 11" in transcript
             assert composer.value == ""
             assert composer.submission_text == ""
@@ -1930,5 +1939,130 @@ def test_tui_shows_tool_call_limit_message_when_provider_keeps_requesting_tools(
             composer.value = "loop forever"
             await pilot.press("enter")
             await await_transcript(pilot, "도구 호출 한도 초과")
+
+    asyncio.run(run())
+
+
+# ── request/result presentation contract (2026-07-26) ───────────────────
+
+
+def test_role_visual_contract_keeps_raw_message_bodies_separate_from_labels():
+    user = ChatMessage("user", "ship it", turn_id="turn-user")
+    assistant = ChatMessage("assistant", "Done.", turn_id="turn-assistant")
+
+    assert user.text == "ship it"
+    assert assistant.text == "Done."
+    assert user.presentation_text == "You\n│ ship it"
+    assert assistant.presentation_text == "AgentOS · responding\n│ Done."
+
+    assistant.set_presentation_status("complete")
+    assert assistant.presentation_text == "AgentOS · complete\n│ Done."
+    # Copy/fork source data remains the undecorated provider body and turn id.
+    assert assistant.text == "Done."
+    assert assistant.turn_id == "turn-assistant"
+
+
+def test_stream_status_no_response_done_shows_complete_result_area(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+
+        def empty_stream(request, *, provider: str = "mock"):
+            yield LLMEvent(type="start", provider=provider, mode="mock")
+            yield LLMEvent(type="done", provider=provider, mode="mock")
+
+        monkeypatch.setattr("agentos.conversation.runtime.session_stream_context", empty_stream)
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "empty response"
+            await pilot.press("enter")
+            await await_transcript(pilot, "No response content was returned.")
+            assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
+            assert assistant.presentation_status == "complete"
+            assert assistant.presentation_text == "AgentOS · complete\n│ No response content was returned."
+
+    asyncio.run(run())
+
+
+def test_stream_status_partial_error_preserves_body_and_marks_failed(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+
+        def failing_stream(request, *, provider: str = "mock"):
+            yield LLMEvent(type="message_delta", provider=provider, mode="mock", text="Partial result")
+            yield LLMEvent(
+                type="error",
+                provider=provider,
+                mode="mock",
+                error={"code": "transport_error", "message": "connection reset"},
+                recovery="Resend your message.",
+            )
+
+        monkeypatch.setattr("agentos.conversation.runtime.session_stream_context", failing_stream)
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "fail after delta"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Next: /status")
+            assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
+            assert assistant.text == "Partial result"
+            assert assistant.presentation_status == "failed"
+            assert "AgentOS · failed\n│ Partial result" in _presentation_text(pilot)
+
+    asyncio.run(run())
+
+
+def test_stream_status_partial_cancel_preserves_body_and_marks_cancelled(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        release = threading.Event()
+
+        def cancellable_stream(request, *, provider: str = "mock"):
+            yield LLMEvent(type="message_delta", provider=provider, mode="mock", text="Partial result")
+            release.wait(timeout=5)
+            yield LLMEvent(type="done", provider=provider, mode="mock")
+
+        monkeypatch.setattr("agentos.conversation.runtime.session_stream_context", cancellable_stream)
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "cancel after delta"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Partial result")
+            await pilot.press("escape")
+            release.set()
+            await await_transcript(pilot, "Turn cancelled.")
+            assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
+            assert assistant.text == "Partial result"
+            assert assistant.presentation_status == "cancelled"
+            assert "AgentOS · cancelled\n│ Partial result" in _presentation_text(pilot)
+
+    asyncio.run(run())
+
+
+def test_activity_turn_contract_preserves_event_order_and_turn_id(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+
+        def activity_stream(request, *, provider: str = "mock"):
+            yield LLMEvent(type="reasoning", provider=provider, mode="mock", text="planning")
+            yield LLMEvent(type="tool_call", provider=provider, mode="mock", metadata={"name": "read", "arguments": {}})
+            yield LLMEvent(type="tool_result", provider=provider, mode="mock", metadata={"name": "read", "summary": "ok"})
+            yield LLMEvent(type="message_delta", provider=provider, mode="mock", text="Answer")
+            yield LLMEvent(type="done", provider=provider, mode="mock")
+
+        monkeypatch.setattr("agentos.conversation.runtime.session_stream_context", activity_stream)
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "show activity"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Answer")
+            messages = [m for m in pilot.app.query(ChatMessage) if m.role in {"reasoning", "tool", "assistant"}]
+            assert [m.role for m in messages] == ["reasoning", "tool", "tool", "assistant"]
+            assert len({m.turn_id for m in messages}) == 1
+            presentation = _presentation_text(pilot)
+            assert presentation.index("Activity · Thinking") < presentation.index("Activity · Tool") < presentation.index("AgentOS · complete")
 
     asyncio.run(run())
