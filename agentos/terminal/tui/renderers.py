@@ -70,9 +70,16 @@ def render_event(event: dict[str, Any]) -> str:
     if event_type == "tool_call_limit_reached":
         metadata = safe.get("metadata") or {}
         limit = metadata.get("limit", "")
-        return f"도구 호출 한도 초과({limit}회) — 현재까지의 응답으로 종료합니다."
+        return (
+            f"도구 호출 한도({limit}회)에 도달해 이번 턴을 종료했습니다. "
+            "여기까지의 작업은 그대로 유지됩니다. "
+            "Next: 요청을 더 작은 단계로 나눠 다시 보내세요."
+        )
     if event_type == "tool_call_denied":
-        return "도구 호출이 거부되어 실행되지 않았습니다."
+        return (
+            "도구 실행을 거부해 이번 턴을 종료했습니다. 아무것도 변경되지 않았습니다. "
+            "Next: 다른 방식으로 다시 요청하세요."
+        )
     return event_type
 
 

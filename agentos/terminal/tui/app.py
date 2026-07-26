@@ -8,6 +8,8 @@ import os
 # their terminal/IME combination does not need the workaround.
 os.environ.setdefault("TEXTUAL_DISABLE_KITTY_KEY", "1")
 
+from pathlib import Path
+
 from rich.console import Console
 from textual import work
 from textual.app import App, ComposeResult
@@ -22,8 +24,11 @@ from agentos.llm.providers.codex_native import DEFAULT_MODEL as CODEX_DEFAULT_MO
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
 from agentos.terminal.events import CliEvent, new_turn_id, wrap_provider_event
 from agentos.terminal.hooks import HookError, apply_input_hooks
-from agentos.terminal.interaction import run_interactive
+from agentos.terminal.interaction import TOOLS_ANNOUNCEMENT, run_interactive
+from agentos.llm.tools.approval import approval_prompt
+from agentos.llm.tools.registry import ALL_TOOL_NAMES
 from agentos.terminal.paths import initialize_state, write_preferred_provider
+from agentos.terminal.skills import global_skill_read_paths, global_skills_dir
 from agentos.terminal.sessions import (
     SessionError,
     append_event,
@@ -37,7 +42,7 @@ from agentos.terminal.sessions import (
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
 from agentos.terminal.tui.state import TuiStatus, get_git_branch
-from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
+from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, ConfirmToolScreen, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
 
 # Keyboard shortcut reference table shown by /hotkeys
 _HOTKEYS_TABLE = """\
@@ -218,6 +223,10 @@ class AgentOSTui(App[None]):
 
     def compose(self) -> ComposeResult:
         transcript_text = "AgentOS\nType a message or / for commands"
+        # A user returning after this release gains write/edit/bash must not
+        # learn about that from the first approval modal — that is the
+        # wrong moment to find out.
+        transcript_text += f"\n{TOOLS_ANNOUNCEMENT}"
         banner = self._bootstrap_banner_text()
         if banner is not None:
             transcript_text += f"\n{banner}"
@@ -716,7 +725,34 @@ class AgentOSTui(App[None]):
         # (rather than merely abandoning it) deterministically raises
         # `GeneratorExit` at its suspended `yield`, skipping that post-loop
         # commit regardless of Python implementation/GC timing.
-        turn_stream = runtime.submit_turn(prompt)
+        tool_call_count = 0
+
+        def confirm_tool_call(name: str, arguments: dict) -> bool:
+            nonlocal tool_call_count
+            tool_call_count += 1
+            body = approval_prompt(
+                name, arguments, cwd=Path.cwd(), call_number=tool_call_count
+            )
+            title, _, detail = body.partition("\n")
+            # `push_screen_wait` is a coroutine; `call_from_thread` awaits it
+            # and blocks this worker thread until the user answers. Pairing
+            # `call_from_thread` with the non-awaiting `push_screen` would
+            # return a truthy callback object instead, silently approving
+            # every write/edit/bash call.
+            return bool(
+                self.call_from_thread(
+                    self.push_screen_wait, ConfirmToolScreen(title, detail)
+                )
+            )
+
+        turn_stream = runtime.submit_turn(
+            prompt,
+            cwd=Path.cwd(),
+            tool_names=list(ALL_TOOL_NAMES),
+            allowed_read_paths=global_skill_read_paths(),
+            blocked_read_roots=(global_skills_dir(),),
+            confirm_tool_call=confirm_tool_call,
+        )
         try:
             for provider_event in turn_stream:
                 if worker.is_cancelled:

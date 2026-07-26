@@ -8,7 +8,7 @@ from rich.style import Style
 
 from agentos.terminal.tui.app import AgentOSTui
 from agentos.terminal.tui.state import TuiStatus
-from agentos.terminal.tui.widgets import StatusFooter, Transcript
+from agentos.terminal.tui.widgets import ChatMessage, StatusFooter, Transcript
 
 
 def _contrast(first: str, second: str) -> float:
@@ -252,5 +252,94 @@ def test_user_background_block_preserves_no_color_role_contract(tmp_path, monkey
 
                 assert "You" in svg
                 assert "AgentOS&#160;·&#160;complete" in svg
+
+    asyncio.run(run())
+
+
+def test_markdown_styles_come_from_theme_and_meet_contrast(tmp_path, monkeypatch):
+    """Rich's default `markdown.*` slots are fixed cyan/magenta and ignore the
+    active theme. Every slot we render must resolve to a theme colour that
+    stays readable against both the background and the surface."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            message = ChatMessage("assistant", "### Title\n\n- item with `code`\n")
+            await pilot.app.query_one(Transcript).mount(message)
+            for theme in ("textual-dark", "textual-light"):
+                pilot.app.theme = theme
+                await pilot.pause()
+                variables = pilot.app.get_css_variables()
+                styles = message._markdown_styles()
+                for slot in (
+                    "markdown.code",
+                    "markdown.code_block",
+                    "markdown.h1",
+                    "markdown.h3",
+                    "markdown.block_quote",
+                    "markdown.item.number",
+                    "markdown.list",
+                    "markdown.link",
+                ):
+                    assert slot in styles, slot
+                    colour = styles[slot].replace("bold ", "")
+                    # Never a fixed ANSI name - it must come from the theme.
+                    assert colour.startswith("#"), (slot, colour)
+                    assert colour in variables.values(), (slot, colour)
+                    assert _contrast(colour, variables["background"]) >= 4.5, (slot, theme)
+                    assert _contrast(colour, variables["surface"]) >= 4.5, (slot, theme)
+
+    asyncio.run(run())
+
+
+def test_themed_markdown_applies_styles_when_rendered():
+    """Pins the wrapper mechanism itself: `Markdown` has no `theme` argument,
+    so the styles have to reach the Console via `use_theme()`."""
+    import io
+
+    from rich.console import Console
+
+    from agentos.terminal.tui.widgets import ThemedMarkdown
+
+    console = Console(file=io.StringIO(), force_terminal=True, color_system="truecolor", width=40)
+    console.print(ThemedMarkdown("### Heading", {"markdown.h3": "#00ff00"}, "monokai"))
+    output = console.file.getvalue()
+    assert "38;2;0;255;0" in output, output
+    # Rich's default bold-magenta heading must be gone.
+    assert "\x1b[1;35m" not in output, output
+
+
+def test_fenced_code_block_theme_follows_light_and_dark(tmp_path, monkeypatch):
+    """Fenced blocks are highlighted by Pygments, which `use_theme()` never
+    reaches, so a light theme must not keep monokai's fixed dark background."""
+    import io
+
+    from rich.console import Console
+
+    from agentos.terminal.tui.widgets import ThemedMarkdown
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            message = ChatMessage("assistant", "```python\nx = 1\n```")
+            await pilot.app.query_one(Transcript).mount(message)
+            rendered: list[str] = []
+            for theme in ("textual-dark", "textual-light"):
+                pilot.app.theme = theme
+                await pilot.pause()
+                console = Console(
+                    file=io.StringIO(), force_terminal=True, color_system="truecolor", width=40
+                )
+                console.print(
+                    ThemedMarkdown(message.text, message._markdown_styles(), message._code_theme())
+                )
+                rendered.append(console.file.getvalue())
+
+            dark_output, light_output = rendered
+            assert dark_output != light_output
+            # monokai's fixed background must not survive on the light theme.
+            assert "48;2;39;40;34" not in light_output, light_output
 
     asyncio.run(run())

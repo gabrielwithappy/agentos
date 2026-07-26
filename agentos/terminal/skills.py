@@ -185,3 +185,22 @@ def statuses(home: str | Path | None = None) -> list[SkillStatus]:
                 state, source_digest = "source_unavailable", None
         result.append(SkillStatus(name, state, actual, source_digest))
     return result
+
+
+def global_skill_read_paths(home: str | Path | None = None) -> tuple[Path, ...]:
+    """`SKILL.md` files under the global skills dir that tools may read even
+    though they sit outside the session cwd.
+
+    Shared by the TUI and the interactive CLI so the two front-ends can
+    never grant different read boundaries for the same session.
+    """
+    root = global_skills_dir(home)
+    if root.is_symlink() or not root.is_dir():
+        return ()
+    paths: list[Path] = []
+    for entry in root.iterdir():
+        skill_file = entry / "SKILL.md"
+        if entry.is_symlink() or not entry.is_dir() or skill_file.is_symlink() or not skill_file.is_file():
+            continue
+        paths.append(skill_file.resolve())
+    return tuple(paths)
