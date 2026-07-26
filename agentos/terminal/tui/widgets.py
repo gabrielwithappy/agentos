@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from rich.console import Group
 from rich.markdown import Markdown
 from rich.text import Text
+from rich.theme import Theme
 from textual.timer import Timer
 from textual.widgets import ListView, Static, OptionList, Label, TextArea, Input
 from textual.message import Message
@@ -175,6 +176,99 @@ class ThemeScreen(ModalScreen[str]):
             event.stop()
 
 
+class ConfirmToolScreen(ModalScreen[bool]):
+    """Approval prompt for an irreversible tool call.
+
+    Two properties are load-bearing and covered by tests: the deny option is
+    listed first so it holds initial focus (Enter must never mean "approve"),
+    and the body is the shared `approval_prompt()` text rather than a
+    head-truncated argument summary, so the tail of a command chain stays
+    visible.
+    """
+
+    DEFAULT_CSS = """
+    ConfirmToolScreen {
+        align: center middle;
+    }
+    #confirm-container {
+        width: 80;
+        max-width: 90%;
+        height: auto;
+        max-height: 24;
+        border: solid $text-primary;
+        background: $surface;
+        padding: 1 2;
+    }
+    #confirm-title {
+        width: 100%;
+        margin-bottom: 1;
+        text-style: bold;
+    }
+    #confirm-body {
+        width: 100%;
+        margin-bottom: 1;
+    }
+    """
+
+    def __init__(self, title: str, body: str) -> None:
+        super().__init__()
+        self._title = title
+        self._body = body
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="confirm-container"):
+            yield Label(self._title, id="confirm-title")
+            yield Static(self._body, id="confirm-body")
+            yield OptionList("거부 (기본)", "승인", id="confirm-options")
+
+    def on_mount(self) -> None:
+        options = self.query_one("#confirm-options", OptionList)
+        options.highlighted = 0
+        options.focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        self.dismiss(event.option_index == 1)
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            self.dismiss(False)
+            event.stop()
+
+
+# Rich's default `markdown.*` styles are fixed ANSI colours (`markdown.code`
+# is `bold cyan on black`, the headings are `magenta`), so they ignore the
+# active Textual theme entirely and read badly on light terminals. `Markdown`
+# has no `theme` parameter and Textual's `Static.update()` never hands us the
+# Console doing the rendering, so the only seam is to push a theme onto
+# whichever Console ends up rendering us.
+class ThemedMarkdown:
+    """Renders `markup` as Markdown with `styles` layered over Rich's
+    defaults.
+
+    `code_theme` is separate on purpose: fenced code blocks are highlighted
+    by Pygments, which the Console theme does not reach, so the caller has
+    to pick a Pygments theme that suits the current background.
+    """
+
+    def __init__(self, markup: str, styles: dict[str, str], code_theme: str) -> None:
+        self._markup = markup
+        self._styles = styles
+        self._code_theme = code_theme
+
+    def __rich_console__(self, console, options):
+        markdown = Markdown(self._markup, code_theme=self._code_theme)
+        if not self._styles:
+            yield from console.render(markdown, options)
+            return
+        with console.use_theme(Theme(self._styles, inherit=True)):
+            yield from console.render(markdown, options)
+
+
+# Pygments themes whose backgrounds sit on the same side as the terminal's.
+_DARK_CODE_THEME = "monokai"
+_LIGHT_CODE_THEME = "default"
+
+
 class ChatMessage(Static):
     DEFAULT_CSS = """
     ChatMessage {
@@ -295,15 +389,60 @@ class ChatMessage(Static):
         multiple activity entries from each other."""
         return self.role in ("reasoning", "tool")
 
+    def _theme_variables(self) -> dict[str, str]:
+        """Theme colours for the running app, or `{}` when there is no app to
+        ask — `ChatMessage` is instantiated directly in tests, and a missing
+        theme must degrade to Rich's defaults rather than raise."""
+        try:
+            return self.app.get_css_variables()
+        except Exception:
+            return {}
+
+    def _markdown_styles(self) -> dict[str, str]:
+        """Maps Rich's `markdown.*` slots onto the active theme so emphasis
+        follows `/theme` instead of Rich's fixed cyan/magenta."""
+        # `$text-muted`/`$text` resolve to `auto NN%`, which Rich cannot parse
+        # as a colour, and `$text-secondary` measures 4.16 against the dark
+        # theme's surface — below AA. `$text-primary` is the only theme slot
+        # that clears 4.5 against both background and surface in both themes.
+        variables = self._theme_variables()
+        primary = variables.get("text-primary")
+        if not primary:
+            return {}
+        return {
+            "markdown.code": primary,
+            "markdown.code_block": primary,
+            "markdown.h1": f"bold {primary}",
+            "markdown.h2": f"bold {primary}",
+            "markdown.h3": f"bold {primary}",
+            "markdown.h4": primary,
+            "markdown.block_quote": primary,
+            "markdown.item.number": primary,
+            "markdown.list": primary,
+            "markdown.link": primary,
+        }
+
+    def _code_theme(self) -> str:
+        """Pygments theme for fenced blocks. `use_theme()` cannot reach these
+        — they are syntax-highlighted — so the light/dark choice is made
+        here from the theme's own `dark` flag."""
+        try:
+            return _DARK_CODE_THEME if self.app.current_theme.dark else _LIGHT_CODE_THEME
+        except Exception:
+            return _DARK_CODE_THEME
+
+    def _markdown(self) -> ThemedMarkdown:
+        return ThemedMarkdown(self.text, self._markdown_styles(), self._code_theme())
+
     def _render_presentation(self) -> None:
         header = self._presentation_header()
         if header is None:
             self.update(self.text)
         elif self.rendered_as_markdown and self.text.strip():
             if self._uses_left_border():
-                self.update(Group(Text(header), Text("│"), Markdown(self.text)))
+                self.update(Group(Text(header), Text("│"), self._markdown()))
             else:
-                self.update(Group(Text(header), Markdown(self.text)))
+                self.update(Group(Text(header), self._markdown()))
         else:
             self.update(self.presentation_text)
 

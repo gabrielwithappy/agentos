@@ -133,6 +133,16 @@ what the provider did before answering:
 Activity preserves provider event order and is not part of the final assistant
 result; the final answer is rendered last.
 
+### 답변 형식 (Response style)
+
+AgentOS sends a fixed response-style instruction ahead of every request, so
+answers lead with the conclusion and expand into implementation detail only
+when asked. If an answer omits detail, it says so and invites a follow-up —
+just ask "자세히 설명해줘" (or similar) to get the deeper explanation. One
+thing this instruction never shortens: any action AgentOS actually took
+(files changed, commands run) is always reported in full, regardless of how
+brief the rest of the answer is.
+
 Unknown commands show `Unknown command. Next: /help` and return focus to the
 composer. `/session resume` opens the session-and-branch picker: with no
 sessions it shows `No sessions found. Esc to return.`, with an unavailable
@@ -343,6 +353,53 @@ before any turn is submitted:
 Unreadable files (permission error, bad encoding, broken symlink) never block
 session start: they are silently skipped, and the skip count is shown in the
 startup banner.
+
+At session start, AgentOS also announces what it can now do:
+
+```
+AgentOS가 파일을 찾고·읽고·고치고(write/edit) 명령을 실행할(bash) 수 있습니다.
+되돌리기 어려운 도구는 실행 전마다 승인을 요청합니다.
+```
+
+### 도구 (Tools)
+
+AgentOS offers the model seven tools, all boundary-checked against the
+session's working directory (`cwd`) through one shared resolver:
+
+| 도구 | 역할 | 승인 |
+|---|---|---|
+| `read` | Read a file. | 불필요 (opt-in via `AGENTOS_TOOL_READ_CONFIRM`) |
+| `list` | List a directory's entries. | 불필요 |
+| `glob` | Find files by name pattern. | 불필요 |
+| `grep` | Search file contents by regex. | 불필요 |
+| `write` | Create or overwrite a file. | **필수 — 매 호출** |
+| `edit` | Replace one exact, unique string in a file. | **필수 — 매 호출** |
+| `bash` | Run a shell command from `cwd`. | **필수 — 매 호출** |
+
+`write`, `edit`, and `bash` ask for approval before every single call,
+independent of any environment variable. If no approval callback is
+available, the call is denied rather than run unattended.
+
+**The approval screen shows the full action, not a truncated summary.** A
+`bash` call displays the entire command, wrapped rather than cut off at a
+fixed character limit — a head-truncated summary would hide exactly the kind
+of destructive trailing command (`&& rm -rf ...`) a user most needs to see.
+A `write` call states whether it creates a new file or overwrites an
+existing one (with its current size). An `edit` call shows the old and new
+text side by side. When several tool calls happen in one turn, the screen
+also shows a running count ("이번 턴 N번째 도구 승인") so repeated approvals
+stay visible instead of becoming a reflex.
+
+**`bash`는 샌드박스가 아닙니다.** Unlike the other six tools, an approved
+`bash` command can affect files outside the session's working directory —
+pinning `cwd` only sets where the process starts, not what it may touch.
+매 호출 승인이 유일한 실질 통제선이며, 네트워크 차단이나 파일시스템 격리는
+제공하지 않습니다. The approval screen states this before every `bash` call.
+
+Denying a tool call ends the turn immediately: nothing changes, and the
+message tells you so and suggests retrying with a different request. Hitting
+the per-turn tool-call limit (10 calls) behaves the same way — split a large
+request into smaller ones if you hit it.
 
 At session start, a one-line banner reports what loaded:
 

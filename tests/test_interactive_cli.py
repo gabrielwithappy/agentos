@@ -284,4 +284,4 @@ def test_run_interactive_tool_call_limit_shows_recovery_message(tmp_path, monkey
 
     assert exit_code == 0
     joined = "\n".join(printed)
-    assert "도구 호출 한도 초과" in joined
+    assert "도구 호출 한도(" in joined and "Next:" in joined

@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from unittest import mock
 
 from agentos.conversation import runtime as runtime_module
 from agentos.conversation.runtime import MAX_TOOL_CALLS_PER_TURN, ConversationRuntime
-from agentos.conversation.types import BranchHead, ConversationState, ProviderContinuation
-from agentos.llm.types import LLMEvent
+from agentos.conversation.types import (
+    BranchHead,
+    ConversationMessage,
+    ConversationState,
+    ProviderContinuation,
+)
+from agentos.llm.types import InvocationMessage, LLMEvent
 from agentos.terminal.events import wrap_provider_event
 
 
@@ -29,7 +35,12 @@ def test_submit_turn_user_commit_precedes_the_provider_stream_call(monkeypatch):
     captured_message_counts = []
 
     def fake_stream_context(request, provider="mock"):
-        captured_message_counts.append(len(request.messages))
+        # The AgentOS response-style system prompt is prepended at request
+        # assembly time and is not part of the conversation, so count only
+        # the messages that came from `ConversationState`.
+        captured_message_counts.append(
+            len([m for m in request.messages if m.role != "system"])
+        )
         yield LLMEvent(type="start", provider="mock", mode="mock")
         yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="hi")
         yield LLMEvent(type="done", provider="mock", mode="mock")
@@ -503,3 +514,204 @@ def test_submit_turn_read_confirm_env_var_on_waits_for_approval(tmp_path, monkey
     branch = runtime.state.active_branch()
     messages = runtime.state.branch_messages(branch.branch_id)
     assert all(m.role != "tool" for m in messages)
+
+
+def _write_tool_stream(monkeypatch, runtime):
+    """Provider that asks for a `write` once, then finishes."""
+
+    def fake_stream_context(request, provider="mock"):
+        if not any(m.role == "tool" for m in request.messages):
+            yield LLMEvent(type="start", provider="mock", mode="mock")
+            yield LLMEvent(
+                type="tool_call",
+                provider="mock",
+                mode="mock",
+                metadata={"name": "write", "arguments": {"path": "out.txt", "content": "x"}},
+            )
+            return
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="done")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+
+def test_mutating_tool_is_denied_without_confirm_callback(tmp_path, monkeypatch):
+    """No approval path must mean no execution — never unrestricted execution."""
+    monkeypatch.delenv("AGENTOS_TOOL_READ_CONFIRM", raising=False)
+    runtime = ConversationRuntime(_empty_state(), provider="mock", model="mock-model")
+    _write_tool_stream(monkeypatch, runtime)
+
+    events = list(runtime.submit_turn("write it", cwd=tmp_path, tool_names=["write"]))
+
+    assert "tool_call_denied" in [e.type for e in events]
+    assert not (tmp_path / "out.txt").exists()
+
+
+def test_mutating_tool_always_confirms_regardless_of_env(tmp_path, monkeypatch):
+    """`AGENTOS_TOOL_READ_CONFIRM` is off by default; a write must still ask."""
+    monkeypatch.delenv("AGENTOS_TOOL_READ_CONFIRM", raising=False)
+    runtime = ConversationRuntime(_empty_state(), provider="mock", model="mock-model")
+    _write_tool_stream(monkeypatch, runtime)
+    confirm_calls = []
+
+    def confirm(name, arguments):
+        confirm_calls.append((name, arguments))
+        return True
+
+    list(
+        runtime.submit_turn(
+            "write it", cwd=tmp_path, tool_names=["write"], confirm_tool_call=confirm
+        )
+    )
+
+    assert confirm_calls == [("write", {"path": "out.txt", "content": "x"})]
+    assert (tmp_path / "out.txt").read_text(encoding="utf-8") == "x"
+
+
+def test_readonly_tool_confirmation_still_env_gated(tmp_path, monkeypatch):
+    """The mutating policy must not leak into read-only tools."""
+    monkeypatch.delenv("AGENTOS_TOOL_READ_CONFIRM", raising=False)
+    runtime = ConversationRuntime(_empty_state(), provider="mock", model="mock-model")
+    (tmp_path / "AGENTS.md").write_text("content", encoding="utf-8")
+
+    def fake_stream_context(request, provider="mock"):
+        if not any(m.role == "tool" for m in request.messages):
+            yield LLMEvent(type="start", provider="mock", mode="mock")
+            yield LLMEvent(
+                type="tool_call",
+                provider="mock",
+                mode="mock",
+                metadata={"name": "list", "arguments": {}},
+            )
+            return
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    # No callback at all: a read-only tool still runs.
+    events = list(runtime.submit_turn("list it", cwd=tmp_path, tool_names=["list"]))
+    assert "tool_call_denied" not in [e.type for e in events]
+
+
+def test_response_style_prompt_precedes_project_context(monkeypatch):
+    """AgentOS previously sent no system prompt at all, so the project
+    context (when present) was the only guidance the model received. The
+    style prompt must come first so a project document cannot redefine it."""
+    from agentos.llm.prompt import AGENTOS_RESPONSE_STYLE_PROMPT
+
+    state = _empty_state()
+    project_message = ConversationMessage(
+        id="bootstrap",
+        role="system",
+        text="<project_context>...</project_context>",
+        source="trusted-system",
+    )
+    branch = state.branches[state.active_branch_id]
+    state = replace(
+        state,
+        messages={**state.messages, project_message.id: project_message},
+        branches={
+            **state.branches,
+            branch.branch_id: replace(branch, head_message_id=project_message.id),
+        },
+    )
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    captured: list = []
+
+    def fake_stream_context(request, provider="mock"):
+        captured.append(request)
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="hi")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+    list(runtime.submit_turn("hello"))
+
+    request = captured[0]
+    assert request.messages[0].text == AGENTOS_RESPONSE_STYLE_PROMPT
+    assert "<project_context>" in request.messages[1].text
+
+
+def test_prompt_is_not_persisted_to_conversation_state(monkeypatch):
+    """Persisting the style prompt would change the session file format and
+    the meaning of a replay, so it must never reach `ConversationState`."""
+    from agentos.llm.prompt import AGENTOS_RESPONSE_STYLE_PROMPT
+
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+
+    def fake_stream_context(request, provider="mock"):
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="hi")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+    list(runtime.submit_turn("hello"))
+
+    branch = runtime.state.active_branch()
+    for message in runtime.state.branch_messages(branch.branch_id):
+        assert AGENTOS_RESPONSE_STYLE_PROMPT not in message.text
+
+
+def test_prompt_reaches_transport_instructions(monkeypatch):
+    """`build_transport_request()` turns `role="system"` messages into
+    `instructions` — the only channel a Codex Responses call sees them
+    through — so the style prompt must actually arrive there."""
+    from agentos.llm.prompt import AGENTOS_RESPONSE_STYLE_PROMPT
+    from agentos.llm.transports.base import build_transport_request
+    from agentos.llm.types import InvocationRequest
+
+    request = InvocationRequest(
+        messages=[
+            InvocationMessage(role="system", text=AGENTOS_RESPONSE_STYLE_PROMPT),
+            InvocationMessage(role="user", text="hi"),
+        ],
+    )
+    built = build_transport_request(model="gpt-5.5", invocation_request=request)
+    assert built.instructions == AGENTOS_RESPONSE_STYLE_PROMPT
+
+
+def test_prompt_is_stable_across_continuation_reuse(monkeypatch):
+    """Pins the invariant the plan relies on instead of adding a schema
+    field: `instructions` must be identical across a continuation-reuse
+    turn within one runtime instance, and a continuation must never be
+    reused across a different runtime instance (the invariant rests solely
+    on `transport_session_epoch` freshness, not on the handle being
+    unreachable)."""
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    captured: list = []
+
+    def fake_stream_context(request, provider="mock"):
+        captured.append(request)
+        yield LLMEvent(
+            type="start", provider="mock", mode="mock", metadata={"continuation": "handle-1"}
+        )
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="hi")
+        yield LLMEvent(
+            type="done", provider="mock", mode="mock", metadata={"continuation": "handle-1"}
+        )
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+    list(runtime.submit_turn("first"))
+    list(runtime.submit_turn("second"))
+
+    assert len(captured) == 2
+    assert captured[0].continuation is None
+    assert captured[1].continuation == "handle-1"
+    assert captured[0].messages[0].text == captured[1].messages[0].text
+
+    other_runtime = ConversationRuntime(runtime.state, provider="mock", model="mock-model")
+    other_captured: list = []
+
+    def fake_stream_context_other(request, provider="mock"):
+        other_captured.append(request)
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="hi")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context_other)
+    list(other_runtime.submit_turn("third"))
+    assert other_captured[0].continuation is None

@@ -15,8 +15,9 @@ from agentos.conversation.types import (
     ProviderContinuation,
     new_message_id,
 )
+from agentos.llm.prompt import prepend_response_style
 from agentos.llm.session import stream_context as session_stream_context
-from agentos.llm.tools.registry import ToolName, execute_tool, get_tool_schemas
+from agentos.llm.tools.registry import ToolName, execute_tool, get_tool_schemas, requires_confirmation
 from agentos.llm.types import InvocationMessage, InvocationRequest, LLMEvent
 from agentos.terminal.events import new_turn_id
 
@@ -139,12 +140,17 @@ class ConversationRuntime:
         tool_call are unaffected: exactly one provider call, identical to
         the pre-tool-loop behavior.
 
-        `confirm_tool_call(name, arguments) -> bool`, if given and
-        `AGENTOS_TOOL_READ_CONFIRM` is truthy, is called before each tool
-        execution; a `False` return aborts the loop without executing the
-        tool (a `tool_call_denied` event is yielded and the turn ends with
-        whatever assistant text has been produced so far, same as hitting
-        the call-count limit).
+        `confirm_tool_call(name, arguments) -> bool` gates tool execution. A
+        `False` return aborts the loop without executing the tool (a
+        `tool_call_denied` event is yielded and the turn ends with whatever
+        assistant text has been produced so far, same as hitting the
+        call-count limit). When it is consulted depends on the tool:
+
+        - Tools where `registry.requires_confirmation()` is true (`write`,
+          `edit`, `bash`) are always confirmed, regardless of environment.
+          Passing no `confirm_tool_call` denies them rather than running
+          them unattended.
+        - Read-only tools stay opt-in behind `AGENTOS_TOOL_READ_CONFIRM`.
         """
         branch_id = self._state.active_branch_id
         candidate_state = self._append_message(
@@ -176,7 +182,9 @@ class ConversationRuntime:
             built = build_context(candidate_state, branch_id, max_messages=max_messages)
             self.last_context_build_ms = (time.perf_counter() - context_build_started) * 1000
             request = InvocationRequest(
-                messages=[InvocationMessage(role=m.role, text=m.text) for m in built.messages],
+                messages=prepend_response_style(
+                    [InvocationMessage(role=m.role, text=m.text) for m in built.messages]
+                ),
                 continuation=continuation.handle if continuation is not None else None,
                 tools=tool_schemas,
             )
@@ -224,7 +232,27 @@ class ConversationRuntime:
             tool_name = pending_tool_call.metadata.get("name", "")
             tool_arguments = pending_tool_call.metadata.get("arguments", {})
 
-            if _read_confirm_required() and confirm_tool_call is not None:
+            # Mutating tools are checked first and unconditionally: folding
+            # them into the env-gated branch below would leave writes and
+            # shell commands running unannounced on a default install.
+            if requires_confirmation(tool_name):
+                approved = (
+                    confirm_tool_call(tool_name, tool_arguments)
+                    if confirm_tool_call is not None
+                    # No approval path means no approval. A caller that
+                    # offers no confirmation UI must not thereby get
+                    # unrestricted execution.
+                    else False
+                )
+                if not approved:
+                    yield LLMEvent(
+                        type="tool_call_denied",
+                        provider=self._provider_name,
+                        mode="tool",
+                        metadata={"name": tool_name},
+                    )
+                    break
+            elif _read_confirm_required() and confirm_tool_call is not None:
                 if not confirm_tool_call(tool_name, tool_arguments):
                     yield LLMEvent(
                         type="tool_call_denied",

@@ -1,31 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from agentos.conversation.threat_patterns import scan_for_threats
 from agentos.llm.redaction import redact_text
+from agentos.llm.tools.paths import resolve_within_cwd
+from agentos.llm.tools.types import ToolExecutionResult
 
 # Matches pi's `truncate.ts` defaults (`DEFAULT_MAX_LINES`/`DEFAULT_MAX_BYTES`).
 MAX_LINES = 2000
 MAX_BYTES = 50 * 1024
 
 READ_TOOL_NAME = "read"
-
-
-@dataclass(frozen=True)
-class ToolExecutionResult:
-    """Outcome of one tool execution, ready to become a `role="tool"`
-    `ConversationMessage` text. `blocked` mirrors `bootstrap.ContextFile`'s
-    `skipped`/`blocked` split: a skip/error means the file couldn't be
-    produced; a block means it was read fine but content matched a threat
-    pattern, so `content` already holds a `[BLOCKED: ...]` marker instead of
-    the raw text."""
-
-    content: str
-    is_error: bool = False
-    truncated: bool = False
-    blocked: bool = False
 
 
 def read_tool_schema() -> dict:
@@ -42,31 +28,6 @@ def read_tool_schema() -> dict:
             "required": ["path"],
         },
     }
-
-
-def _resolve_allowed_path(
-    path: str,
-    cwd: Path,
-    allowed_paths: tuple[Path, ...] = (),
-    blocked_roots: tuple[Path, ...] = (),
-) -> Path | None:
-    """Resolves `path` against `cwd` and returns it only if the fully
-    resolved path (symlinks included) lands inside `cwd`. Resolution happens
-    before the containment check — checking first would let a symlink whose
-    target lives outside `cwd` slip through undetected."""
-    candidate = Path(path)
-    if not candidate.is_absolute():
-        candidate = cwd / candidate
-    resolved = candidate.resolve()
-    resolved_cwd = cwd.resolve()
-    resolved_allowed = tuple(candidate.resolve() for candidate in allowed_paths)
-    if resolved in resolved_allowed:
-        return resolved
-    if any(resolved.is_relative_to(root.resolve()) for root in blocked_roots):
-        return None
-    if not resolved.is_relative_to(resolved_cwd):
-        return None
-    return resolved
 
 
 def _truncate_lines(content: str) -> tuple[str, bool]:
@@ -106,7 +67,7 @@ def execute_read(
     allowed_paths: tuple[Path, ...] = (),
     blocked_roots: tuple[Path, ...] = (),
 ) -> ToolExecutionResult:
-    resolved = _resolve_allowed_path(path, cwd, allowed_paths, blocked_roots)
+    resolved = resolve_within_cwd(path, cwd, allowed_paths, blocked_roots)
     if resolved is None:
         return ToolExecutionResult(content=f"Error: path '{path}' is outside the working directory.", is_error=True)
 

@@ -18,6 +18,8 @@ from agentos.terminal.tui.renderers import (
 from agentos.terminal.tui.state import TuiStatus
 from agentos.terminal.tui.widgets import ChatMessage
 from agentos.terminal import sessions
+from agentos.conversation import runtime as runtime_module
+from agentos.conversation.runtime import ConversationRuntime
 
 
 def test_tui_disables_kitty_keyboard_protocol_for_ime_compatibility():
@@ -162,7 +164,11 @@ def test_assistant_message_finalizes_as_markdown(tmp_path, monkeypatch):
             composer = pilot.app.query_one("#composer")
             composer.value = "markdown"
             await pilot.press("enter")
-            await pilot.pause()
+            # The mock provider now issues a read-only tool call before its
+            # final response (the TUI offers the full tool set), so the turn
+            # takes an extra worker round trip. A bare `pilot.pause()` isn't
+            # guaranteed to span that, so wait for the reply text instead.
+            await await_transcript(pilot, "Mock response from AgentOS")
 
             assistant_messages = [
                 message
@@ -1579,7 +1585,11 @@ def test_conversation_runtime_snapshot_is_persisted_after_a_successful_turn(tmp_
         # order the same way production code does, via the branch chain.
         rebuilt = sessions.resume_conversation_state(session_id, home=str(tmp_path / "home"))
         ordered = rebuilt.branch_messages(rebuilt.active_branch_id)
-        assert [m.role for m in ordered] == ["user", "assistant"]
+        # The mock provider requests a read-only tool, so a `tool` message may
+        # sit between the two; what this test pins is that the turn starts
+        # with the user message and ends with the assistant reply.
+        assert [m.role for m in ordered][0] == "user"
+        assert [m.role for m in ordered][-1] == "assistant"
         assert ordered[0].text == "hello"
 
     asyncio.run(run())
@@ -1962,7 +1972,7 @@ def test_tui_shows_tool_call_limit_message_when_provider_keeps_requesting_tools(
             composer = pilot.app.query_one("#composer")
             composer.value = "loop forever"
             await pilot.press("enter")
-            await await_transcript(pilot, "도구 호출 한도 초과")
+            await await_transcript(pilot, "도구 호출 한도(")
 
     asyncio.run(run())
 
@@ -2168,3 +2178,132 @@ def test_activity_turn_contract_preserves_event_order_and_turn_id(tmp_path, monk
             assert presentation.index("Activity · Thinking") < presentation.index("Activity · Tool") < presentation.index("AgentOS · complete")
 
     asyncio.run(run())
+
+
+def test_tui_submit_turn_passes_full_tool_names(tmp_path, monkeypatch):
+    """The TUI used to call `submit_turn(prompt)` with no tools at all, so
+    tool calls were impossible there regardless of what the model asked for."""
+    from agentos.llm.tools.registry import ALL_TOOL_NAMES
+
+    captured: dict = {}
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+
+        real_submit = ConversationRuntime.submit_turn
+
+        def spy(self, text, **kwargs):
+            captured.update(kwargs)
+            return real_submit(self, text, **kwargs)
+
+        monkeypatch.setattr(ConversationRuntime, "submit_turn", spy)
+
+        async with app.run_test() as pilot:
+            pilot.app.query_one("#composer").value = "hello"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+    asyncio.run(run())
+
+    assert captured["tool_names"] == list(ALL_TOOL_NAMES)
+    assert captured["confirm_tool_call"] is not None
+    assert captured["cwd"] is not None
+
+
+def test_tui_and_cli_share_read_boundary_arguments(tmp_path, monkeypatch):
+    """A weaker boundary in one front-end would defeat the single shared
+    path check. Uses a populated skills dir so `()` == `()` cannot pass."""
+    from agentos.terminal.skills import global_skill_read_paths, global_skills_dir
+
+    home = tmp_path / "home"
+    skill_dir = home / "core" / ".agents" / "skills" / "demo"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("---\nname: demo\n---\nbody\n", encoding="utf-8")
+    monkeypatch.setenv("AGENTOS_HOME", str(home))
+
+    allowed = global_skill_read_paths()
+    assert allowed, "fixture must produce a non-empty allowlist"
+
+    captured: dict = {}
+
+    async def run() -> None:
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        real_submit = ConversationRuntime.submit_turn
+
+        def spy(self, text, **kwargs):
+            captured.update(kwargs)
+            return real_submit(self, text, **kwargs)
+
+        monkeypatch.setattr(ConversationRuntime, "submit_turn", spy)
+        async with app.run_test() as pilot:
+            pilot.app.query_one("#composer").value = "hello"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Mock response from AgentOS")
+
+    asyncio.run(run())
+
+    assert captured["allowed_read_paths"] == allowed
+    assert captured["blocked_read_roots"] == (global_skills_dir(),)
+
+
+def test_tui_confirm_screen_defaults_focus_to_deny():
+    """Enter on a fresh approval modal must not approve."""
+    from agentos.terminal.tui.widgets import ConfirmToolScreen
+
+    async def run() -> None:
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            screen = ConfirmToolScreen("도구 실행 승인 필요 — bash", "rm -rf build/")
+            result: list = []
+            pilot.app.push_screen(screen, result.append)
+            await pilot.pause()
+            options = screen.query_one("#confirm-options")
+            assert options.highlighted == 0
+            assert "거부" in str(options.get_option_at_index(0).prompt)
+            await pilot.press("enter")
+            await pilot.pause()
+            assert result == [False], result
+
+    asyncio.run(run())
+
+
+def test_tui_pending_confirmation_does_not_execute_tool(tmp_path, monkeypatch):
+    """While the modal is unanswered the tool must not run. A `push_screen`
+    (non-awaiting) call would return a truthy callback and auto-approve."""
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    from agentos.conversation.runtime import ConversationRuntime as Runtime
+
+    executed: list[str] = []
+
+    def fake_execute(name, arguments, **kwargs):
+        executed.append(name)
+        raise AssertionError("tool executed without approval")
+
+    monkeypatch.setattr(runtime_module, "execute_tool", fake_execute)
+
+    # Drive the runtime directly: a confirmation that never approves must
+    # leave the tool unexecuted.
+    from tests.test_conversation_runtime import _empty_state
+
+    runtime = Runtime(_empty_state(), provider="mock", model="mock-model")
+
+    def fake_stream_context(request, provider="mock"):
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(
+            type="tool_call",
+            provider="mock",
+            mode="mock",
+            metadata={"name": "bash", "arguments": {"command": "rm -rf /"}},
+        )
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    events = list(
+        runtime.submit_turn(
+            "go", cwd=tmp_path, tool_names=["bash"], confirm_tool_call=lambda n, a: False
+        )
+    )
+
+    assert executed == []
+    assert "tool_call_denied" in [e.type for e in events]
