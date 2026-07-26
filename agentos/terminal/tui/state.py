@@ -4,6 +4,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from rich.cells import cell_len
+
 
 @dataclass(frozen=True)
 class TuiStatus:
@@ -108,6 +110,78 @@ class TuiStatus:
             parts.append(f"convo-branch {shorten(self.conversation_branch)}")
         parts.append(f"total in/out {self.total_input_chars}/{self.total_output_chars} chars")
         return " | ".join(parts)
+
+    def compact_footer_parts(self, max_width: int = 80) -> list[tuple[str, str]]:
+        """Return a one-line, terminal-cell-width-aware TUI footer.
+
+        The detailed ``footer_text`` contract remains for /status and the
+        non-Textual fallback.  Here, optional location/branch details yield
+        first on narrow screens; turn, provider/session, and usage remain.
+        """
+        if max_width < 1:
+            return []
+
+        fields: list[tuple[str, str, bool]] = [
+            ("cwd:", self.cwd, True),
+            ("pm:", f"{self.provider}/{self.model}", False),
+            ("sid:", self.session, False),
+        ]
+        if self.git_branch:
+            fields.append(("git:", self.git_branch, True))
+        if self.conversation_branch:
+            fields.append(("convo:", self.conversation_branch, True))
+        fields.extend([
+            ("turn:", self.last_turn, False),
+            ("in:", str(self.total_input_chars), False),
+            ("out:", str(self.total_output_chars), False),
+        ])
+
+        def width(items: list[tuple[str, str, bool]]) -> int:
+            return cell_len(" ".join(f"{label}{value}" for label, value, _ in items))
+
+        # Omit optional fields from lowest priority first.
+        for label in ("cwd:", "convo:", "git:"):
+            if width(fields) <= max_width:
+                break
+            fields = [field for field in fields if field[0] != label]
+
+        # Then make values shorter without splitting wide characters.
+        shrink_order = ("pm:", "sid:", "out:", "in:", "turn:")
+        while width(fields) > max_width:
+            changed = False
+            for label in shrink_order:
+                for index, (field_label, value, optional) in enumerate(fields):
+                    if field_label == label and cell_len(value) > 1:
+                        fields[index] = (field_label, _truncate_cells(value, cell_len(value) - 1), optional)
+                        changed = True
+                        break
+                if changed:
+                    break
+            if not changed:
+                break
+        # Extremely narrow terminals cannot fit the mandatory labels alone.
+        # Return a single deterministic ellipsized fragment rather than
+        # relying on Textual to clip or wrap beyond the screen edge.
+        if width(fields) > max_width:
+            return [("", _truncate_cells(" ".join(f"{label}{value}" for label, value, _ in fields), max_width))]
+        return [(label, value) for label, value, _ in fields]
+
+    def compact_footer_text(self, max_width: int = 80) -> str:
+        return " ".join(f"{label}{value}" for label, value in self.compact_footer_parts(max_width))
+
+
+def _truncate_cells(value: str, max_width: int) -> str:
+    """Truncate without exceeding terminal-cell width, using an ellipsis."""
+    if cell_len(value) <= max_width:
+        return value
+    if max_width <= 1:
+        return "…" if max_width else ""
+    kept = ""
+    for character in value:
+        if cell_len(kept + character) > max_width - 1:
+            break
+        kept += character
+    return kept + "…"
 
 
 def get_git_branch() -> str | None:

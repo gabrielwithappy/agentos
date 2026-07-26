@@ -2,6 +2,12 @@ from __future__ import annotations
 
 import os
 
+# Textual's Kitty keyboard protocol reports associated text in a way that
+# conflicts with Korean IME composition in several terminal emulators. Keep
+# the protocol opt-out by default; users may explicitly set it to ``0`` when
+# their terminal/IME combination does not need the workaround.
+os.environ.setdefault("TEXTUAL_DISABLE_KITTY_KEY", "1")
+
 from rich.console import Console
 from textual import work
 from textual.app import App, ComposeResult
@@ -222,10 +228,11 @@ class AgentOSTui(App[None]):
         )
         yield Composer(id="composer")
         yield SessionPicker(id="session-picker")
-        yield StatusFooter(self.status.footer_text(), id="status")
+        yield StatusFooter(id="status")
         yield Footer()
 
     def on_mount(self) -> None:
+        self._render_status_footer()
         self._focus_composer()
 
     # ── Notification helpers (Milestone 1) ──────────────────────────────────
@@ -356,13 +363,13 @@ class AgentOSTui(App[None]):
         if not self.session_id:
             self.session_id = create_session(provider=self.provider, mode="tui")
             self.status = self._status_with_totals(provider=self.provider, session_id=self.session_id)
-            self.query_one("#status", StatusFooter).update(self.status.footer_text())
+            self._render_status_footer()
         turn_id = new_turn_id()
         try:
             prompt = apply_input_hooks(text)
         except HookError as exc:
             self.status = self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn="error")
-            self.query_one("#status", StatusFooter).update(self.status.footer_text())
+            self._render_status_footer()
             self._notify_error(f"Hook failed: {exc}. See /hooks for details.")
             transcript.update("Hook failed. Next: /hooks")
             self._focus_composer()
@@ -377,7 +384,7 @@ class AgentOSTui(App[None]):
             CliEvent("input_received", self.session_id, turn_id, self.provider, "tui", {"length": len(prompt)}).to_dict(),
         )
         self.status = self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn="running")
-        self.query_one("#status", StatusFooter).update(self.status.footer_text())
+        self._render_status_footer()
         self.last_tool_calls = []
         self.last_usage = None
         pending_parent = self._pending_parent_turn_id
@@ -397,13 +404,17 @@ class AgentOSTui(App[None]):
         def theme_callback(selected: str) -> None:
             if selected:
                 self.theme = selected
+                self._render_status_footer()
             self.query_one("#composer", Composer).focus()
 
         self.push_screen(ThemeScreen(themes), theme_callback)
 
     def _update_status(self, status: TuiStatus) -> None:
         self.status = status
-        self.query_one("#status", StatusFooter).update(status.footer_text())
+        self._render_status_footer()
+
+    def _render_status_footer(self) -> None:
+        self.query_one("#status", StatusFooter).update_status(self.status)
 
     def _clear_loading_message(self) -> None:
         if self._loading_message is not None:
@@ -950,7 +961,7 @@ class AgentOSTui(App[None]):
         # previous session's (or no) active branch.
         runtime = self._ensure_runtime(self.session_id, self.provider)
         self.status = self._status_with_totals(provider=self.provider, session_id=self.session_id)
-        self.query_one("#status", StatusFooter).update(self.status.footer_text())
+        self._render_status_footer()
         if len(runtime.state.branches) > 1:
             self._open_branch_picker(runtime)
             return

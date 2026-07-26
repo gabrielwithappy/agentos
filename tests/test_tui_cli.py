@@ -20,6 +20,12 @@ from agentos.terminal.tui.widgets import ChatMessage
 from agentos.terminal import sessions
 
 
+def test_tui_disables_kitty_keyboard_protocol_for_ime_compatibility():
+    import textual.constants
+
+    assert textual.constants.DISABLE_KITTY_KEY is True
+
+
 def _transcript_text(pilot) -> str:
     return "\n".join(message.text for message in pilot.app.query(ChatMessage))
 
@@ -77,8 +83,9 @@ def test_layout_contains_transcript_composer_and_footer(tmp_path, monkeypatch):
             assert "AgentOS" in _transcript_text(pilot)
             composer = pilot.app.query_one("#composer")
             status = str(pilot.app.query_one("#status").render())
-            for label in ("cwd", "provider", "model", "session", "hooks", "mode", "last turn"):
+            for label in ("pm:", "sid:", "turn:", "in:", "out:"):
                 assert label in status
+            assert "hooks" not in status and "mode" not in status
 
     asyncio.run(run())
 
@@ -93,8 +100,8 @@ def test_composer_submit_updates_transcript_and_restores_focus(tmp_path, monkeyp
             await pilot.press("enter")
             await await_transcript(pilot, "Mock response from AgentOS")
             assert "hello" in _transcript_text(pilot)
-            assert "You\n│ hello" in _presentation_text(pilot)
-            assert "last turn done" in str(pilot.app.query_one("#status").render())
+            assert "You\nhello" in _presentation_text(pilot)
+            assert "turn:done" in str(pilot.app.query_one("#status").render())
             session_files = [
                 path
                 for path in (tmp_path / "home" / "sessions").glob("*.jsonl")
@@ -117,7 +124,7 @@ def test_composer_submits_multiline_prompt(tmp_path, monkeypatch):
             await pilot.press("enter")
             transcript = _transcript_text(pilot)
             assert "hello\nworld" in transcript
-            assert "You\n│ hello\nworld" in _presentation_text(pilot)
+            assert "You\nhello\nworld" in _presentation_text(pilot)
             assert composer.value == ""
             assert pilot.app.focused is composer
 
@@ -140,8 +147,8 @@ def test_transcript_accumulates_multiple_turns(tmp_path, monkeypatch):
             transcript = _transcript_text(pilot)
             assert "first" in transcript
             assert "second" in transcript
-            assert "You\n│ first" in _presentation_text(pilot)
-            assert "You\n│ second" in _presentation_text(pilot)
+            assert "You\nfirst" in _presentation_text(pilot)
+            assert "You\nsecond" in _presentation_text(pilot)
             assert transcript.count("Mock response from AgentOS") == 2
 
     asyncio.run(run())
@@ -207,10 +214,28 @@ def test_composer_large_paste_marker_expands_on_submit(tmp_path, monkeypatch):
             await pilot.pause()
             transcript = _transcript_text(pilot)
             assert "line 0" in transcript
-            assert "You\n│ line 0" in _presentation_text(pilot)
+            assert "You\nline 0" in _presentation_text(pilot)
             assert "line 11" in transcript
             assert composer.value == ""
             assert composer.submission_text == ""
+
+    asyncio.run(run())
+
+
+def test_composer_paste_preserves_korean_ime_commit_without_duplicate_or_partial_jamo(tmp_path, monkeypatch):
+    """Unicode/IME commits must be inserted once through Textual's paste hook."""
+    async def run() -> None:
+        from textual.events import Paste
+
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.post_message(Paste("안녕"))
+            await pilot.pause()
+            assert composer.value == "안녕"
+            assert composer.value.count("안") == 1
+            assert "ㄴ" not in composer.value
 
     asyncio.run(run())
 
@@ -673,7 +698,7 @@ def test_tui_hook_failure_recovery_updates_footer_and_preserves_focus(tmp_path, 
             composer.value = "   "
             await pilot.press("enter")
             assert "Hook failed. Next: /hooks" in _transcript_text(pilot)
-            assert "last turn error" in str(pilot.app.query_one("#status").render())
+            assert "turn:error" in str(pilot.app.query_one("#status").render())
             assert pilot.app.focused is composer
 
     asyncio.run(run())
@@ -1258,7 +1283,7 @@ def test_notification_toast_on_hook_error(tmp_path, monkeypatch):
             await pilot.press("enter")
             await pilot.pause(0.1)
             # Footer is updated to error
-            assert "last turn error" in str(pilot.app.query_one("#status").render())
+            assert "turn:error" in str(pilot.app.query_one("#status").render())
 
     asyncio.run(run())
 
@@ -1668,8 +1693,7 @@ def test_fork_via_f_key_immediately_changes_active_branch_indicator(tmp_path, mo
             await pilot.press("f")
 
             status_after = str(pilot.app.query_one("#status").render())
-            assert "convo-branch" in status_after
-            assert "fork-" in status_after
+            assert "turn:done" in status_after
             assert pilot.app._runtime.state.active_branch_id != "main"
 
     asyncio.run(run())
@@ -1707,7 +1731,7 @@ def test_resume_with_multiple_branches_opens_branch_picker_and_switching_updates
             await pilot.pause(0.1)
 
             status_after = str(pilot.app.query_one("#status").render())
-            assert "convo-branch" in status_after
+            assert "turn:" in status_after
             assert pilot.app._picker_mode == "session"
 
     asyncio.run(run())
@@ -1771,7 +1795,7 @@ def test_transport_error_shows_sanitized_recovery_message_in_transcript(tmp_path
             transcript_text = _transcript_text(pilot)
             assert "SENTINEL_SECRET" not in transcript_text
             assert "Thinking" not in transcript_text.split("Next: /status")[0][-20:]
-            assert "last turn error" in str(pilot.app.query_one("#status").render())
+            assert "turn:error" in str(pilot.app.query_one("#status").render())
 
     asyncio.run(run())
 
@@ -1952,11 +1976,11 @@ def test_role_visual_contract_keeps_raw_message_bodies_separate_from_labels():
 
     assert user.text == "ship it"
     assert assistant.text == "Done."
-    assert user.presentation_text == "You\n│ ship it"
-    assert assistant.presentation_text == "AgentOS · responding\n│ Done."
+    assert user.presentation_text == "You\nship it"
+    assert assistant.presentation_text == "AgentOS · responding\nDone."
 
     assistant.set_presentation_status("complete")
-    assert assistant.presentation_text == "AgentOS · complete\n│ Done."
+    assert assistant.presentation_text == "AgentOS · complete\nDone."
     # Copy/fork source data remains the undecorated provider body and turn id.
     assert assistant.text == "Done."
     assert assistant.turn_id == "turn-assistant"
@@ -2057,7 +2081,7 @@ def test_stream_status_no_response_done_shows_complete_result_area(tmp_path, mon
             await await_transcript(pilot, "No response content was returned.")
             assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
             assert assistant.presentation_status == "complete"
-            assert assistant.presentation_text == "AgentOS · complete\n│ No response content was returned."
+            assert assistant.presentation_text == "AgentOS · complete\nNo response content was returned."
 
     asyncio.run(run())
 
@@ -2086,7 +2110,7 @@ def test_stream_status_partial_error_preserves_body_and_marks_failed(tmp_path, m
             assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
             assert assistant.text == "Partial result"
             assert assistant.presentation_status == "failed"
-            assert "AgentOS · failed\n│ Partial result" in _presentation_text(pilot)
+            assert "AgentOS · failed\nPartial result" in _presentation_text(pilot)
 
     asyncio.run(run())
 
@@ -2114,7 +2138,7 @@ def test_stream_status_partial_cancel_preserves_body_and_marks_cancelled(tmp_pat
             assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
             assert assistant.text == "Partial result"
             assert assistant.presentation_status == "cancelled"
-            assert "AgentOS · cancelled\n│ Partial result" in _presentation_text(pilot)
+            assert "AgentOS · cancelled\nPartial result" in _presentation_text(pilot)
 
     asyncio.run(run())
 
