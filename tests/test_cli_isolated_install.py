@@ -24,14 +24,14 @@ def test_containment_rejects_escape(tmp_path):
         raise AssertionError("expected StateError")
 
 
-def test_initialize_state_creates_only_cli_state(tmp_path):
+def test_initialize_state_creates_cli_state_and_global_skills_root(tmp_path):
     root = initialize_state(tmp_path)
     assert (root / "sessions").is_dir()
     assert (root / "context").is_dir()
     assert (root / "config.toml").is_file()
     manifest = json.loads((root / "state-manifest.json").read_text())
     assert manifest["schema_version"] == "agentos.cli-state/v1"
-    assert not (root / "core" / ".agents").exists()
+    assert (root / "core" / ".agents" / "skills").is_dir()
 
 
 def test_setup_doctor_json_contract(tmp_path):

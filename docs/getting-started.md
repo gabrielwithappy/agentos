@@ -50,3 +50,15 @@ Session은 `AGENTOS_HOME/sessions`에 사용자 데이터로 저장됩니다. �
 ## 다음에 할 일
 
 자세한 command grammar와 recovery matrix는 `docs/cli-reference.md`를 확인하세요.
+# AgentOS 시작하기
+
+```bash
+agentos setup
+agentos skill install /path/to/my-skill
+agentos skill status
+agentos project init
+agentos project status
+agentos doctor --json
+```
+
+`setup`은 사용자 상태와 전역 스킬 저장소를 준비할 뿐 스킬·LLM 로그인을 자동 설치하지 않습니다. `project init`은 현재 프로젝트의 `.agentos/agentos-project/`에 전역 스킬 snapshot과 전역 hook 설정의 digest reference만 만듭니다. 프로젝트의 hook이나 설정을 실행하지 않으며, 다시 실행해도 관리되는 AgentOS 경로만 갱신합니다.

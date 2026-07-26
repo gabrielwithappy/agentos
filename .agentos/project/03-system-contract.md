@@ -14,6 +14,7 @@
 - runtime shape: CLI shell은 TTY terminal-only Textual TUI mode와 non-TTY JSONL mode를 제공한다. provider credential 처리에는 기존 승인 경계를 적용하고 AgentOS-owned OAuth/API key/direct credential parsing은 금지한다. structured bridge는 vendor capability가 명시적으로 확인될 때만 선택 사항으로 추가되며, 화면 파싱이나 숨은 fallback을 두지 않는다.
 - data flow: terminal input -> input normalization -> allowed hooks -> provider-independent turn -> typed events -> text renderer or JSONL renderer. Raw secret values never flow back to UI, hooks, or logs.
 - persistence: session/history와 hook observability는 `AGENTOS_HOME`의 versioned user data에만 저장하며, credential data를 저장하지 않는다. AgentOS session/evidence와 vendor session은 서로 다른 소유자로 구분한다.
+- global skill/project reflection: canonical skills는 `AGENTOS_HOME/core/.agents/skills`에서만 조회한다. `agentos project init`은 `.agentos/agentos-project/`에 skill snapshot과 `config.toml` digest-only reference를 명시적으로 export하며, 이 export는 bootstrap input, global install source, hook configuration source가 아니다.
 - deployment/operation:
 
 ## 아키텍처 요약

@@ -44,9 +44,9 @@ Work Contract 정의: 별도 파일/스키마/저장소를 새로 만드는 것�
 
 | ID | requirement | Priority | acceptance | 추적성 | Evidence link / 검증 근거 | status |
 |---|---|---|---|---|---|---|
-| REQ-HARNESS-002-a | 전역 스킬의 프로젝트 무관 일관 조회 | must | 스킬 조회 경로가 cwd와 무관하게 항상 같은 `AGENTOS_HOME` 스킬 집합을 반환함이 검증됨(현재 동작 유지, 회귀 확인) | `agentos/terminal/sessions.py`, `agentos/conversation/bootstrap.py` | (별도 구현 계획에서 정함) | 계획 필요 |
-| REQ-HARNESS-002-b | `agentos project init` 반영 명령 | must | 사용자가 이 명령으로 현재 프로젝트에 전역 스킬/설정을 명시적으로 반영(복사 또는 참조)할 수 있고, 명령을 실행하지 않으면 project-local 반영이 발생하지 않음이 검증됨 | `reference/decisions/0005-agentos-independent-interactive-cli.md` | (별도 구현 계획에서 정함) | 계획 필요 |
-| REQ-HARNESS-002-c | 전역 스킬 설치/동기화 경로 정합 | must | `agentos skill install`이 개별 스킬 단위 수동 복사 외에, 전역 스킬 디렉터리와 설치 소스 간 stale 상태를 사용자가 확인할 수 있는 수단(예: 버전/해시 비교)이 존재함이 검증됨 | `agentos/commands/skill.py` | (별도 구현 계획에서 정함) | 계획 필요 |
+| REQ-HARNESS-002-a | 전역 스킬의 프로젝트 무관 일관 조회 | must | 스킬 조회 경로가 cwd와 무관하게 항상 같은 `AGENTOS_HOME` 스킬 집합을 반환함이 검증됨(현재 동작 유지, 회귀 확인) | `agentos/terminal/sessions.py`, `agentos/conversation/bootstrap.py` | `tests/test_conversation_bootstrap.py`, `tests/test_project_command.py` | 현재 |
+| REQ-HARNESS-002-b | `agentos project init` 반영 명령 | must | 사용자가 이 명령으로 현재 프로젝트에 전역 스킬/설정을 명시적으로 반영(복사 또는 참조)할 수 있고, 명령을 실행하지 않으면 project-local 반영이 발생하지 않음이 검증됨 | `reference/decisions/0005-agentos-independent-interactive-cli.md` | `tests/test_project_command.py`; `scripts/verify-cli-isolated-install.sh` | 현재 |
+| REQ-HARNESS-002-c | 전역 스킬 설치/동기화 경로 정합 | must | `agentos skill install`이 개별 스킬 단위 수동 복사 외에, 전역 스킬 디렉터리와 설치 소스 간 stale 상태를 사용자가 확인할 수 있는 수단(예: 버전/해시 비교)이 존재함이 검증됨 | `agentos/commands/skill.py` | `agentos skill status`; `tests/test_project_command.py` | 현재 |
 
 ## 요구사항과 acceptance
 

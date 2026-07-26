@@ -9,6 +9,10 @@ The CLI stores user state under `AGENTOS_HOME` or `~/.agentos`.
 agentos [--version] [--help]
 agentos run --once "Prompt" [--provider mock|codex|codex-cli] [--json]  # sends one message and exits — stateless, no continuing session
 agentos setup [--home PATH]
+agentos skill install SKILL_DIRECTORY
+agentos skill status [--json]
+agentos project init [--path PATH] [--json]
+agentos project status [--path PATH] [--json]
 agentos doctor [--json]
 agentos session list
 agentos session show SESSION_ID

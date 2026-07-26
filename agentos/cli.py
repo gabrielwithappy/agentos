@@ -3,7 +3,7 @@ import sys
 import typer
 from rich.console import Console
 
-from agentos.commands import setup, run, harness, doctor, skill, agent, llm, session, hook
+from agentos.commands import setup, run, harness, doctor, skill, agent, llm, session, hook, project
 from agentos.terminal.paths import read_preferred_provider
 from agentos.terminal.tui import run_tui
 
@@ -53,6 +53,7 @@ app.add_typer(agent.app, name="agent", help="Manage agents")
 app.add_typer(llm.app, name="llm", help="Inspect LLM provider status")
 app.add_typer(session.app, name="session", help="Manage sessions")
 app.add_typer(hook.app, name="hook", help="Manage hooks")
+app.add_typer(project.app, name="project", help="Reflect global AgentOS resources into a project")
 
 @app.command()
 def version():
