@@ -44,7 +44,12 @@ def read_tool_schema() -> dict:
     }
 
 
-def _resolve_allowed_path(path: str, cwd: Path, allowed_paths: tuple[Path, ...] = ()) -> Path | None:
+def _resolve_allowed_path(
+    path: str,
+    cwd: Path,
+    allowed_paths: tuple[Path, ...] = (),
+    blocked_roots: tuple[Path, ...] = (),
+) -> Path | None:
     """Resolves `path` against `cwd` and returns it only if the fully
     resolved path (symlinks included) lands inside `cwd`. Resolution happens
     before the containment check — checking first would let a symlink whose
@@ -54,10 +59,12 @@ def _resolve_allowed_path(path: str, cwd: Path, allowed_paths: tuple[Path, ...] 
         candidate = cwd / candidate
     resolved = candidate.resolve()
     resolved_cwd = cwd.resolve()
-    if resolved.is_relative_to(resolved_cwd):
-        return resolved
     resolved_allowed = tuple(candidate.resolve() for candidate in allowed_paths)
-    if resolved not in resolved_allowed:
+    if resolved in resolved_allowed:
+        return resolved
+    if any(resolved.is_relative_to(root.resolve()) for root in blocked_roots):
+        return None
+    if not resolved.is_relative_to(resolved_cwd):
         return None
     return resolved
 
@@ -97,8 +104,9 @@ def execute_read(
     *,
     cwd: Path,
     allowed_paths: tuple[Path, ...] = (),
+    blocked_roots: tuple[Path, ...] = (),
 ) -> ToolExecutionResult:
-    resolved = _resolve_allowed_path(path, cwd, allowed_paths)
+    resolved = _resolve_allowed_path(path, cwd, allowed_paths, blocked_roots)
     if resolved is None:
         return ToolExecutionResult(content=f"Error: path '{path}' is outside the working directory.", is_error=True)
 

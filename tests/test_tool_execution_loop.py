@@ -78,7 +78,7 @@ def test_execute_read_allows_exact_global_skill_file_only(tmp_path):
     manifest.write_text("SENTINEL_SOURCE_PATH", encoding="utf-8")
 
     allowed = execute_read(str(skill), cwd=cwd, allowed_paths=(skill,))
-    blocked = execute_read(str(manifest), cwd=cwd, allowed_paths=(skill,))
+    blocked = execute_read(str(manifest), cwd=skills.parent, allowed_paths=(skill,), blocked_roots=(skills,))
 
     assert allowed.content == "skill body"
     assert not allowed.is_error

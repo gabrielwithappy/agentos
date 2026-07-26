@@ -14,7 +14,7 @@ def get_tool_schemas(names: list[ToolName]) -> list[dict]:
     return [_SCHEMAS[name]() for name in names]
 
 
-def execute_tool(name: str, arguments: dict, *, cwd: Path, allowed_read_paths: tuple[Path, ...] = ()) -> ToolExecutionResult:
+def execute_tool(name: str, arguments: dict, *, cwd: Path, allowed_read_paths: tuple[Path, ...] = (), blocked_read_roots: tuple[Path, ...] = ()) -> ToolExecutionResult:
     if name == READ_TOOL_NAME:
         return execute_read(
             arguments.get("path", ""),
@@ -22,6 +22,7 @@ def execute_tool(name: str, arguments: dict, *, cwd: Path, allowed_read_paths: t
             arguments.get("limit"),
             cwd=cwd,
             allowed_paths=allowed_read_paths,
+            blocked_roots=blocked_read_roots,
         )
     return ToolExecutionResult(content=f"Error: unknown tool '{name}'.", is_error=True)
 

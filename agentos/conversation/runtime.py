@@ -119,6 +119,7 @@ class ConversationRuntime:
         force_full_replay: bool = False,
         cwd: Path | None = None,
         allowed_read_paths: tuple[Path, ...] = (),
+        blocked_read_roots: tuple[Path, ...] = (),
         tool_names: list[ToolName] | None = None,
         confirm_tool_call: Callable[[str, dict], bool] | None = None,
     ) -> Iterator[LLMEvent]:
@@ -233,7 +234,7 @@ class ConversationRuntime:
                     )
                     break
 
-            result = execute_tool(tool_name, tool_arguments, cwd=resolved_cwd, allowed_read_paths=allowed_read_paths)
+            result = execute_tool(tool_name, tool_arguments, cwd=resolved_cwd, allowed_read_paths=allowed_read_paths, blocked_read_roots=blocked_read_roots)
             tool_calls_executed += 1
             candidate_state = self._append_message(
                 candidate_state,

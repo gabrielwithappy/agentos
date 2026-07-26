@@ -187,6 +187,7 @@ def run_interactive(provider: str = "mock") -> int:
                 cwd=Path.cwd(),
                 tool_names=["read"],
                 allowed_read_paths=_global_skill_read_paths(),
+                blocked_read_roots=(global_skills_dir(),),
                 confirm_tool_call=_confirm_tool_call,
             ):
                 payload = event.to_dict()
