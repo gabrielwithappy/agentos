@@ -27,7 +27,11 @@ def check_files(files):
         if target.is_file() and any(marker in target.read_text(encoding='utf-8',errors='ignore') for marker in bad_markers):
             raise SystemExit(f'FAIL public-boundary forbidden-content path={name}')
 if args.worktree:
-    check_files(p.relative_to(ROOT).as_posix() for p in ROOT.rglob('*') if p.is_file() and '.git/' not in p.as_posix())
+    check_files(
+        p.relative_to(ROOT).as_posix()
+        for p in ROOT.rglob('*')
+        if p.is_file() and p.name != '.git' and '.git/' not in p.as_posix()
+    )
 if args.staged or args.require_staged_equals_allowlist:
     names=staged(); check_files(names)
     if args.require_staged_equals_allowlist and names != paths:
