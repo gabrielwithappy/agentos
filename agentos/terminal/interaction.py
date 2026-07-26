@@ -216,6 +216,8 @@ def run_interactive(provider: str = "mock") -> int:
                     console.print(f"읽는 중: {path}")
                 if payload["type"] == "tool_call_limit_reached":
                     console.print(render_event(payload))
+                if payload["type"] == "legacy_tool_result_unavailable":
+                    console.print(render_event(payload))
                 if payload["type"] == "message_delta" and payload.get("text"):
                     console.print(payload["text"])
                 if payload["type"] == "error":

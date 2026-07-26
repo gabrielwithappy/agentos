@@ -80,6 +80,8 @@ def render_event(event: dict[str, Any]) -> str:
             "도구 실행을 거부해 이번 턴을 종료했습니다. 아무것도 변경되지 않았습니다. "
             "Next: 다른 방식으로 다시 요청하세요."
         )
+    if event_type == "legacy_tool_result_unavailable":
+        return "이전 도구 결과를 이 세션에서 다시 불러올 수 없습니다. 필요하면 같은 요청을 다시 보내세요."
     return event_type
 
 

@@ -24,7 +24,6 @@ from agentos.llm.providers.codex_native import DEFAULT_MODEL as CODEX_DEFAULT_MO
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
 from agentos.terminal.events import CliEvent, new_turn_id, wrap_provider_event
 from agentos.terminal.hooks import HookError, apply_input_hooks
-from agentos.terminal.interaction import TOOLS_ANNOUNCEMENT, run_interactive
 from agentos.llm.tools.approval import approval_prompt
 from agentos.llm.tools.registry import ALL_TOOL_NAMES
 from agentos.terminal.paths import initialize_state, write_preferred_provider
@@ -38,6 +37,11 @@ from agentos.terminal.sessions import (
     read_session,
     resume_conversation_state,
     session_summaries,
+)
+
+TOOLS_ANNOUNCEMENT = (
+    "AgentOS가 파일을 찾고·읽고·고치고(write/edit) 명령을 실행할(bash) 수 있습니다. "
+    "되돌리기 어려운 도구는 실행 전마다 승인을 요청합니다."
 )
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
@@ -791,6 +795,11 @@ class AgentOSTui(App[None]):
                             # tool_call or tool_result — bordered display
                             self.call_from_thread(add_tool_message, rendered)
                     continue
+                if event_type == "legacy_tool_result_unavailable":
+                    rendered = render_event(payload)
+                    if rendered:
+                        self.call_from_thread(add_system_message, rendered)
+                    continue
                 if event_type == "message_delta":
                     if loading_active:
                         self.call_from_thread(self._clear_loading_message)
@@ -1046,6 +1055,8 @@ def run_tui(provider: str = "mock") -> int:
         return 0
     except Exception:
         Console(stderr=True).print("TUI failed. Falling back to legacy interactive mode.")
+        from agentos.terminal.interaction import run_interactive
+
         return run_interactive(provider=provider)
 
 

@@ -74,14 +74,15 @@ def test_submit_turn_assistant_commit_happens_only_after_a_done_event(monkeypatc
 
 
 def test_submit_turn_event_stream_is_forwarded_to_the_caller_unmodified(monkeypatch):
+    # No `tool_call` in this canned stream: with tools disabled (no
+    # `tool_names`), `submit_turn` never invokes the tool-execution branch,
+    # so plain reasoning/message/done events must pass through untouched.
     state = _empty_state()
     runtime = ConversationRuntime(state, provider="mock", model="mock-model")
 
     canned = [
         LLMEvent(type="start", provider="mock", mode="mock"),
         LLMEvent(type="reasoning", provider="mock", mode="mock", text="thinking"),
-        LLMEvent(type="tool_call", provider="mock", mode="mock", metadata={"name": "x"}),
-        LLMEvent(type="tool_result", provider="mock", mode="mock", metadata={"name": "x"}),
         LLMEvent(type="message_delta", provider="mock", mode="mock", text="done text"),
         LLMEvent(type="done", provider="mock", mode="mock"),
     ]
@@ -399,6 +400,66 @@ def test_submit_turn_tool_call_loop_executes_read_and_reinvokes(tmp_path, monkey
     assert "hello from agents md" in messages[1].text
     assert messages[1].tool_name == "read"
     assert messages[2].text == "final answer"
+
+
+def test_submit_turn_executes_tool_call_even_when_same_stream_also_yields_done(tmp_path, monkeypatch):
+    # Regression: Codex's native transport emits `response.completed` (->
+    # `done`) as the stream terminator unconditionally, even for a response
+    # whose only output is a function call. `done` must not short-circuit
+    # tool execution when a `tool_call` is pending in the same stream.
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    (tmp_path / "AGENTS.md").write_text("hello from agents md", encoding="utf-8")
+
+    call_count = {"n": 0}
+
+    def fake_stream_context(request, provider="mock"):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            yield LLMEvent(type="start", provider="mock", mode="mock")
+            yield LLMEvent(
+                type="tool_call",
+                provider="mock",
+                mode="mock",
+                metadata={"name": "read", "arguments": {"path": "AGENTS.md"}},
+            )
+            yield LLMEvent(type="done", provider="mock", mode="mock")
+            return
+        assert any(m.role == "tool" for m in request.messages)
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="final answer")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    events = list(runtime.submit_turn("read AGENTS.md", cwd=tmp_path, tool_names=["read"]))
+
+    assert "tool_result" in [e.type for e in events]
+    assert call_count["n"] == 2
+
+    branch = runtime.state.active_branch()
+    messages = runtime.state.branch_messages(branch.branch_id)
+    assert [m.role for m in messages] == ["user", "tool", "assistant"]
+    assert messages[2].text == "final answer"
+
+
+def test_submit_turn_preserves_codex_call_id_for_the_followup_request(tmp_path, monkeypatch):
+    runtime = ConversationRuntime(_empty_state(), provider="codex", model="gpt-5-codex")
+    captured = []
+
+    def fake_stream_context(request, provider="codex"):
+        captured.append(request)
+        if len(captured) == 1:
+            yield LLMEvent(type="tool_call", provider="codex", mode="native", metadata={"name": "list", "arguments": {}, "call_id": "call_list"})
+            yield LLMEvent(type="done", provider="codex", mode="native")
+            return
+        yield LLMEvent(type="message_delta", provider="codex", mode="native", text="done")
+        yield LLMEvent(type="done", provider="codex", mode="native")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+    list(runtime.submit_turn("list", cwd=tmp_path, tool_names=["list"]))
+    tool_message = next(message for message in captured[1].messages if message.role == "tool")
+    assert tool_message.metadata == {"call_id": "call_list", "name": "list", "arguments": "{}"}
 
 
 def test_submit_turn_without_tool_names_runs_a_single_provider_call(monkeypatch):
