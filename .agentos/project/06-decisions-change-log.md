@@ -17,6 +17,7 @@
 | 2026-07-19 | AgentOS TUI UX Architecture: `REQ-CLI-003`을 구현하기 위해 terminal-only Textual TUI shell을 추가하고, pi/Hermes는 read-only design evidence로만 사용하며, no-TTY JSONL, credential, session retention, delete/prune confirmation, and existing AgentOS-built hook boundaries를 유지하기로 결정 | `.agentos/project/exec-plans/active/2026-07-19-agentos-tui-ux-architecture.md` |
 | 2026-07-23 | AgentOS pi-style LLM runtime의 core foundation(provider registry + auth store)만 먼저 구현하고, current `codex` path는 external CLI compatibility path로 유지하며 native OAuth/transport는 후속 reviewed plan으로 분리 | `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime.md` |
 | 2026-07-24 | AgentOS가 native Codex auth/transport(browser callback 우선/device-code fallback login, refresh/logout/status, WebSocket 우선/SSE fallback streaming)를 직접 소유하도록 승인. native provider가 canonical `codex` path가 되고, external CLI compatibility path는 native 실패 시에만 선택되는 recovery-only debug/rollback path로 재분류됨 | `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport.md` |
+| 2026-07-26 | AgentOS를 vendor-neutral project work harness로 전환: control plane(Work Contract, Context Compiler, lifecycle/evidence, Verification Runner, vendor adapter, Control TUI)과 vendor execution plane(Codex/Claude/OpenCode 실제 대화·tool loop·세션)을 분리하고, native Codex runtime/TUI는 기존 운영 상태를 유지하는 non-canonical 고급 경로로 재분류. 0004/0005는 대체되지 않음 | [0006-agentos-vendor-neutral-project-work-harness.md](reference/decisions/0006-agentos-vendor-neutral-project-work-harness.md) |
 
 ## 변경 관리
 

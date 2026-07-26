@@ -8,10 +8,45 @@
 
 ## 사용자 결과
 
-- 주요 사용자: AgentOS를 처음 접하는 개발자 및 기여자
-- 사용자 워크플로우: 독립 설치 -> `agentos setup` -> `agentos` 대화형 세션 또는 `agentos run --once` 자동화 -> `agentos doctor`로 복구/진단
-- 원하는 결과: source checkout이나 별도 프론트엔드 없이 일관된 AgentOS command, 대화형 입력, session, hook 관리와 복구 안내를 사용한다.
-- 피해야 할 실패 상태: 현재 디렉터리에 따라 명령이 달라지거나, hook 실패·입력 취소·provider 오류에서 사용자가 다음 행동을 알 수 없는 상태.
+- 주요 사용자: AgentOS를 처음 접하는 개발자 및 기여자, 그리고 여러 vendor coding-agent를 넘나들며 한 프로젝트를 운영하는 개발자.
+- 사용자 워크플로우 (vendor-neutral project work harness): AgentOS에서 작업 계약 확인 → 원본 vendor CLI에서 handoff bundle로 작업 수행 → AgentOS에 declared verification 결과 기록. 기존 독립 CLI 워크플로우(독립 설치 -> `agentos setup` -> `agentos` 대화형 세션 또는 `agentos run --once` 자동화 -> `agentos doctor`로 복구/진단)는 이 harness 위에서 계속 제공된다.
+- 원하는 결과: source checkout이나 별도 프론트엔드 없이 일관된 AgentOS command, 대화형 입력, session, hook 관리와 복구 안내를 사용한다. 동시에 Work Contract, Context Compiler, lifecycle/evidence, Verification Runner, vendor adapter 상태를 AgentOS에서 확인하고, 실제 코딩 대화와 vendor 고유 기능은 원본 vendor CLI에서 수행한다.
+- 피해야 할 실패 상태: 현재 디렉터리에 따라 명령이 달라지거나, hook 실패·입력 취소·provider 오류에서 사용자가 다음 행동을 알 수 없는 상태. 또는 vendor CLI를 교체했을 때 프로젝트 작업 계약이나 완료 근거가 사라지는 상태.
+
+## 제품 방향: vendor-neutral project work harness
+
+- REQ-HARNESS-001 (must, 현재): AgentOS control plane은 Work Contract, Context Compiler, lifecycle/evidence ledger, Verification Runner, vendor adapter 상태, Control TUI를 소유한다. 근거: `reference/decisions/0006-agentos-vendor-neutral-project-work-harness.md`. 이 상위 requirement는 아래 REQ-HARNESS-001-a~f로 세분화되며, 각 하위 requirement는 독립적으로 계획·구현·검증한다.
+- 비목표: AgentOS가 Codex·Claude·OpenCode의 실제 대화, tool loop, provider session, model/plugin 기능을 복제하는 common chat runtime을 만들지 않는다. provider credential/tool ownership은 각 vendor CLI가 소유하며 AgentOS는 이를 대신 소유하지 않는다.
+
+### REQ-HARNESS-001 세분화
+
+Work Contract 정의: 별도 파일/스키마/저장소를 새로 만드는 것이 아니라, 기존 `.agentos/project/exec-plans/**` 계획 포맷을 확장하는 것이다. exec-plan은 이미 목표·acceptance·Run/Expected 검증 계약을 담고 있으며, 이 계약은 "누가 실행하는가"와 독립적으로 성립한다(Run/Expected는 실행자와 무관한 검증 계약이다). REQ-HARNESS-001-a는 여기에 `execution_mode`, `executor`, `delegation` 필드를 추가해 "누가 이 작업을 실제로 구현하는가"를 명시적으로 선언하는 확장이다. `execution_mode`는 3가지 값을 가진다: `local-agent`(현재 세션이 직접 구현), `vendor-handoff`(Codex CLI/Claude Code CLI 등 외부 CLI에 사용자가 수동으로 handoff bundle을 전달), `structured-bridge`(안정된 machine-readable interface가 명시적으로 확인됐을 때만 자동 연동, `03-system-contract.md`의 optional structured bridge와 동일 개념). 프로세스 분리는 필수가 아니라 책임 분리다 — 같은 프로세스가 control plane(계약 정의)과 executor(구현) 역할을 동시에 수행해도 된다. 단, planner와 executor가 동일 프로세스/세션인 경우 그 세션이 자기 자신에게 `vendor-handoff`를 수행하는 self-handoff는 금지한다(순환적이며 무의미하다) — 이 경우 `execution_mode: local-agent`를 사용한다.
+
+구현 순서: Work Contract(001-a)가 다른 모든 control plane 구성요소의 데이터 기반이므로 가장 먼저 계획한다. lifecycle/evidence ledger(001-b)와 vendor adapter 상태(001-e)는 Work Contract 존재를 전제하지 않고도 독립적으로 착수 가능하다. Context Compiler(001-c, `vendor-handoff`/`structured-bridge` 모드에서만 필요)와 Verification Runner(001-d)는 Work Contract의 `execution_mode`/`executor` 필드가 확정된 뒤에만 의미 있게 정의할 수 있다. Control TUI(001-f)는 나머지 구성요소의 상태를 보여주는 표면이므로 최소 하나 이상의 하위 구성요소가 구현된 뒤 착수한다.
+
+범위 경계: REQ-HARNESS-001-a는 `writing-plans` 스킬(`.agents/skills/harness/writing-plans/**`, TEMPLATE.md 포함)의 실행 계약을 바꾸는 작업이므로, 이번 문서 전환 계획(`2026-07-26-project-work-harness-document-pivot`)과는 별도의 독립 실행 계획("writing-plans의 executor-neutral execution contract 도입" 등)에서 다룬다. `.agents/skills/**` 변경은 AGENTS.md의 구조적 변경 감지·`authorized_architects` 승인·manifest sync 규칙이 적용되며, 이 문서 전환 계획의 비목표("harness asset 구조 변경 없음")를 넘어선다. 목표는 "위임형으로 전면 교체"가 아니라 exec-plan을 실행자 중립적으로 만드는 것이다. 기존 exec-plan은 `local-agent`를 기본값으로 계속 지원한다(기존 완료 계획은 암묵적으로 모두 `local-agent`).
+
+| ID | requirement | Priority | acceptance | 추적성 | Evidence link / 검증 근거 | status |
+|---|---|---|---|---|---|---|
+| REQ-HARNESS-001-a | Work Contract 필드 확장(execution_mode/executor/delegation) | must | (1) `writing-plans` 템플릿에 `execution_mode`(`local-agent`\|`vendor-handoff`\|`structured-bridge`), `executor`, handoff/evidence 반환 계약 필드가 추가됨. (2) 기본값은 `local-agent`이고 기존 직접 구현 계획과 호환됨. (3) `vendor-handoff`일 때 AgentOS가 만드는 최소 handoff bundle과 외부 실행 결과 수집 방식이 정의됨. (4) planner=executor인 세션의 self-handoff 금지 규칙이 명문화됨. (5) Gate 2, plan hash, lifecycle/closeout 증거가 실행 모드와 무관하게 유지됨이 검증됨. (6) `.agents/skills/**` 변경에 필요한 manifest sync, 리뷰, 하네스 회귀 테스트가 통과함 | `reference/decisions/0006-agentos-vendor-neutral-project-work-harness.md` | (별도 구현 계획에서 정함) | 계획 필요 |
+| REQ-HARNESS-001-b | lifecycle/evidence ledger | must | 계획의 상태 전이(reviewed, 구현 시작/완료, closeout)와 검증 evidence(Run/Expected 결과)가 append-only 방식으로 기록되고 재구성 가능함이 검증됨 | `reference/decisions/0006-agentos-vendor-neutral-project-work-harness.md` | (별도 구현 계획에서 정함) | 계획 필요 |
+| REQ-HARNESS-001-c | Context Compiler (`vendor-handoff`/`structured-bridge` 전용) | must | `execution_mode`가 `vendor-handoff` 또는 `structured-bridge`인 계획에서, Work Contract와 승인된 최소 문맥으로부터 handoff bundle을 결정론적으로 생성하고, raw secret/전체 저장소 텍스트를 포함하지 않으며, harness 자체 실행 지시(스킬 호출, Gate 규칙 등)가 vendor 세션에 명령으로 오인되지 않도록 데이터/지시 경계가 명시됨이 검증됨 | `reference/decisions/0006-agentos-vendor-neutral-project-work-harness.md` | (별도 구현 계획에서 정함) | 계획 필요 |
+| REQ-HARNESS-001-d | Verification Runner | must | declared verification 명령(Run/Expected)을 실행자(local-agent/vendor-handoff/structured-bridge 중 어느 것이든)와 무관하게 실행·기록하며, vendor 자체 usage/tool loop를 모방하지 않음이 검증됨 | `reference/decisions/0006-agentos-vendor-neutral-project-work-harness.md` | (별도 구현 계획에서 정함) | 계획 필요 |
+| REQ-HARNESS-001-e | vendor adapter 상태 | must | 각 vendor(Codex/Claude/OpenCode 등)의 structured bridge 지원 여부와 capability 확인 상태를 선언적으로 기록하고, 미확인 상태에서는 "bridge unavailable; native handoff continues"로 fail-closed 표시됨이 검증됨 | `04-safety-risk-verification.md`, `05-agent-operating-contract.md` | (별도 구현 계획에서 정함) | 계획 필요 |
+| REQ-HARNESS-001-f | Control TUI | must | 사용자가 터미널에서 Work Contract 상태, 검증 결과, vendor adapter 상태를 확인할 수 있는 화면이 기존 AgentOS TUI 셸 위에 추가되고, 기존 대화형 세션/hook/session 기능과 회귀 없이 공존함이 검증됨 | `03-system-contract.md` | (별도 구현 계획에서 정함) | 계획 필요 |
+
+### REQ-HARNESS-002: 전역 설치 기능의 프로젝트 반영
+
+배경: 현재 `AGENTS.md`/`CLAUDE.md`는 cwd부터 조상 디렉터리까지 탐색해 어느 프로젝트에서든 발견되지만(`agentos/conversation/bootstrap.py:discover_context_files`), 스킬(`SKILL.md`)은 `AGENTOS_HOME/core/.agents/skills/`라는 고정 전역 경로에서만 검색되고(`agentos/terminal/sessions.py`), 그 경로조차 `agentos skill install <path>`로 스킬 하나씩 수동 복사해야만 채워진다(`agentos/commands/skill.py`) — 프로젝트별로 자동 반영되는 경로가 없다. `0005-agentos-independent-interactive-cli.md`가 이미 "project-local 규칙은 신뢰 승인 없이는 실행하지 않는다"는 원칙을 세워두었으나, 이를 실현하는 명시적 반영 명령이 없다.
+
+- REQ-HARNESS-002 (must, 계획 필요): AgentOS 기능(스킬 등 `AGENTOS_HOME`에 설치된 자원)은 설치 후 OS 자원처럼 어느 프로젝트에서든 전역으로 일관되게 사용 가능해야 하며, 사용자가 명시적 명령(예: `agentos project init`)으로 특정 프로젝트에 전역 기능을 반영(오버라이드/추가)할 수 있어야 한다. 반영은 opt-in이며, 명시적 반영 명령 없이는 project-local 자원이 전역 동작을 바꾸지 않는다.
+- 비목표: 이 requirement는 REQ-HARNESS-001-a~f(대상 프로젝트의 Work Contract/실행 계약)와 다른 층위다 — AgentOS 자신의 기능(스킬, 설정)을 전역과 프로젝트 사이에 어떻게 배치·전파하는지를 다루며, 대상 프로젝트의 작업 계약 내용과는 무관하다.
+
+| ID | requirement | Priority | acceptance | 추적성 | Evidence link / 검증 근거 | status |
+|---|---|---|---|---|---|---|
+| REQ-HARNESS-002-a | 전역 스킬의 프로젝트 무관 일관 조회 | must | 스킬 조회 경로가 cwd와 무관하게 항상 같은 `AGENTOS_HOME` 스킬 집합을 반환함이 검증됨(현재 동작 유지, 회귀 확인) | `agentos/terminal/sessions.py`, `agentos/conversation/bootstrap.py` | (별도 구현 계획에서 정함) | 계획 필요 |
+| REQ-HARNESS-002-b | `agentos project init` 반영 명령 | must | 사용자가 이 명령으로 현재 프로젝트에 전역 스킬/설정을 명시적으로 반영(복사 또는 참조)할 수 있고, 명령을 실행하지 않으면 project-local 반영이 발생하지 않음이 검증됨 | `reference/decisions/0005-agentos-independent-interactive-cli.md` | (별도 구현 계획에서 정함) | 계획 필요 |
+| REQ-HARNESS-002-c | 전역 스킬 설치/동기화 경로 정합 | must | `agentos skill install`이 개별 스킬 단위 수동 복사 외에, 전역 스킬 디렉터리와 설치 소스 간 stale 상태를 사용자가 확인할 수 있는 수단(예: 버전/해시 비교)이 존재함이 검증됨 | `agentos/commands/skill.py` | (별도 구현 계획에서 정함) | 계획 필요 |
 
 ## 요구사항과 acceptance
 
@@ -70,6 +105,8 @@
 |---|---|---|---|
 | 실제 Codex account-login provider adapter의 구현 파일, runtime command surface, and verification sequence는 무엇인가? | implementation owner | 후속 구현 계획 범위 결정 | Yes, for real provider implementation |
 | 첫 CLI MVP의 hook 선언 형식과 session 보존 기간은 무엇인가? | implementation owner | REQ-CLI-002 API 및 migration 범위 | Yes, for CLI implementation plan |
+| REQ-HARNESS-001-a의 `execution_mode`(`local-agent`\|`vendor-handoff`\|`structured-bridge`)/`executor`/`delegation` 필드를 exec-plan header(TEMPLATE.md 포함)의 어느 위치에 추가할지, 그리고 기존 완료된 exec-plan(암묵적으로 모두 `local-agent`)을 소급 표기할지는 무엇인가? | 프로젝트 오너 | 이후 001-b~f 전체 구현과 writing-plans 스킬 확장 범위 결정 | Yes, for the first harness implementation plan |
+| Codex CLI와 Claude Code CLI가 REQ-HARNESS-001-e의 structured bridge에 쓸 수 있는 안정된 machine-readable output(JSON status, exit code contract 등)을 실제로 제공하는가? | implementation owner | bridge 구현 여부와 001-e/001-c 범위 결정 | Yes, for vendor adapter status implementation |
 
 ## 지원 문서
 

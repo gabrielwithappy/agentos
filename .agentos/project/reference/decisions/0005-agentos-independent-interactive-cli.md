@@ -1,4 +1,4 @@
-# 0005 - AgentOS 독립 대화형 CLI와 Harness 입력 계약
+# 0005 - AgentOS 독립(independent) 대화형 CLI와 Harness 입력 계약
 
 - Expansion Trigger: 기존 최소 Typer 명령군은 존재하지만 source checkout/CWD 의존과 대화형 입력·hook 계약이 없어 독립적인 AgentOS 사용자 인터페이스가 아니다.
 - parent root doc: `01-project-charter.md`, `02-product-scope-and-requirements.md`, `03-system-contract.md`, `04-safety-risk-verification.md`, `05-agent-operating-contract.md`, `06-decisions-change-log.md`

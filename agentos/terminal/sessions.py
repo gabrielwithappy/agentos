@@ -181,7 +181,7 @@ def conversation_snapshot_path(session_id: str, home: str | Path | None = None) 
     return sessions_dir(home) / f"{sid}.conversation-snapshot.json"
 
 
-def resume_conversation_state(session_id: str, home: str | Path | None = None):
+def resume_conversation_state(session_id: str, home: str | Path | None = None, cwd: str | Path | None = None):
     """Resolves the `ConversationState` to resume `session_id` from.
 
     Prefers the new conversation-runtime events/snapshot pair (see
@@ -189,9 +189,16 @@ def resume_conversation_state(session_id: str, home: str | Path | None = None):
     exists but a legacy `agentos.session/v1` `.jsonl`/`.meta.json` pair
     exists, migrates it read-only (never writes back to the legacy files).
     Returns a brand new empty state if this is a session id AgentOS has
-    never persisted conversation-runtime state for.
+    never persisted conversation-runtime state for — in that "never
+    persisted before" case only, a bootstrap system message (discovered
+    `AGENTS.md`/`CLAUDE.md` + installed skill metadata, see
+    `agentos.conversation.bootstrap`) is committed as the branch's first
+    message. Resumed/migrated sessions never get a bootstrap message
+    injected, since their history already reflects whatever was true when
+    they were first created.
     """
-    from agentos.conversation.persistence import empty_state, migrate_legacy_state, rebuild_state
+    from agentos.conversation.bootstrap import build_bootstrap_message_for_session
+    from agentos.conversation.persistence import empty_state_with_bootstrap, migrate_legacy_state, rebuild_state
 
     sid = validate_session_id(session_id)
     events_path = conversation_events_path(sid, home)
@@ -211,4 +218,10 @@ def resume_conversation_state(session_id: str, home: str | Path | None = None):
         if legacy_events:
             return migrate_legacy_state(sid, legacy_events)
 
-    return empty_state(sid)
+    resolved_home = agentos_home(home)
+    bootstrap_message, _files, _skills, _skipped = build_bootstrap_message_for_session(
+        cwd or Path.cwd(),
+        resolved_home / "core",
+        resolved_home / "core" / ".agents" / "skills",
+    )
+    return empty_state_with_bootstrap(sid, bootstrap_message=bootstrap_message)

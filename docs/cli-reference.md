@@ -290,6 +290,101 @@ invocation, and the marker preserved across five linked turns) or a sanitized
 `FAIL session-runtime-benchmark stop=daemon-follow-up-not-approved` — a
 threshold failure never auto-proposes a daemon/client split.
 
+## Bootstrap Context (`AGENTS.md`/`CLAUDE.md` and Skills)
+
+Every brand-new session (never resumed/migrated from a prior session id)
+automatically loads project context into its first trusted `system` message,
+before any turn is submitted:
+
+- **Project instructions**: AgentOS walks from the current working directory
+  **up through every ancestor directory to the filesystem root**, looking for
+  one `AGENTS.md` (or `AGENTS.MD`/`CLAUDE.md`/`CLAUDE.MD` as a fallback) per
+  directory. This means a shared parent directory — a monorepo root, or even
+  your home directory — can contribute a file you did not expect. A global
+  `AGENTOS_HOME/core/AGENTS.md`/`CLAUDE.md` is also included if present. Review
+  what ancestor directories exist above any project you run `agentos` from if
+  this matters to you.
+- **Installed skills**: name/description/location metadata for every skill
+  under `AGENTOS_HOME/core/.agents/skills/` (installed via `agentos skill
+  install`) is listed — never the full skill body.
+
+Unreadable files (permission error, bad encoding, broken symlink) never block
+session start: they are silently skipped, and the skip count is shown in the
+startup banner.
+
+At session start, a one-line banner reports what loaded:
+
+```
+부트스트랩 컨텍스트: 2개 파일, 3개 스킬 로드됨 — /status로 확인
+```
+
+Run `/status` at any time to see the exact file paths and skill names that
+were loaded into the current session.
+
+**Opt out**: set `AGENTOS_SKIP_CONTEXT_BOOTSTRAP=1` to disable this feature
+entirely for a session — no context files or skills are discovered, and no
+bootstrap system message is created.
+
+### `@`-include expansion
+
+A line that is *only* `@<path>` (matching Claude Code's `CLAUDE.md` include
+syntax) is replaced with the referenced file's content. Relative paths
+resolve against the including file's directory; includes are recursive up
+to 5 levels deep.
+
+**Trust boundary**: an included path is only honored when it resolves
+inside the directory the including file was found in (or a subdirectory of
+it) — never an ancestor, never an absolute path, never `~`. This is
+narrower than Claude Code's own `@~/anything` support, on purpose: a
+context file discovered by walking untrusted ancestor directories must not
+be able to pull in and leak arbitrary files (`@~/.ssh/id_rsa`,
+`@/etc/passwd`) outside the directory it was found in. Anything that
+escapes this boundary, is missing, is circular, or exceeds the depth limit
+is replaced inline with a marker instead of failing the whole file:
+
+```
+[INCLUDE_BLOCKED: @../outside/secret.md escapes trusted context root]
+[INCLUDE_SKIPPED: @a.md already included (circular reference)]
+[INCLUDE_BLOCKED: @f.md exceeds max include depth 5]
+```
+
+Expansion happens before prompt-injection scanning and the size cap below,
+so included content is covered by both.
+
+### Prompt-injection scanning and size caps
+
+Because ancestor-directory discovery can pull in an `AGENTS.md`/`CLAUDE.md`
+you did not author (a shared monorepo root, a cloned untrusted repository),
+every discovered file's content is scanned for prompt-injection patterns
+before it is added to the bootstrap system message. Patterns cover classic
+"ignore previous instructions" injection, role-play/identity hijack, known
+command-and-control framework names (Cobalt Strike, Sliver, Havoc,
+Metasploit, etc.), and invisible-unicode obfuscation. This is a best-effort,
+regex-based advisory guard, not a guarantee — a sufficiently obfuscated
+payload can still slip through.
+
+If a file matches a threat pattern, its content is **not** loaded. Instead
+the system message contains:
+
+```
+[BLOCKED: AGENTS.md contained potential prompt injection (known_c2_framework). Content not loaded.]
+```
+
+Run `/status` to see which files were blocked and which pattern categories
+matched (an attack-type identifier, not the literal matched text). If a
+normal, non-malicious file is blocked (a false positive), use the pattern
+category shown in `/status` to find and edit the offending wording in that
+file — the file loads normally again on the next session. You do not need
+to reach for `AGENTOS_SKIP_CONTEXT_BOOTSTRAP=1` (which disables bootstrap
+entirely) just to recover from a single false positive.
+
+Separately, any context file larger than 20,000 characters is capped: only
+the head and tail are kept, with a marker noting how much was kept and the
+original file path, e.g. `[...truncated AGENTS.md: kept 12000+6000 of
+25000 chars. See full file at: /path/to/AGENTS.md]`. This keeps one
+oversized file from eating a session's entire token budget. Truncated
+files are also listed in `/status`.
+
 ## Hooks
 
 Hooks are built-in declarative policies from `AGENTOS_HOME/config.toml` with

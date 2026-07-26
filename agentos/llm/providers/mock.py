@@ -25,11 +25,32 @@ class MockProvider:
         actually passed through, not just the newest prompt. Mirrors
         `stream_once()`'s reasoning/tool_call/tool_result event richness
         (context-aware callers, e.g. the TUI's `ConversationRuntime`, still
-        exercise the same process-visualization and `/tools` surfaces)."""
+        exercise the same process-visualization and `/tools` surfaces).
+
+        When `request.tools` is non-empty and no `role="tool"` message has
+        been appended to `request.messages` yet, this instead emits a
+        genuine tool_call for the first declared tool (no `done` event) —
+        this lets `ConversationRuntime`'s agentic loop (tool_call -> execute
+        -> re-invoke) be exercised end-to-end against a deterministic
+        provider. Once a `role="tool"` message is present (the loop already
+        executed the tool and re-invoked), it falls back to the plain demo
+        response below so the loop terminates.
+        """
         user_texts = [redact_text(m.text) for m in request.messages if m.role == "user"]
         joined = " | ".join(user_texts) if user_texts else ""
         latest_text = user_texts[-1] if user_texts else ""
         text = f"Received context [{joined}]. {MOCK_MESSAGE}"
+
+        tool_already_executed = any(m.role == "tool" for m in request.messages)
+        if request.tools and not tool_already_executed:
+            yield LLMEvent(type="start", provider=self.name, mode=self.mode, metadata={"mock": True})
+            yield LLMEvent(
+                type="tool_call",
+                provider=self.name,
+                mode=self.mode,
+                metadata={"name": request.tools[0]["name"], "arguments": {"path": "AGENTS.md"}},
+            )
+            return
 
         yield LLMEvent(type="start", provider=self.name, mode=self.mode, metadata={"mock": True})
         yield LLMEvent(

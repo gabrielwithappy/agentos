@@ -182,10 +182,41 @@ class AgentOSTui(App[None]):
             return base.with_last_turn(last_turn)
         return base
 
+    def _bootstrap_banner_text(self) -> str | None:
+        """One-line summary of what bootstrap context loaded, mirroring the
+        legacy interactive fallback's `_print_bootstrap_banner()` — matches
+        this project's "always show a banner + full `/status` detail"
+        visibility philosophy, so TUI users see this without typing
+        `/status` first."""
+        from agentos.conversation.bootstrap import find_bootstrap_message
+
+        if not self.session_id:
+            return None
+        state = (
+            self._runtime.state
+            if self._runtime is not None and self._runtime.state.session_id == self.session_id
+            else resume_conversation_state(self.session_id)
+        )
+        message = find_bootstrap_message(state)
+        if message is None:
+            return None
+        file_count = len(message.metadata.get("bootstrap_context_paths", []))
+        skill_count = len(message.metadata.get("bootstrap_skill_names", []))
+        blocked_count = len(message.metadata.get("bootstrap_blocked_files", []))
+        truncated_count = len(message.metadata.get("bootstrap_truncated_files", []))
+        summary = f"부트스트랩 컨텍스트: {file_count}개 파일, {skill_count}개 스킬 로드됨 — /status로 확인"
+        if blocked_count or truncated_count:
+            summary += f" (차단 {blocked_count}건, 잘림 {truncated_count}건)"
+        return summary
+
     def compose(self) -> ComposeResult:
+        transcript_text = "AgentOS\nType a message or / for commands"
+        banner = self._bootstrap_banner_text()
+        if banner is not None:
+            transcript_text += f"\n{banner}"
         yield Header(show_clock=False)
         yield Transcript(
-            "AgentOS\nType a message or / for commands",
+            transcript_text,
             id="transcript",
         )
         yield Composer(id="composer")
@@ -433,11 +464,38 @@ class AgentOSTui(App[None]):
         return "\n".join(lines)
 
     def _status_summary(self) -> str:
-        summary = self.status.footer_text()
+        summary = self.status.footer_text() + "\n" + self._bootstrap_status_text()
         if self.provider != "codex":
             return summary + f"\nCodex auth commands inactive for provider {self.provider}. Next: /model codex"
         payload = llm_command.build_status_payload("codex")
         return summary + "\n" + self._format_auth_result("Codex auth status", payload)
+
+    def _bootstrap_status_text(self) -> str:
+        from agentos.conversation.bootstrap import find_bootstrap_message
+
+        if not self.session_id:
+            return "bootstrap_context: none"
+        state = (
+            self._runtime.state
+            if self._runtime is not None and self._runtime.state.session_id == self.session_id
+            else resume_conversation_state(self.session_id)
+        )
+        message = find_bootstrap_message(state)
+        if message is None:
+            return "bootstrap_context: none"
+        paths = message.metadata.get("bootstrap_context_paths", [])
+        skill_names = message.metadata.get("bootstrap_skill_names", [])
+        blocked_files = message.metadata.get("bootstrap_blocked_files", [])
+        truncated_files = message.metadata.get("bootstrap_truncated_files", [])
+        lines = [f"bootstrap_context_files ({len(paths)}):"]
+        lines.extend(f"  {path}" for path in paths)
+        lines.append(f"bootstrap_skills ({len(skill_names)}):")
+        lines.extend(f"  {name}" for name in skill_names)
+        lines.append(f"bootstrap_blocked_files ({len(blocked_files)}):")
+        lines.extend(f"  {b.get('path')} ({', '.join(b.get('reasons', []))})" for b in blocked_files)
+        lines.append(f"bootstrap_truncated_files ({len(truncated_files)}):")
+        lines.extend(f"  {path}" for path in truncated_files)
+        return "\n".join(lines)
 
     def _handle_auth_action(self, action: str, transcript: Transcript) -> None:
         if self.provider != "codex":
@@ -714,6 +772,11 @@ class AgentOSTui(App[None]):
                         self._update_status,
                         self._status_with_totals(provider=provider, session_id=session_id, last_turn="error"),
                     )
+                    continue
+                if event_type in ("tool_call_limit_reached", "tool_call_denied"):
+                    rendered = render_event(payload)
+                    if rendered:
+                        self.call_from_thread(add_system_message, rendered)
                     continue
                 if event_type == "done":
                     usage = payload.get("usage")

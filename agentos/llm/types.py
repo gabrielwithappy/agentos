@@ -37,6 +37,7 @@ class InvocationRequest:
     messages: list[InvocationMessage]
     continuation: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    tools: list[dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True)
