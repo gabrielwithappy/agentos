@@ -42,3 +42,30 @@ def test_role_visual_contract_exports_narrow_and_wide_svg_evidence(tmp_path, mon
         assert "You" in wide and complete_header in wide
 
     asyncio.run(run())
+
+
+def test_user_background_block_preserves_no_color_role_contract(tmp_path, monkeypatch):
+    """NO_COLOR still leaves headers and left boundaries as the role signal."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("NO_COLOR", "1")
+        evidence_dir = Path.cwd() / ".agents/traces/visual/2026-07-26-tui-message-box-format"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+
+        for size, label in (((80, 24), "80x24"), ((140, 40), "140x40")):
+            app = AgentOSTui(provider="mock", create_session_on_start=False)
+            async with app.run_test(size=size) as pilot:
+                transcript = pilot.app.query_one("#transcript", Transcript)
+                transcript.add_message("user", "A request readable without colour.")
+                assistant = transcript.add_message("assistant", "A result with the existing boundary.")
+                assistant.set_presentation_status("complete")
+                await pilot.pause()
+                svg = pilot.app.export_screenshot(title=f"AgentOS message block {label}")
+                (evidence_dir / f"message-box-{label}.svg").write_text(svg, encoding="utf-8")
+
+                assert "You" in svg
+                assert "AgentOS&#160;·&#160;complete" in svg
+                assert "│" in svg
+
+    asyncio.run(run())

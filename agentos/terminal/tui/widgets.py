@@ -180,6 +180,8 @@ class ChatMessage(Static):
     }
     ChatMessage.user {
         color: $success;
+        background: $boost;
+        padding: 0 1;
     }
     ChatMessage.assistant {
     }

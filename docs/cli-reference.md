@@ -96,6 +96,13 @@ left boundary. The labels are presentation only: copied text, persisted
 conversation messages, and forked turns retain the original message body
 without a `You:` or `AgentOS` prefix.
 
+In colour-capable terminals, the whole `You` request region also uses a subtle
+background block so requests remain easy to locate while scrolling. AgentOS
+answers and `Activity` entries keep their plain background (tool entries keep
+their existing warning border). With `NO_COLOR=1` or a terminal that omits
+background colours, the `You`/`AgentOS` headers and `│` boundaries above
+remain the role distinction.
+
 While a turn is waiting for the first response chunk, the transcript shows a
 `Thinking…` line. Pressing `Esc` at that point removes that indicator and
 shows `Turn cancelled.`; the composer is already focused, ready for the next

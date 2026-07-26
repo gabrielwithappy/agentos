@@ -3,11 +3,12 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-26T06:37:18Z
+> Generated at: 2026-07-26T07:38:29Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 완료 (closeout 재검토 대기)` [AgentOS TUI 요청·결과 분리 구현 계획](.agentos/project/exec-plans/active/2026-07-26-tui-request-result-separation.md) | progress: 마일스톤 0-6 구현 및 테스트 완료. closeout 본문 갱신으로 fresh Gate 2 재검토와 archive 결정만 남았다.
+- `완료` [AgentOS TUI 요청·결과 분리 구현 계획](.agentos/project/exec-plans/active/2026-07-26-tui-request-result-separation.md) | reviewed | progress: 마일스톤 0-6 구현 및 테스트 완료. closeout 본문 갱신으로 fresh Gate 2 재검토와 archive 결정만 남았다.
+- `완료` [AgentOS TUI 메시지 배경색 블록 구현 계획](.agentos/project/exec-plans/active/2026-07-26-tui-message-box-format.md) | reviewed_evidence=invalid | progress: 구현 및 검증 완료. closeout은 Gate 2 승인 당시의 실행 범위에 대한 사후 기록이다.
 - `구현 계획 (Gate 2 통과)` [executor-neutral writing-plans 계약 구현 계획](.agentos/project/exec-plans/active/2026-07-26-executor-neutral-writing-plans.md) | reviewed | progress: executor-neutral 실행 방식 계약 계획 초안 작성 완료, Gate 2 리뷰 대기 중. 실제 harness 계약 변경은 사용자 승인 후에만 실행한다.
 
 ## Archived Plans

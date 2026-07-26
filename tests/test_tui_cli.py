@@ -1962,6 +1962,84 @@ def test_role_visual_contract_keeps_raw_message_bodies_separate_from_labels():
     assert assistant.turn_id == "turn-assistant"
 
 
+def test_user_message_background_is_full_width_and_role_scoped(tmp_path, monkeypatch):
+    """Only requests receive the persistent full-width background block."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            transcript = pilot.app.query_one("#transcript")
+            user = transcript.add_message("user", "A visibly grouped request")
+            other_messages = [
+                transcript.add_message(role, f"{role} remains unboxed")
+                for role in ("assistant", "reasoning", "tool", "system")
+            ]
+            await pilot.pause()
+
+            assert user.styles.width.value == 100
+            assert user.styles.background.a > 0
+            assert user.styles.padding.left == user.styles.padding.right == 1
+            assert all(message.styles.background.a == 0 for message in other_messages)
+
+    asyncio.run(run())
+
+
+def test_user_message_focus_contrast_keeps_accent_border(tmp_path, monkeypatch):
+    """A focused request keeps the persistent block and gains the focus border."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            message = pilot.app.query_one("#transcript").add_message("user", "Focus me")
+            await pilot.pause()
+            background_before_focus = message.styles.background
+
+            message.focus()
+            await pilot.pause()
+
+            assert message.styles.background == background_before_focus
+            assert message.styles.border.top[0] == "round"
+            assert message.styles.border.left[0] == "round"
+
+    asyncio.run(run())
+
+
+def test_presentation_does_not_change_copied_text(tmp_path, monkeypatch):
+    """Presentation headers/borders must never leak into the copy-to-clipboard
+    path — ``action_copy_message`` always copies the raw ``text``, never
+    ``presentation_text``, even after the status header has changed."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+
+        def reply_stream(request, *, provider: str = "mock"):
+            yield LLMEvent(type="message_delta", provider=provider, mode="mock", text="Done.")
+            yield LLMEvent(type="done", provider=provider, mode="mock")
+
+        monkeypatch.setattr("agentos.conversation.runtime.session_stream_context", reply_stream)
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "copy me"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Done.")
+            assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
+            assert assistant.presentation_text.startswith("AgentOS · ")
+
+            copied: list[str] = []
+            monkeypatch.setattr(pilot.app, "copy_to_clipboard", lambda text: copied.append(text))
+            assistant.action_copy_message()
+
+            assert copied, "action_copy_message did not call copy_to_clipboard"
+            assert copied[0] == assistant.text == "Done."
+            assert "AgentOS" not in copied[0]
+            assert "│" not in copied[0]
+
+    asyncio.run(run())
+
+
 def test_stream_status_no_response_done_shows_complete_result_area(tmp_path, monkeypatch):
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
