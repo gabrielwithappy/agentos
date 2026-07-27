@@ -13,10 +13,22 @@ GitHub Projects (Classic 또는 New) 연동을 위해서는 아래 4개의 환�
 3. `OBSERVABILITY_GITHUB_REPO`: 대상 레포지토리 (예: `gabrielwithappy/agentos`)
 4. `OBSERVABILITY_GITHUB_PROJECT_ID`: 이벤트를 전송할 GitHub Project ID
 
-### 환경 변수 설정 예시
+### 1. 대화형 마법사 (추천)
+단순히 `OBSERVABILITY_ENABLED=1` 환경변수만 설정하고 `agentos` 명령어를 실행하면, **대화형 마법사(Interactive Wizard)**가 나타나 필요한 정보를 물어보고 자동으로 현재 디렉토리의 `.env` 파일에 설정해 줍니다. 
+
+또한 터미널에 `gh auth login`이 되어있다면, `GITHUB_TOKEN`은 백그라운드에서 자동으로 가져오므로 일일이 발급받아 입력할 필요가 없습니다!
+
 ```bash
 export OBSERVABILITY_ENABLED=1
-export GITHUB_TOKEN="YOUR_GITHUB_TOKEN_HERE"
+agentos run
+```
+*(실행 시 `OBSERVABILITY_GITHUB_REPO`와 `OBSERVABILITY_GITHUB_PROJECT_ID`를 물어보고 자동 저장합니다.)*
+
+### 2. 수동 설정 (환경 변수 또는 `.env` 파일)
+직접 `.env` 파일에 기록하거나 환경 변수로 다음과 같이 지정할 수도 있습니다.
+```bash
+export OBSERVABILITY_ENABLED=1
+export GITHUB_TOKEN="YOUR_GITHUB_TOKEN_HERE" # (gh auth가 설정된 경우 생략 가능)
 export OBSERVABILITY_GITHUB_REPO="gabrielwithappy/agentos"
 export OBSERVABILITY_GITHUB_PROJECT_ID="1"
 ```
