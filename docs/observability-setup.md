@@ -66,5 +66,9 @@ export OBSERVABILITY_GITHUB_OWNER="gabrielwithappy"
 export OBSERVABILITY_GITHUB_PROJECT_NUMBER="6"
 ```
 
+## 자동 복구 (Self-healing)
+
+`.env` 파일이 실수로 지워지거나 새 환경에서 프로젝트를 클론받은 경우에도, `agentos run` 실행 시 대화형 마법사가 뜨기 전에 `gh` CLI 인증 정보를 바탕으로 프로젝트 이름이 `AgentOS:`로 시작하는 프로젝트를 찾아내어 자동으로 설정 복구를 수행합니다. 이를 통해 설정 번거로움과 오류가 대폭 줄어듭니다. 만약 자동 탐지에 실패하더라도 기존의 수동 대화형 마법사가 호출되어 복구를 진행할 수 있습니다.
+
 ## 에러 복구(Error Recovery) 메커니즘
 네트워크 단절이나 토큰 만료(401) 등 통신에 실패하더라도 AgentOS 메인 프로세스는 절대 중단되지 않습니다. 실패 시엔 CLI 콘솔과 `agentos.log`에 `[Observability Warning]` 경고 메시지만 출력됩니다.

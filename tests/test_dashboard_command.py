@@ -198,7 +198,7 @@ def test_sync_plan_missing_file_exits_nonzero(tmp_path):
 def test_sync_plan_missing_owner_exits_nonzero(tmp_path):
     plan_file = tmp_path / "plan.md"
     plan_file.write_text(PLAN_TEXT, encoding="utf-8")
-    result = runner.invoke(app, [str(plan_file)])
+    result = runner.invoke(app, [str(plan_file)], env={"OBSERVABILITY_GITHUB_OWNER": None, "OBSERVABILITY_GITHUB_PROJECT_NUMBER": None})
     assert result.exit_code == 1
 
 
