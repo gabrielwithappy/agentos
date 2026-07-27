@@ -21,6 +21,7 @@ def _project_metadata_response(options=None):
             {"id": "opt_backlog", "name": "Backlog"},
             {"id": "opt_ready", "name": "Ready"},
             {"id": "opt_inprogress", "name": "In Progress"},
+            {"id": "opt_awaiting_verification", "name": "Awaiting Verification"},
             {"id": "opt_done", "name": "Done"},
         ]
     return {
@@ -101,7 +102,7 @@ def test_sync_plan_creates_card_when_not_found(tmp_path):
         assert "addProjectV2DraftIssue" in create_body["query"]
 
         status_body = json.loads(mock_urlopen.call_args_list[4][0][0].data.decode("utf-8"))
-        assert status_body["variables"]["optionId"] == "opt_inprogress"
+        assert status_body["variables"]["optionId"] == "opt_awaiting_verification"
 
 
 def test_sync_plan_warns_instead_of_false_success_when_status_option_missing(tmp_path):

@@ -80,7 +80,20 @@ def test_status_to_board_status_virtual_ready_example():
 
 def test_status_to_board_status_real_in_progress_cases():
     assert status_to_board_status("구현 완료", "true") == "In Progress"
-    assert status_to_board_status("구현 및 전체 검증 완료 (사용자 실사용 확인 대기)", "true") == "In Progress"
+
+
+def test_status_to_board_status_awaiting_verification_cases():
+    # 자동 검증까지 끝났고 사람의 수동 확인만 남은 실존 문구 —
+    # reviewed:true면 In Progress가 아니라 Awaiting Verification으로 분리된다.
+    assert (
+        status_to_board_status("구현 및 전체 검증 완료 (사용자 실사용 확인 대기)", "true")
+        == "Awaiting Verification"
+    )
+    # reviewed 우선순위 확인: 같은 문구라도 reviewed:false면 Backlog가 먼저 걸린다.
+    assert (
+        status_to_board_status("구현 및 전체 검증 완료 (사용자 실사용 확인 대기)", "false")
+        == "Backlog"
+    )
 
 
 def test_status_to_board_status_real_done_cases():

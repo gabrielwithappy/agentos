@@ -27,19 +27,22 @@ agentos dashboard sync-plan <exec-plan-file> --owner <owner> --project-number <�
 agentos dashboard sync-plan --all --owner <owner> --project-number <번호>
 ```
 
-### Status 컬럼 5종 — 용도 분리
+### Status 컬럼 6종 — 용도 분리
 
-exec-plan 동기화는 런타임 이벤트와 **다른 4단계**로 Status를 매핑하므로, 대상 보드의 Status 필드에는 최종적으로 5개 옵션이 있어야 합니다:
+exec-plan 동기화는 런타임 이벤트와 **다른 5단계**로 Status를 매핑하므로, 대상 보드의 Status 필드에는 최종적으로 6개 옵션이 있어야 합니다:
 
-| 옵션 | 용도 | 사용 주체 |
-|---|---|---|
-| `Todo` | 런타임 이벤트(`CLI_INTERRUPT` 등) 전용 | `OBSERVABILITY_ENABLED=1` 알림 경로만 사용, exec-plan 동기화는 이 옵션을 쓰지 않음 |
-| `Backlog` | exec-plan이 아직 Gate 2 리뷰를 통과하지 못함(`reviewed: false`) | `sync-plan` 전용 |
-| `Ready` | Gate 2 리뷰는 통과했지만(`reviewed: true`) 아직 "완료"로 표시되지 않음 | `sync-plan` 전용 |
-| `In Progress` | 구현이 진행됐지만 최종 완료 문구("완료"로 시작)는 아직 아님(예: "구현 완료", "구현 및 전체 검증 완료 (사용자 실사용 확인 대기)") | `sync-plan` 전용 |
-| `Done` | 계획 문서 상태가 "완료"로 시작 | `sync-plan` 전용, 런타임 이벤트도 일부 공유 |
+| 옵션 | 용도 | 판단 조건 | 사용 주체 |
+|---|---|---|---|
+| `Todo` | 런타임 이벤트(`CLI_INTERRUPT` 등) 전용 | — | `OBSERVABILITY_ENABLED=1` 알림 경로만 사용, exec-plan 동기화는 이 옵션을 쓰지 않음 |
+| `Backlog` | exec-plan이 아직 Gate 2 리뷰를 통과하지 못함 | `reviewed: false` | `sync-plan` 전용 |
+| `Ready` | Gate 2 리뷰는 통과했지만 아직 "완료"로 표시되지 않음 | `reviewed: true` + 주 상태 문구에 "완료" 없음 | `sync-plan` 전용 |
+| `In Progress` | 구현이 진행 중이며 자동 검증도 아직 안 끝남 | `reviewed: true` + "완료" 포함하지만 "완료"로 시작 안 함 + `"사용자 실사용 확인 대기"` 문구 없음(예: "구현 완료") | `sync-plan` 전용 |
+| `Awaiting Verification` | 구현·자동 검증은 끝났고 사람의 수동 확인(브라우저 로그인, 실제 보드 조회 등)만 남음 | `reviewed: true` + "완료" 포함하지만 "완료"로 시작 안 함 + 상태 문구에 정확한 부분 문자열 `"사용자 실사용 확인 대기"` 포함(예: "구현 및 전체 검증 완료 (사용자 실사용 확인 대기)") | `sync-plan` 전용 |
+| `Done` | 계획 문서 상태가 "완료"로 시작 | 주 상태 문구가 "완료"로 시작 | `sync-plan` 전용, 런타임 이벤트도 일부 공유 |
 
-새 보드를 만들었다면 기본으로 Todo/In Progress/Done 3개만 있으므로, `Backlog`와 `Ready` 옵션을 웹 UI(Project 설정 → Status 필드 → 옵션 추가)나 `gh api graphql`의 `updateProjectV2Field` mutation으로 추가해야 `sync-plan`이 그 두 단계를 정확히 반영할 수 있습니다. 옵션이 없는 상태에서 `sync-plan`을 실행하면 카드는 생성/갱신되지만 Status는 바뀌지 않고, 콘솔에 `Status option '...' not found on board` 경고가 뜹니다(카드가 만들어졌는데 상태가 안 바뀌어서 성공했다고 착각하지 않도록).
+새 보드를 만들었다면 기본으로 Todo/In Progress/Done 3개만 있으므로, `Backlog`/`Ready`/`Awaiting Verification` 옵션을 웹 UI(Project 설정 → Status 필드 → 옵션 추가)나 `gh api graphql`의 `updateProjectV2Field` mutation으로 추가해야 `sync-plan`이 이 단계들을 정확히 반영할 수 있습니다. 옵션이 없는 상태에서 `sync-plan`을 실행하면 카드는 생성/갱신되지만 Status는 바뀌지 않고, 콘솔에 `Status option '...' not found on board` 경고가 뜹니다(카드가 만들어졌는데 상태가 안 바뀌어서 성공했다고 착각하지 않도록).
+
+`Awaiting Verification` 판단은 exec-plan 파일에 새 메타 필드를 추가하지 않고, 계획 작성자가 상태 문구에 붙이는 관용구(`"(사용자 실사용 확인 대기)"`)를 그대로 재해석합니다 — TEMPLATE.md에 이 관용구 사용 안내가 있습니다.
 
 **주의**: 기존 Status 옵션 목록을 `updateProjectV2Field`로 통째로 교체하면(옵션 추가 시 GitHub API가 이렇게 동작합니다) 이미 카드에 설정된 Status 값이 초기화됩니다. 옵션을 추가한 직후에는 `sync-plan --all`을 한 번 더 실행해 모든 카드의 Status를 다시 채워 넣으세요.
 
