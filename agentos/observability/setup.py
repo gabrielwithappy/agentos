@@ -34,32 +34,32 @@ def setup_observability() -> None:
 
     if os.environ.get("OBSERVABILITY_ENABLED") == "1":
         token = get_gh_token()
-        repo = os.environ.get("OBSERVABILITY_GITHUB_REPO", "")
-        project_id = os.environ.get("OBSERVABILITY_GITHUB_PROJECT_ID", "")
-        
+        owner = os.environ.get("OBSERVABILITY_GITHUB_OWNER", "")
+        project_number = os.environ.get("OBSERVABILITY_GITHUB_PROJECT_NUMBER", "")
+
         # Interactive Wizard
         import sys
         if sys.stdout.isatty() and sys.stdin.isatty():
             updated = False
-            if not repo:
-                repo = input("\n[Observability Wizard] 대상 GitHub 레포지토리를 입력하세요 (예: gabrielwithappy/agentos): ").strip()
-                if repo:
-                    os.environ["OBSERVABILITY_GITHUB_REPO"] = repo
-                    append_env_file(env_path, "OBSERVABILITY_GITHUB_REPO", repo)
+            if not owner:
+                owner = input("\n[Observability Wizard] 대상 GitHub Projects v2 소유자(owner login)를 입력하세요 (예: gabrielwithappy): ").strip()
+                if owner:
+                    os.environ["OBSERVABILITY_GITHUB_OWNER"] = owner
+                    append_env_file(env_path, "OBSERVABILITY_GITHUB_OWNER", owner)
                     updated = True
-            
-            if not project_id:
-                project_id = input("[Observability Wizard] 대상 GitHub 프로젝트 ID를 입력하세요 (예: 1): ").strip()
-                if project_id:
-                    os.environ["OBSERVABILITY_GITHUB_PROJECT_ID"] = project_id
-                    append_env_file(env_path, "OBSERVABILITY_GITHUB_PROJECT_ID", project_id)
+
+            if not project_number:
+                project_number = input("[Observability Wizard] 대상 GitHub Projects v2 프로젝트 번호를 입력하세요 (예: 6): ").strip()
+                if project_number:
+                    os.environ["OBSERVABILITY_GITHUB_PROJECT_NUMBER"] = project_number
+                    append_env_file(env_path, "OBSERVABILITY_GITHUB_PROJECT_NUMBER", project_number)
                     updated = True
-            
+
             if updated:
                 print(f"[Observability Wizard] 설정이 {env_path} 에 저장되었습니다.\n")
-        
-        if token and repo and project_id:
-            adapter = GithubDashboardAdapter(token=token, repo=repo, project_id=project_id)
+
+        if token and owner and project_number:
+            adapter = GithubDashboardAdapter(token=token, owner=owner, project_number=project_number)
             notifier.register_adapter(adapter)
         else:
             import logging
