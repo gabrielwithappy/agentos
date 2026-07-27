@@ -2,6 +2,7 @@ import os
 import subprocess
 from pathlib import Path
 from agentos.observability.notifier import notifier
+import json
 from agentos.observability.adapters.github import GithubDashboardAdapter
 
 def get_gh_token() -> str:
@@ -13,6 +14,35 @@ def get_gh_token() -> str:
         except Exception:
             pass
     return token
+
+def auto_discover_github_project(token: str) -> tuple[str, str]:
+    """Auto-discovers the GitHub project owner and number based on the AgentOS prefix."""
+    if not token:
+        return "", ""
+    try:
+        # First, try to get the current authenticated user as the owner
+        result = subprocess.run(["gh", "api", "user", "-q", ".login"], capture_output=True, text=True, check=True)
+        owner = result.stdout.strip()
+        if not owner:
+            return "", ""
+
+        # Fetch projects for the owner
+        result = subprocess.run(["gh", "project", "list", "--owner", owner, "--format", "json"], capture_output=True, text=True, check=True)
+        out = result.stdout
+        start_idx = out.find('{')
+        if start_idx != -1:
+            out = out[start_idx:]
+        
+        data = json.loads(out)
+        for proj in data.get("projects", []):
+            title = proj.get("title", "")
+            if title.startswith("AgentOS"):
+                return owner, str(proj.get("number", ""))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).debug(f"Auto-discovery failed: {e}")
+    return "", ""
+
 
 def load_env_file(filepath: Path) -> None:
     if filepath.exists():
@@ -36,6 +66,20 @@ def setup_observability() -> None:
         token = get_gh_token()
         owner = os.environ.get("OBSERVABILITY_GITHUB_OWNER", "")
         project_number = os.environ.get("OBSERVABILITY_GITHUB_PROJECT_NUMBER", "")
+
+        # Auto-discovery
+        if not owner or not project_number:
+            disc_owner, disc_number = auto_discover_github_project(token)
+            if disc_owner and disc_number:
+                if not owner:
+                    owner = disc_owner
+                    os.environ["OBSERVABILITY_GITHUB_OWNER"] = owner
+                    append_env_file(env_path, "OBSERVABILITY_GITHUB_OWNER", owner)
+                if not project_number:
+                    project_number = disc_number
+                    os.environ["OBSERVABILITY_GITHUB_PROJECT_NUMBER"] = project_number
+                    append_env_file(env_path, "OBSERVABILITY_GITHUB_PROJECT_NUMBER", project_number)
+                print(f"[Observability Auto-discovery] 프로젝트 '{owner}/{project_number}'가 자동 복원되었습니다.")
 
         # Interactive Wizard
         import sys

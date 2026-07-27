@@ -3,11 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-27T14:14:23Z
+> Generated at: 2026-07-27T14:51:21Z
 
 ## Active Plans
-- 현재 실행 중인 계획 없음
 - older active plans omitted=0
+- `구현 계획 (실행 대기)` [GitHub 대시보드 연동 .env 자동 복원(Self-healing) 기능 구현 계획](.agentos/project/exec-plans/active/2026-07-27-dashboard-auto-discovery-env.md) | reviewed_evidence=missing | outcome: 사용자는 로컬 프로젝트 환경 변수(`.env`)가 사라지더라도 `agentos run` 실행 시 대시보드 연동 설정이 자동으로 복원되어 번거로운 대화형 입력 과정을 건너뛸 수 있다. (기존 데이터와 동기화 방식은 바뀌지 않음) | progress: 계획 초안 작성, 5차 리뷰 대기 중
 
 ## Archived Plans
 - archive summary: completed=35, parked=12
