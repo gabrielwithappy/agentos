@@ -20,4 +20,5 @@
 
 - `adapters/codex/hooks.json` is the Codex native hook template.
 - `adapters/claude-code/settings.json` is the Claude Code native hook template.
+- `adapters/agy/plugin.json` is the Antigravity (agy) native hook plugin template.
 - `adapters/claude/README.md` documents the generic Claude no-native-hook boundary.

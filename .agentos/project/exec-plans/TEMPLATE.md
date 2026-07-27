@@ -3,6 +3,8 @@
 > **상태:** 리뷰 대기 (완료 후 '완료'로 변경)
 > **작성일:** YYYY-MM-DD<br>
 > reviewed: false (리뷰 증거 파일 생성 전까지 절대 true로 변경 불가)<br>
+> active_agent: <br>
+> active_session: <br>
 > implementation_started_at: <br>
 > implementation_completed_at: <br>
 > implementation_duration: <br>

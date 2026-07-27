@@ -69,7 +69,8 @@ Load plan, review critically, execute all tasks, report when complete.
 4. Review critically - identify any questions or concerns about the plan
 5. If concerns: Raise them with your human partner before starting
 6. main checkout 보존, review/spike/hotfix 격리, 또는 명시적으로 승인된 병렬 소유권 분리가 필요한 계획이면 canonical `git-worktree-parallel` skill로 예외적 격리 workspace를 먼저 준비한다
-7. If no concerns: Create TodoWrite and proceed
+7. **SSOT 점유(Lock) 선언 (MANDATORY)**: 계획을 실행하기 직전에, 다른 에이전트와의 충돌을 막기 위해 계획 문서 최상단의 `active_agent`에 자신의 이름(예: antigravity, claude)을, `active_session`에 현재 세션/워크트리 경로를 반드시 기록(저장)하여 점유를 선언한다.
+8. If no concerns: Create TodoWrite and proceed
 
 ### Step 2: Execute Tasks
 

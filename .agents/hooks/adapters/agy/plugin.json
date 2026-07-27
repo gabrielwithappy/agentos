@@ -1,0 +1,10 @@
+{
+  "name": "agentos-unified-hooks",
+  "version": "1.0.0",
+  "description": "Bridges Antigravity CLI lifecycle hooks to AgentOS common hook scripts.",
+  "entrypoint": "main.py",
+  "permissions": [
+    "execute_commands",
+    "read_workspace"
+  ]
+}
