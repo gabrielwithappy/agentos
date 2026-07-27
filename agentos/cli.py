@@ -3,6 +3,12 @@ import sys
 import typer
 from rich.console import Console
 
+try:
+    from agentos.observability.setup import setup_observability
+    setup_observability()
+except ImportError:
+    pass
+
 from agentos.commands import setup, run, harness, doctor, skill, agent, llm, session, hook, project
 from agentos.terminal.paths import read_preferred_provider
 from agentos.terminal.tui import run_tui
