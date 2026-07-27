@@ -28,7 +28,7 @@ from agentos.llm.auth.types import AuthRecord
 
 DEFAULT_AUTHORIZE_URL = "https://claude.ai/oauth/authorize"
 DEFAULT_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
-CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"  # gitleaks:allow — Anthropic's public OAuth client_id (no client_secret), matches the Claude Code CLI's; not a secret
 SCOPES = "org:create_api_key user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload"
 DEFAULT_CALLBACK_PORT = 53692
 FALLBACK_CALLBACK_PORT = 53693
