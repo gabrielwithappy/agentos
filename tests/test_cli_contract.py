@@ -11,8 +11,12 @@ runner = CliRunner()
 
 
 def test_yolo_is_available_on_top_level_and_run_help():
-    assert "--yolo" in runner.invoke(app, ["--help"]).output
-    assert "--yolo" in runner.invoke(app, ["run", "--help"]).output
+    # Rich wraps/truncates the `--help` panel based on terminal width; pin a
+    # wide `COLUMNS` so this assertion doesn't depend on the runner's
+    # ambient terminal size.
+    wide_runner = CliRunner(env={"COLUMNS": "200"})
+    assert "--yolo" in wide_runner.invoke(app, ["--help"]).output
+    assert "--yolo" in wide_runner.invoke(app, ["run", "--help"]).output
 
 
 def test_yolo_rejected_for_stateless_once():
