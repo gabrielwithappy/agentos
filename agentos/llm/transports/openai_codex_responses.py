@@ -143,21 +143,41 @@ def map_codex_frame(frame: dict[str, Any]) -> ProviderEvent | None:
         delta = frame.get("delta")
         text = redact_text(str(delta)) if delta is not None else None
         return ProviderEvent(type="reasoning", text=text, response_id=response_id)
-    if frame_type in ("response.function_call_arguments.delta", "response.output_item.added"):
-        item = frame.get("item")
-        if isinstance(item, dict) and item.get("type") in ("function_call", "custom_tool_call"):
-            return ProviderEvent(
-                type="tool_call",
-                metadata={"name": item.get("name"), "arguments": item.get("arguments")},
-                response_id=response_id,
-            )
+    if frame_type in ("response.function_call_arguments.delta", "response.function_call_arguments.done"):
+        # Neither frame carries the function `name` on the Codex
+        # ChatGPT-account backend (unlike the documented OpenAI platform
+        # Responses API, whose `.done` frame includes `name`). The complete
+        # item — `name` *and* arguments together — only arrives on
+        # `response.output_item.done` with `item.type == "function_call"`
+        # (handled below), so both argument-streaming frames are ignored.
+        return None
+    if frame_type == "response.output_item.added":
+        # `item.arguments` is empty/in-progress at this point in the
+        # stream. The complete item arrives later on
+        # `response.output_item.done` (handled below), so no `tool_call`
+        # event is emitted here.
         return None
     if frame_type == "response.output_item.done":
         item = frame.get("item")
-        if isinstance(item, dict) and item.get("type") in (
-            "function_call_output",
-            "custom_tool_call_output",
-        ):
+        if not isinstance(item, dict):
+            return None
+        item_type = item.get("type")
+        if item_type in ("function_call", "custom_tool_call"):
+            raw_arguments = item.get("arguments")
+            try:
+                arguments = json.loads(raw_arguments) if raw_arguments else {}
+            except json.JSONDecodeError:
+                arguments = {}
+            return ProviderEvent(
+                type="tool_call",
+                metadata={
+                    "name": item.get("name"),
+                    "arguments": arguments,
+                    "call_id": item.get("call_id"),
+                },
+                response_id=response_id,
+            )
+        if item_type in ("function_call_output", "custom_tool_call_output"):
             summary = item.get("output") or item.get("result")
             return ProviderEvent(
                 type="tool_result",

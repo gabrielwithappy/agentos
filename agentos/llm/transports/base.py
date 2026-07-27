@@ -94,11 +94,27 @@ def build_transport_request(
     """
     instructions_parts = [redact_text(m.text) for m in invocation_request.messages if m.role == "system"]
     instructions = "\n\n".join(instructions_parts) if instructions_parts else None
-    messages = [
-        {"role": m.role, "content": redact_text(m.text)}
-        for m in invocation_request.messages
-        if m.role != "system"
-    ]
+    messages: list[dict[str, Any]] = []
+    for message in invocation_request.messages:
+        if message.role == "system":
+            continue
+        if message.role != "tool":
+            messages.append({"role": message.role, "content": redact_text(message.text)})
+            continue
+        call_id = message.metadata.get("call_id")
+        name = message.metadata.get("name")
+        arguments = message.metadata.get("arguments")
+        if not isinstance(call_id, str) or not isinstance(name, str) or not isinstance(arguments, str):
+            # Old persisted sessions have tool text but no correlation data.
+            # Sending it as a generic role=tool record is not a valid Responses
+            # input and inventing an output would attach it to the wrong call.
+            continue
+        messages.extend(
+            [
+                {"type": "function_call", "call_id": call_id, "name": name, "arguments": arguments},
+                {"type": "function_call_output", "call_id": call_id, "output": redact_text(message.text)},
+            ]
+        )
     kwargs: dict[str, Any] = {}
     if session_id is not None:
         kwargs["session_id"] = session_id

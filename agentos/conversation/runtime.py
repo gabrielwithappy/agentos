@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable, Iterator
 from dataclasses import replace
 from pathlib import Path
+import json
 from uuid import uuid4
 
 from agentos.conversation.context import build_context
@@ -37,6 +38,14 @@ TOOL_READ_CONFIRM_ENV_VAR = "AGENTOS_TOOL_READ_CONFIRM"
 
 def _read_confirm_required() -> bool:
     return os.environ.get(TOOL_READ_CONFIRM_ENV_VAR, "").strip() not in ("", "0", "false", "False")
+
+
+def _has_pending_codex_correlation(metadata: dict) -> bool:
+    return isinstance(metadata.get("call_id"), str) and isinstance(metadata.get("name"), str) and isinstance(metadata.get("arguments"), dict)
+
+
+def _has_codex_tool_correlation(metadata: dict) -> bool:
+    return isinstance(metadata.get("call_id"), str) and isinstance(metadata.get("name"), str) and isinstance(metadata.get("arguments"), str)
 
 
 class ConversationRuntime:
@@ -123,6 +132,7 @@ class ConversationRuntime:
         blocked_read_roots: tuple[Path, ...] = (),
         tool_names: list[ToolName] | None = None,
         confirm_tool_call: Callable[[str, dict], bool] | None = None,
+        yolo: bool = False,
     ) -> Iterator[LLMEvent]:
         """`force_full_replay=True` is a benchmarking/diagnostic hook: it
         skips continuation reuse for this turn even if a valid one exists,
@@ -136,7 +146,7 @@ class ConversationRuntime:
         responds with a `tool_call` instead of `done`, this method executes
         the tool, appends a `role="tool"` message, and re-invokes the
         provider with the extended context — up to `MAX_TOOL_CALLS_PER_TURN`
-        times — before yielding the final assistant response. Turns with no
+        times by default, or without that per-turn cap when `yolo=True` — before yielding the final assistant response. Turns with no
         tool_call are unaffected: exactly one provider call, identical to
         the pre-tool-loop behavior.
 
@@ -181,9 +191,21 @@ class ConversationRuntime:
             context_build_started = time.perf_counter()
             built = build_context(candidate_state, branch_id, max_messages=max_messages)
             self.last_context_build_ms = (time.perf_counter() - context_build_started) * 1000
+            legacy_tool_results = [
+                message
+                for message in built.messages
+                if message.role == "tool" and not _has_codex_tool_correlation(message.metadata)
+            ]
+            if self._provider_name == "codex" and legacy_tool_results:
+                yield LLMEvent(
+                    type="legacy_tool_result_unavailable",
+                    provider=self._provider_name,
+                    mode="tool",
+                    recovery="retry the request",
+                )
             request = InvocationRequest(
                 messages=prepend_response_style(
-                    [InvocationMessage(role=m.role, text=m.text) for m in built.messages]
+                    [InvocationMessage(role=m.role, text=m.text, metadata=dict(m.metadata)) for m in built.messages]
                 ),
                 continuation=continuation.handle if continuation is not None else None,
                 tools=tool_schemas,
@@ -200,6 +222,12 @@ class ConversationRuntime:
                     latest_continuation_handle = handle
                 if event.type == "tool_call":
                     pending_tool_call = event
+                if event.type == "tool_result":
+                    # The provider already executed and reported this call
+                    # within the same stream (e.g. a demo/mock provider that
+                    # narrates tool_call+tool_result together) — nothing is
+                    # actually pending for this runtime to execute.
+                    pending_tool_call = None
                 if event.type in TERMINAL_EVENT_TYPES:
                     terminal_event = event
                 yield event
@@ -208,15 +236,21 @@ class ConversationRuntime:
                 # Cancelled or unsupported-capability: commit nothing.
                 return
 
-            if terminal_event is not None and terminal_event.type == "done":
-                break
-
+            # A `tool_call` takes priority over a `done` seen in the same
+            # stream: Codex's native transport emits `response.completed`
+            # (-> `done`) as the stream terminator for every response,
+            # including ones whose only output is a function call — it
+            # does not withhold `done` just because a tool_call is
+            # pending. Treating `done` as authoritative here would always
+            # skip tool execution and commit an empty assistant message.
             if pending_tool_call is None:
+                if terminal_event is not None and terminal_event.type == "done":
+                    break
                 # Cancelled (caller stopped consuming before a terminal
                 # event): commit nothing.
                 return
 
-            if tool_calls_executed >= MAX_TOOL_CALLS_PER_TURN:
+            if not yolo and tool_calls_executed >= MAX_TOOL_CALLS_PER_TURN:
                 assistant_text_parts.append(
                     "\n\n[도구 호출 한도 초과: 한 턴에 최대 "
                     f"{MAX_TOOL_CALLS_PER_TURN}회까지만 도구를 호출할 수 있습니다.]"
@@ -231,11 +265,20 @@ class ConversationRuntime:
 
             tool_name = pending_tool_call.metadata.get("name", "")
             tool_arguments = pending_tool_call.metadata.get("arguments", {})
+            if self._provider_name == "codex" and not _has_pending_codex_correlation(pending_tool_call.metadata):
+                yield LLMEvent(
+                    type="error",
+                    provider=self._provider_name,
+                    mode="tool",
+                    error={"code": "tool_call_uncorrelated", "message": "도구 호출을 연결할 수 없습니다. 같은 요청을 다시 시도하세요."},
+                    recovery="retry the request",
+                )
+                return
 
             # Mutating tools are checked first and unconditionally: folding
             # them into the env-gated branch below would leave writes and
             # shell commands running unannounced on a default install.
-            if requires_confirmation(tool_name):
+            if requires_confirmation(tool_name) and not yolo:
                 approved = (
                     confirm_tool_call(tool_name, tool_arguments)
                     if confirm_tool_call is not None
@@ -274,13 +317,18 @@ class ConversationRuntime:
                     source=self._provider_name,
                     tool_name=tool_name,
                     turn_id=turn_id,
+                    metadata={
+                        "call_id": pending_tool_call.metadata.get("call_id"),
+                        "name": tool_name,
+                        "arguments": json.dumps(tool_arguments, ensure_ascii=False, separators=(",", ":")),
+                    },
                 ),
             )
             yield LLMEvent(
                 type="tool_result",
                 provider=self._provider_name,
                 mode="tool",
-                metadata={"name": tool_name, "is_error": result.is_error, "blocked": result.blocked},
+                metadata={"name": tool_name, "is_error": result.is_error, "blocked": result.blocked, "summary": result.content},
             )
             # A fresh tool message just changed the branch prefix, so any
             # previously resolved continuation no longer matches what the
@@ -295,7 +343,6 @@ class ConversationRuntime:
             continuation_handle=latest_continuation_handle,
         )
         self._state = final_state
-
     def _resolve_continuation(self, branch: BranchHead) -> ProviderContinuation | None:
         continuation = branch.continuation
         if continuation is None:

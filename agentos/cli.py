@@ -21,6 +21,7 @@ def main(
     ctx: typer.Context,
     version: bool = typer.Option(False, "--version", help="Print version and exit."),
     provider: str | None = typer.Option(None, "--provider", help="Interactive provider."),
+    yolo: bool = typer.Option(False, "--yolo", help="Skip write/edit/bash approval prompts (use with care)."),
 ):
     if version:
         console.print("AgentOS CLI version 0.1.0")
@@ -34,7 +35,7 @@ def main(
         )
         raise typer.Exit(2)
     selected_provider = provider or read_preferred_provider() or "mock"
-    raise typer.Exit(run_tui(provider=selected_provider))
+    raise typer.Exit(run_tui(provider=selected_provider, yolo=yolo))
 
 
 # Add subcommands as commands if they are single actions

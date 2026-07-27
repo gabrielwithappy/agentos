@@ -146,6 +146,33 @@ def test_build_transport_request_forwards_tools_from_invocation_request():
     assert transport_request.tools == [tool_spec]
 
 
+def test_build_transport_request_replays_correlated_tool_as_call_and_output():
+    invocation_request = InvocationRequest(
+        messages=[
+            InvocationMessage(role="user", text="list files"),
+            InvocationMessage(
+                role="tool",
+                text="README.md",
+                metadata={"call_id": "call_list", "name": "list", "arguments": '{"path":"."}'},
+            ),
+        ]
+    )
+    body = build_transport_request(model="gpt-5-codex", invocation_request=invocation_request).to_request_body()
+    assert body["input"] == [
+        {"role": "user", "content": "list files"},
+        {"type": "function_call", "call_id": "call_list", "name": "list", "arguments": '{"path":"."}'},
+        {"type": "function_call_output", "call_id": "call_list", "output": "README.md"},
+    ]
+
+
+def test_build_transport_request_omits_uncorrelated_legacy_tool_message():
+    invocation_request = InvocationRequest(
+        messages=[InvocationMessage(role="user", text="continue"), InvocationMessage(role="tool", text="old result")]
+    )
+    body = build_transport_request(model="gpt-5-codex", invocation_request=invocation_request).to_request_body()
+    assert body["input"] == [{"role": "user", "content": "continue"}]
+
+
 # --- continuation_expired / branch_change / provider_switch / restart / resume / transport_epoch / replay ---
 
 
@@ -348,17 +375,135 @@ def test_reasoning_frame_maps_to_reasoning_event():
     assert event.text == "thinking..."
 
 
-def test_tool_call_frame_maps_to_tool_call_event():
+def test_output_item_added_for_function_call_does_not_emit_tool_call_yet():
+    # The Codex ChatGPT-account backend leaves `arguments` empty/in-progress
+    # at this point in the stream — the complete item (name + arguments)
+    # only arrives later on `response.output_item.done`.
     event = map_codex_frame(
         {
             "type": "response.output_item.added",
-            "item": {"type": "function_call", "name": "search", "arguments": "{}"},
+            "item": {
+                "id": "fc_1",
+                "type": "function_call",
+                "status": "in_progress",
+                "arguments": "",
+                "call_id": "call_1",
+                "name": "search",
+            },
+            "response": {"id": "r1"},
+        }
+    )
+    assert event is None
+
+
+def test_function_call_arguments_delta_is_ignored():
+    event = map_codex_frame(
+        {
+            "type": "response.function_call_arguments.delta",
+            "item_id": "fc_1",
+            "delta": "{\"query\":",
+            "output_index": 1,
+        }
+    )
+    assert event is None
+
+
+def test_function_call_arguments_done_is_ignored():
+    # Unlike the documented OpenAI platform Responses API, the Codex
+    # ChatGPT-account backend's `.done` frame carries only `arguments` and
+    # `item_id` — no `name` — so it cannot be used to build a `tool_call`
+    # event on its own. `response.output_item.done` is used instead (see
+    # below), since it repeats the complete `arguments` alongside `name`.
+    event = map_codex_frame(
+        {
+            "type": "response.function_call_arguments.done",
+            "arguments": '{"query": "hello"}',
+            "item_id": "fc_1",
+            "output_index": 1,
+        }
+    )
+    assert event is None
+
+
+def test_output_item_done_for_function_call_maps_to_tool_call_event_with_parsed_arguments():
+    event = map_codex_frame(
+        {
+            "type": "response.output_item.done",
+            "item": {
+                "id": "fc_1",
+                "type": "function_call",
+                "status": "completed",
+                "arguments": '{"path": "."}',
+                "call_id": "call_1",
+                "name": "list",
+            },
+            "output_index": 1,
             "response": {"id": "r1"},
         }
     )
     assert event is not None
     assert event.type == "tool_call"
-    assert event.metadata["name"] == "search"
+    assert event.metadata["name"] == "list"
+    assert event.metadata["arguments"] == {"path": "."}
+    assert event.metadata["call_id"] == "call_1"
+
+
+def test_output_item_done_for_function_call_with_empty_arguments_yields_empty_dict():
+    event = map_codex_frame(
+        {
+            "type": "response.output_item.done",
+            "item": {"type": "function_call", "arguments": "", "call_id": "call_1", "name": "list"},
+            "response": {"id": "r1"},
+        }
+    )
+    assert event is not None
+    assert event.metadata["arguments"] == {}
+
+
+def test_output_item_done_for_function_call_with_malformed_json_falls_back_to_empty_dict():
+    event = map_codex_frame(
+        {
+            "type": "response.output_item.done",
+            "item": {"type": "function_call", "arguments": "{not valid json", "call_id": "call_1", "name": "list"},
+            "response": {"id": "r1"},
+        }
+    )
+    assert event is not None
+    assert event.metadata["arguments"] == {}
+
+
+def test_full_tool_call_stream_sequence_yields_single_tool_call_with_dict_arguments():
+    # Reproduces the real Codex ChatGPT-account backend frame order,
+    # captured from a live session: output_item.added (empty arguments) ->
+    # zero or more argument deltas -> function_call_arguments.done (no
+    # `name`, ignored) -> output_item.done (complete item: name +
+    # arguments).
+    frames = [
+        {"type": "response.created", "response": {"id": "r1"}},
+        {
+            "type": "response.output_item.added",
+            "item": {"id": "fc_1", "type": "function_call", "status": "in_progress", "arguments": "", "call_id": "call_1", "name": "list"},
+            "output_index": 1,
+        },
+        {"type": "response.function_call_arguments.delta", "item_id": "fc_1", "delta": "{}", "output_index": 1},
+        {
+            "type": "response.function_call_arguments.done",
+            "arguments": "{}",
+            "item_id": "fc_1",
+            "output_index": 1,
+        },
+        {
+            "type": "response.output_item.done",
+            "item": {"id": "fc_1", "type": "function_call", "status": "completed", "arguments": "{}", "call_id": "call_1", "name": "list"},
+            "output_index": 1,
+        },
+        {"type": "response.completed", "response": {"id": "r1"}},
+    ]
+    events = [e for e in (map_codex_frame(f) for f in frames) if e is not None]
+    tool_call_events = [e for e in events if e.type == "tool_call"]
+    assert len(tool_call_events) == 1
+    assert tool_call_events[0].metadata["arguments"] == {}
+    assert tool_call_events[0].metadata["name"] == "list"
 
 
 def test_tool_result_frame_maps_to_tool_result_event():

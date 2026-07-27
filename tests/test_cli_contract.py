@@ -10,6 +10,25 @@ from agentos.cli import app
 runner = CliRunner()
 
 
+def test_yolo_is_available_on_top_level_and_run_help():
+    # Asserting on rendered --help text is flaky: Rich wraps/truncates the
+    # panel based on ambient terminal width, which differs between local
+    # runs and CI. Assert the flag is recognized (no "no such option" error)
+    # instead of matching rendered text.
+    result = runner.invoke(app, ["--yolo", "--version"])
+    assert result.exit_code == 0
+    assert "no such option" not in result.output.lower()
+
+    result = runner.invoke(app, ["run", "--yolo", "--once", "hello"])
+    assert "no such option" not in result.output.lower()
+
+
+def test_yolo_rejected_for_stateless_once():
+    result = runner.invoke(app, ["run", "--once", "--yolo", "hello"])
+    assert result.exit_code == 2
+    assert "cannot be combined with --once" in result.output
+
+
 def test_root_without_tty_exits_2():
     result = runner.invoke(app, [])
     assert result.exit_code == 2

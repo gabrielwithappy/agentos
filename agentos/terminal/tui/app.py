@@ -24,7 +24,6 @@ from agentos.llm.providers.codex_native import DEFAULT_MODEL as CODEX_DEFAULT_MO
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
 from agentos.terminal.events import CliEvent, new_turn_id, wrap_provider_event
 from agentos.terminal.hooks import HookError, apply_input_hooks
-from agentos.terminal.interaction import TOOLS_ANNOUNCEMENT, run_interactive
 from agentos.llm.tools.approval import approval_prompt
 from agentos.llm.tools.registry import ALL_TOOL_NAMES
 from agentos.terminal.paths import initialize_state, write_preferred_provider
@@ -38,6 +37,11 @@ from agentos.terminal.sessions import (
     read_session,
     resume_conversation_state,
     session_summaries,
+)
+
+TOOLS_ANNOUNCEMENT = (
+    "AgentOS가 파일을 찾고·읽고·고치고(write/edit) 명령을 실행할(bash) 수 있습니다. "
+    "되돌리기 어려운 도구는 실행 전마다 승인을 요청합니다."
 )
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
@@ -121,9 +125,10 @@ class AgentOSTui(App[None]):
     }
     """
 
-    def __init__(self, provider: str = "mock", *, create_session_on_start: bool = True) -> None:
+    def __init__(self, provider: str = "mock", *, create_session_on_start: bool = True, yolo: bool = False) -> None:
         super().__init__()
         self.provider = provider
+        self.yolo = yolo
         initialize_state()
         self.session_id = create_session(provider=provider, mode="tui") if create_session_on_start else ""
         # Cumulative usage counters — owned by app instance so TuiStatus.initial() re-creation never resets them
@@ -687,6 +692,7 @@ class AgentOSTui(App[None]):
         has_error = False
         response_text = ""
         assistant_message: ChatMessage | None = None
+        current_tool_message: ChatMessage | None = None
         tool_calls: list[dict[str, object]] = []
         usage: dict[str, int] | None = None
         loading_active = True
@@ -696,8 +702,11 @@ class AgentOSTui(App[None]):
         def add_reasoning_message(text_content: str) -> None:
             self.query_one("#transcript", Transcript).add_message("reasoning", text_content, turn_id=turn_id)
 
-        def add_tool_message(text_content: str) -> None:
-            self.query_one("#transcript", Transcript).add_message("tool", text_content, turn_id=turn_id)
+        def add_tool_message(text_content: str) -> ChatMessage:
+            return self.query_one("#transcript", Transcript).add_message("tool", text_content, turn_id=turn_id)
+
+        def update_tool_message(message: ChatMessage, text_content: str) -> None:
+            self.query_one("#transcript", Transcript).update_message(message, text_content)
 
         def add_system_message(text_content: str) -> None:
             self.query_one("#transcript", Transcript).add_message("system", text_content)
@@ -752,6 +761,7 @@ class AgentOSTui(App[None]):
             allowed_read_paths=global_skill_read_paths(),
             blocked_read_roots=(global_skills_dir(),),
             confirm_tool_call=confirm_tool_call,
+            yolo=self.yolo,
         )
         try:
             for provider_event in turn_stream:
@@ -787,9 +797,25 @@ class AgentOSTui(App[None]):
                             loading_active = False
                         if event_type == "reasoning":
                             self.call_from_thread(add_reasoning_message, rendered)
+                        elif event_type == "tool_call":
+                            # New Activity · Tool block; its matching tool_result
+                            # (below) merges into this same message instead of
+                            # appending a second block, so a completed round
+                            # reads as one entry, not two.
+                            current_tool_message = self.call_from_thread(add_tool_message, rendered)
+                        elif current_tool_message is not None:
+                            merged_text = f"{current_tool_message.text}\n{rendered}"
+                            self.call_from_thread(update_tool_message, current_tool_message, merged_text)
+                            current_tool_message = None
                         else:
-                            # tool_call or tool_result — bordered display
+                            # Defensive: a tool_result with no preceding tool_call
+                            # in this stream still needs to be shown somewhere.
                             self.call_from_thread(add_tool_message, rendered)
+                    continue
+                if event_type == "legacy_tool_result_unavailable":
+                    rendered = render_event(payload)
+                    if rendered:
+                        self.call_from_thread(add_system_message, rendered)
                     continue
                 if event_type == "message_delta":
                     if loading_active:
@@ -1038,18 +1064,20 @@ class AgentOSTui(App[None]):
         self.push_screen(MenuScreen(), menu_callback)
 
 
-def run_tui(provider: str = "mock") -> int:
+def run_tui(provider: str = "mock", yolo: bool = False) -> int:
     if os.environ.get("AGENTOS_TUI_TEST_PLAIN") == "1":
-        return run_plain_tui_transcript(provider=provider)
+        return run_plain_tui_transcript(provider=provider, yolo=yolo)
     try:
-        AgentOSTui(provider=provider).run()
+        AgentOSTui(provider=provider, yolo=yolo).run()
         return 0
     except Exception:
         Console(stderr=True).print("TUI failed. Falling back to legacy interactive mode.")
-        return run_interactive(provider=provider)
+        from agentos.terminal.interaction import run_interactive
+
+        return run_interactive(provider=provider, yolo=yolo)
 
 
-def run_plain_tui_transcript(provider: str = "mock") -> int:
+def run_plain_tui_transcript(provider: str = "mock", yolo: bool = False) -> int:
     # `highlight=False`: this plain-text fallback is parsed verbatim by
     # AGENTOS_TUI_TEST_PLAIN pseudo-TTY harnesses. Rich's default content
     # highlighter otherwise wraps bare "/" (and similar path-like tokens) in
@@ -1060,6 +1088,8 @@ def run_plain_tui_transcript(provider: str = "mock") -> int:
     session_id = create_session(provider=provider, mode="tui")
     status = TuiStatus.initial(provider=provider, session_id=session_id)
     console.print("AgentOS")
+    if yolo:
+        console.print("YOLO: enabled (write/edit/bash approvals skipped; Esc/Ctrl+C cancels)")
     console.print("Type a message or / for commands")
     console.print(status.footer_text())
     while True:

@@ -183,7 +183,10 @@ class ConfirmToolScreen(ModalScreen[bool]):
     listed first so it holds initial focus (Enter must never mean "approve"),
     and the body is the shared `approval_prompt()` text rather than a
     head-truncated argument summary, so the tail of a command chain stays
-    visible.
+    visible. The body lives in its own bounded `VerticalScroll` region
+    (separate from the title and options) so a long body scrolls instead of
+    pushing the 거부/승인 options past the modal's `max-height` — the options
+    stay on screen no matter how long the approval text is.
     """
 
     DEFAULT_CSS = """
@@ -204,9 +207,12 @@ class ConfirmToolScreen(ModalScreen[bool]):
         margin-bottom: 1;
         text-style: bold;
     }
+    #confirm-body-scroll {
+        max-height: 14;
+        margin-bottom: 1;
+    }
     #confirm-body {
         width: 100%;
-        margin-bottom: 1;
     }
     """
 
@@ -218,7 +224,8 @@ class ConfirmToolScreen(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         with Vertical(id="confirm-container"):
             yield Label(self._title, id="confirm-title")
-            yield Static(self._body, id="confirm-body")
+            with VerticalScroll(id="confirm-body-scroll"):
+                yield Static(self._body, id="confirm-body")
             yield OptionList("거부 (기본)", "승인", id="confirm-options")
 
     def on_mount(self) -> None:

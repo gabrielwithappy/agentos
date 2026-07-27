@@ -5,7 +5,8 @@ from typing import Any, Literal
 
 
 EventType = Literal[
-    "start", "message_delta", "reasoning", "tool_call", "tool_result", "done", "error"
+    "start", "message_delta", "reasoning", "tool_call", "tool_result", "done", "error",
+    "legacy_tool_result_unavailable",
 ]
 
 
