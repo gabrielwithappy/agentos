@@ -16,7 +16,7 @@ GitHub Projects (Classic 또는 New) 연동을 위해서는 아래 4개의 환�
 ### 환경 변수 설정 예시
 ```bash
 export OBSERVABILITY_ENABLED=1
-export GITHUB_TOKEN="ghp_your_token_here"
+export GITHUB_TOKEN="YOUR_GITHUB_TOKEN_HERE"
 export OBSERVABILITY_GITHUB_REPO="gabrielwithappy/agentos"
 export OBSERVABILITY_GITHUB_PROJECT_ID="1"
 ```
