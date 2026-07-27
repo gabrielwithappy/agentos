@@ -4,7 +4,7 @@
 
 ## 1. 실행 계획(Execution Plan) 생성 경로
 - **계획 파일 위치:** 모든 실행/구현 계획 문서는 시스템의 임시 경로나 별도의 아티팩트가 아닌, 프로젝트 컨벤션에 따라 워크스페이스 내부인 `.agentos/project/exec-plans/active/` 하위에 직접 마크다운 파일로 생성하고 업데이트해야 한다.
-- 완료된 계획은 `.agentos/project/exec-plans/archive/` 로 이동한다.
+- 계획 문서의 상태 변경 및 아카이빙은 파일 시스템 명령어(mv 등)로 직접 처리해서는 안 된다. 반드시 계획 관리 전용 스킬(writing-plans, executing-plans)에 위임하여 해당 스킬의 공식 라이프사이클 도구를 통해 수행해야 한다.
 
 ## 2. 기타 벤더 특화 제약
 - `AGENTS.md` Rule 6에 명시된 바와 같이 Claude Code 환경(Task 도구 사용 가능)에서는 자기검토(self-review) fallback이 허용되지 않는다. 반드시 다른 서브에이전트나 명시적인 검토 게이트를 통과해야 한다.
