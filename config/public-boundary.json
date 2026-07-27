@@ -269,6 +269,11 @@
     "agentos/llm/transports/base.py",
     "agentos/llm/transports/openai_codex_responses.py",
     "agentos/llm/types.py",
+    "agentos/observability/__init__.py",
+    "agentos/observability/adapters/__init__.py",
+    "agentos/observability/adapters/github.py",
+    "agentos/observability/notifier.py",
+    "agentos/observability/setup.py",
     "agentos/runtime/__init__.py",
     "agentos/runtime/bench.py",
     "agentos/runtime/launcher.py",
@@ -335,6 +340,7 @@
     "docs/cli-reference.md",
     "docs/getting-started.md",
     "docs/maintainers/release-checklist.md",
+    "docs/observability-setup.md",
     "harness-loop.sh",
     "pyproject.toml",
     "scripts/install-hooks.sh",
@@ -356,6 +362,7 @@
     "tests/helpers/pty_cli_driver.py",
     "tests/security/test_governance_boundary.sh",
     "tests/security/test_public_boundary_rejects_leaks.sh",
+    "tests/test_adapters.py",
     "tests/test_agentos_prompt.py",
     "tests/test_auth_store.py",
     "tests/test_claude_oauth.py",
@@ -377,6 +384,7 @@
     "tests/test_interactive_cli.py",
     "tests/test_llm_core.py",
     "tests/test_llm_tools.py",
+    "tests/test_notifier.py",
     "tests/test_project_command.py",
     "tests/test_runtime_bench.py",
     "tests/test_runtime_protocol.py",
@@ -388,15 +396,5 @@
   ],
   "schema": "agentos-public-boundary-candidate-v1",
   "selection_model": "source-and-template-only",
-  "source_repository": "agent-harness",
-  "allowlist": [
-    "agentos/observability/__init__.py",
-    "agentos/observability/adapters/__init__.py",
-    "agentos/observability/adapters/github.py",
-    "agentos/observability/notifier.py",
-    "agentos/observability/setup.py",
-    "docs/observability-setup.md",
-    "tests/test_adapters.py",
-    "tests/test_notifier.py"
-  ]
+  "source_repository": "agent-harness"
 }
