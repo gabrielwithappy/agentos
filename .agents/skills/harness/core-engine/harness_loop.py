@@ -1209,6 +1209,13 @@ class HarnessLoop:
                         result_summary=state.result_summary,
                     )
                 elif exit_code == -1:
+                    try:
+                        import os
+                        if os.environ.get("OBSERVABILITY_ENABLED") == "1":
+                            from agentos.observability.notifier import notifier
+                            notifier.notify({"event": "CLI_TIMEOUT", "loop_id": state.loop_id})
+                    except Exception:
+                        pass
                     print(f"⚠️  [TIMEOUT] CLI 응답 시간 초과. 루프 계속...")
                     state.last_event = "timeout"
                     state.current_task = "Child CLI timeout"

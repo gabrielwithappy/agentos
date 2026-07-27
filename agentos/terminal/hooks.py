@@ -144,3 +144,15 @@ def apply_input_hooks(prompt: str, home: str | Path | None = None) -> str:
             if spec.critical:
                 raise HookError("Hook failed. Next: agentos hook config show", hook=spec.name) from exc
     return result
+
+def notify_lifecycle_event(event_type: str, details: dict[str, Any] | None = None) -> None:
+    import os
+    if os.environ.get("OBSERVABILITY_ENABLED") == "1":
+        try:
+            from agentos.observability.notifier import notifier
+            payload = {"event": event_type}
+            if details:
+                payload.update(details)
+            notifier.notify(payload)
+        except Exception:
+            pass

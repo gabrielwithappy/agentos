@@ -388,5 +388,15 @@
   ],
   "schema": "agentos-public-boundary-candidate-v1",
   "selection_model": "source-and-template-only",
-  "source_repository": "agent-harness"
+  "source_repository": "agent-harness",
+  "allowlist": [
+    "agentos/observability/__init__.py",
+    "agentos/observability/adapters/__init__.py",
+    "agentos/observability/adapters/github.py",
+    "agentos/observability/notifier.py",
+    "agentos/observability/setup.py",
+    "docs/observability-setup.md",
+    "tests/test_adapters.py",
+    "tests/test_notifier.py"
+  ]
 }

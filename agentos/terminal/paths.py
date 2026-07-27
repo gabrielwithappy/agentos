@@ -46,6 +46,11 @@ def atomic_write_text(path: Path, content: str) -> None:
             handle.write(content)
         set_user_only_permissions(tmp, directory=False)
         os.replace(tmp, path)
+        try:
+            from agentos.terminal.hooks import notify_lifecycle_event
+            notify_lifecycle_event("FILE_WRITTEN", {"path": str(path), "bytes": len(content)})
+        except ImportError:
+            pass
     finally:
         if tmp.exists():
             tmp.unlink()

@@ -16,7 +16,7 @@ from agentos.conversation.persistence import commit_turn, next_sequence
 from agentos.conversation.runtime import ConversationRuntime
 from agentos.llm.session import UnsupportedProviderError, unsupported_provider_event
 from agentos.terminal.events import CliEvent, new_turn_id, wrap_provider_event
-from agentos.terminal.hooks import HookError, apply_input_hooks
+from agentos.terminal.hooks import HookError, apply_input_hooks, notify_lifecycle_event
 from agentos.terminal.paths import initialize_state
 from agentos.terminal.sessions import (
     append_event,
@@ -100,17 +100,21 @@ def run_interactive(provider: str = "mock", yolo: bool = False) -> int:
         try:
             raw = input(f"agentos[{provider}]> ")
         except EOFError:
+            notify_lifecycle_event("CLI_EOF", {"session_id": session_id})
             console.print("Session closed.")
             return 0
         except KeyboardInterrupt:
             if cancelling:
+                notify_lifecycle_event("CLI_INTERRUPT", {"session_id": session_id, "action": "exit"})
                 print("\nExiting after cancellation.", file=sys.stderr)
                 return 130
+            notify_lifecycle_event("CLI_INTERRUPT", {"session_id": session_id, "action": "cancel_turn"})
             cancelling = True
             print("\nTurn cancelled. You can enter another prompt or /exit.", file=sys.stderr)
             continue
         cancelling = False
         if raw.strip() in {"/exit", "exit", "quit"}:
+            notify_lifecycle_event("CLI_EXIT", {"session_id": session_id})
             console.print("Session closed.")
             return 0
         if raw.strip() == "/help":
@@ -230,6 +234,7 @@ def run_interactive(provider: str = "mock", yolo: bool = False) -> int:
                 if payload["type"] == "error":
                     has_error = True
                     error_payload = payload.get("error") or {}
+                    notify_lifecycle_event("CLI_ERROR", {"error": error_payload})
                     if error_payload.get("code") == "unauthenticated":
                         print(SHELL_LOGIN_RECOVERY_TEXT, file=sys.stderr)
                     else:

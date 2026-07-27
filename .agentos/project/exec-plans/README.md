@@ -3,12 +3,13 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-27T05:29:00Z
+> Generated at: 2026-07-27T08:09:31Z
 
 ## Active Plans
 - older active plans omitted=0
-- `리뷰 대기 (완료 후 '완료'로 변경)` [Claude(Anthropic) OAuth LLM Provider 추가 구현 계획](.agentos/project/exec-plans/active/2026-07-27-claude-oauth-provider.md) | progress: 계획 초안 작성 완료. hermes-agent(`/references/pi`) 참고 조사 완료, `add-llm-provider` 스킬(`/references/pi/.pi/skills/add-llm-provider.md`) 체크리스트를 AgentOS…
-- `구현 계획 (실행 대기)` [Codex 도구 결과 상관관계 복구 구현 계획](.agentos/project/exec-plans/active/2026-07-26-codex-tool-result-correlation.md) | reviewed_evidence=missing | outcome: TUI 사용자는 도구 호출 후 멈춤이나 API 형식 오류 없이 결과와 후속 답변을 받는다. | progress: 계획 초안 작성, Gate 2 리뷰 대기.
+- `진행 중 (완료 후 '완료'로 변경)` [AgentOS Observability (대시보드 연동) 아키텍처 설계 계획](.agentos/project/exec-plans/active/2026-07-27-observability-architecture-plan.md) | progress: 계획 재작성 (P4 심플리시티 원칙 준수를 위한 리팩터링 완료)
+- `구현 및 전체 검증 완료 (사용자 실사용 확인 대기)` [Claude(Anthropic) OAuth LLM Provider 추가 구현 계획](.agentos/project/exec-plans/active/2026-07-27-claude-oauth-provider.md) | progress: 계획 초안 작성 완료. hermes-agent(`/references/pi`) 참고 조사 완료, `add-llm-provider` 스킬(`/references/pi/.pi/skills/add-llm-provider.md`) 체크리스트를 AgentOS…
+- `구현 완료 · Gate 2 리뷰 FAIL (재작업 필요)` [Codex 도구 결과 상관관계 복구 구현 계획](.agentos/project/exec-plans/active/2026-07-26-codex-tool-result-correlation.md) | outcome: TUI 사용자는 도구 호출 후 멈춤이나 API 형식 오류 없이 결과와 후속 답변을 받는다. | progress: 구현/테스트는 완료했으나 Gate 2 서브에이전트 리뷰(`plan-reviewer`, `principle-auditor`) 결과 FAIL. 아래 "리뷰 반영 이력"의 지적 사항 해소 및 재리뷰 PASS 전까지 `reviewed: true`로 전이 불…
 
 ## Archived Plans
 - archive summary: completed=33, parked=6
