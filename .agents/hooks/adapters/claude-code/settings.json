@@ -20,6 +20,15 @@
             "command": "/bin/bash -lc 'root=\"${CLAUDE_PROJECT_DIR:-}\"; if [[ -z \"$root\" ]]; then root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; fi; bash \"$root/.agents/hooks/scripts/check-careful.sh\"'"
           }
         ]
+      },
+      {
+        "matcher": "Replace|Edit|Write.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"${CLAUDE_PROJECT_DIR:-}\"; if [[ -z \"$root\" ]]; then root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; fi; python3 \"$root/.agents/hooks/scripts/check-alignment.py\"'"
+          }
+        ]
       }
     ],
     "PostToolUse": [
