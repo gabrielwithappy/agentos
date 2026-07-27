@@ -20,6 +20,7 @@ from textual.worker import Worker, get_current_worker
 from agentos.commands import hook as hook_command, llm as llm_command
 from agentos.conversation.persistence import commit_turn, empty_state, next_sequence
 from agentos.conversation.runtime import ConversationRuntime
+from agentos.llm.providers.claude_native import DEFAULT_MODEL as CLAUDE_DEFAULT_MODEL
 from agentos.llm.providers.codex_native import DEFAULT_MODEL as CODEX_DEFAULT_MODEL
 from agentos.llm.session import UnsupportedProviderError, stream_once, unsupported_provider_event
 from agentos.terminal.events import CliEvent, new_turn_id, wrap_provider_event
@@ -81,6 +82,8 @@ SHELL_LOGIN_RECOVERY_TEXT = (
 def _default_model_for_provider(provider: str) -> str:
     if provider in ("codex", "codex-cli"):
         return CODEX_DEFAULT_MODEL
+    if provider == "claude":
+        return CLAUDE_DEFAULT_MODEL
     return f"{provider}-default"
 
 
@@ -579,7 +582,7 @@ class AgentOSTui(App[None]):
 
     # ── Model picker handler (Milestone 5) ────────────────────────────────
 
-    _AVAILABLE_PROVIDERS = ("mock", "codex")
+    _AVAILABLE_PROVIDERS = ("mock", "codex", "claude")
 
     def _handle_model(self, text: str, transcript: Transcript) -> None:
         arg = text[len("/model"):].strip().lower()

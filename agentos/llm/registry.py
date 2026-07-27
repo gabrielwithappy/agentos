@@ -98,6 +98,7 @@ class ProviderRegistry:
 
 
 def build_default_registry() -> ProviderRegistry:
+    from agentos.llm.providers.claude_native import ClaudeNativeProvider
     from agentos.llm.providers.codex_cli import CodexCliProvider
     from agentos.llm.providers.codex_native import CodexNativeProvider
     from agentos.llm.providers.mock import MockProvider
@@ -105,6 +106,7 @@ def build_default_registry() -> ProviderRegistry:
     registry = ProviderRegistry()
     registry.register("codex", CodexNativeProvider)
     registry.register("codex-cli", CodexCliProvider)
+    registry.register("claude", ClaudeNativeProvider)
     registry.register("mock", MockProvider)
     return registry
 

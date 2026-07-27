@@ -1473,6 +1473,28 @@ def test_model_switch_command(tmp_path, monkeypatch):
     asyncio.run(run())
 
 
+def test_model_switch_command_supports_claude_provider(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            assert app.provider == "mock"
+            app.process_input("/model claude")
+            assert app.provider == "claude"
+
+    asyncio.run(run())
+
+
+def test_available_providers_includes_claude():
+    assert "claude" in AgentOSTui._AVAILABLE_PROVIDERS
+
+
+def test_default_model_for_provider_returns_claude_sonnet_for_claude():
+    from agentos.terminal.tui.app import _default_model_for_provider
+
+    assert _default_model_for_provider("claude") == "claude-sonnet-5"
+
+
 def test_streaming_markdown_helpers():
     """Milestone 6: Code block detection helpers for streaming markdown."""
     from agentos.terminal.tui.app import _has_complete_markdown_block, _has_open_code_block
