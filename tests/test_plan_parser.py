@@ -1,39 +1,52 @@
-from pathlib import Path
-
 from agentos.observability.plan_parser import parse_exec_plan, status_to_board_status
 
-REAL_PLAN_PATH = Path(
-    ".agentos/project/exec-plans/active/2026-07-27-github-projectv2-dashboard-adapter.md"
-)
+# 실제 exec-plan 파일(2026-07-27-github-projectv2-dashboard-adapter.md)의
+# 헤더/목표/리뷰 이력 구조를 그대로 옮긴 고정 픽스처. 이 파일을 직접
+# 읽으면 .gitignore된 로컬 전용 exec-plan이라 CI 환경에는 존재하지 않아
+# 실패하므로(FileNotFoundError), 실제 파일 구조를 인라인 문자열로 고정한다.
+SAMPLE_PLAN_TEXT = """# GitHub Projects v2(GraphQL) 대시보드 어댑터 교체 구현 계획
+
+> **상태:** 구현 및 전체 검증 완료 (사용자 실사용 확인 대기)
+> **작성일:** 2026-07-27<br>
+> reviewed: true (Gate 2 2종 PASS, 증거: `.agents/traces/reviews/2026-07-27-github-projectv2-dashboard-adapter/{plan-reviewer,principle-auditor}.md`)<br>
+> active_agent: Claude Code (claude-sonnet-5)<br>
+> active_session: 5b17931b-4ac1-4a97-9600-9b13d78e9f7f<br>
+> implementation_started_at: 2026-07-27T09:30:00Z<br>
+> implementation_completed_at: 2026-07-27T09:55:00Z<br>
+> implementation_duration: 약 25분<br>
+
+**목표:**
+- 기존 `GithubDashboardAdapter`(REST `/repos/{repo}/projects/{project_id}/columns`, Classic Projects API)는 GitHub이 신규 계정/리포에서 Classic Projects REST 엔드포인트를 은퇴시켜 실제로 404로 실패한다.
+
+## 리뷰 반영 이력
+- 2026-07-27 (Gate 2 1차 리뷰): principle-auditor PASS, plan-reviewer FAIL.
+- 2026-07-27 (Gate 2 2차 리뷰, 수정본 재검토): plan-reviewer PASS.
+"""
 
 
 def test_parses_real_exec_plan_title_and_status():
-    text = REAL_PLAN_PATH.read_text(encoding="utf-8")
-    summary = parse_exec_plan(text)
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
 
     assert summary.title == "GitHub Projects v2(GraphQL) 대시보드 어댑터 교체 구현 계획"
     assert "구현 및 전체 검증 완료" in summary.status
 
 
 def test_parses_real_exec_plan_agent_and_session():
-    text = REAL_PLAN_PATH.read_text(encoding="utf-8")
-    summary = parse_exec_plan(text)
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
 
     assert summary.active_agent == "Claude Code (claude-sonnet-5)"
     assert summary.active_session == "5b17931b-4ac1-4a97-9600-9b13d78e9f7f"
 
 
 def test_parses_real_exec_plan_goal_and_last_review_entry():
-    text = REAL_PLAN_PATH.read_text(encoding="utf-8")
-    summary = parse_exec_plan(text)
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
 
     assert "Classic Projects REST" in summary.goal
     assert "2차 리뷰" in summary.last_review_entry
 
 
 def test_parses_reviewed_field():
-    text = REAL_PLAN_PATH.read_text(encoding="utf-8")
-    summary = parse_exec_plan(text)
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
 
     assert summary.reviewed.startswith("true")
 
