@@ -7,7 +7,7 @@ The CLI stores user state under `AGENTOS_HOME` or `~/.agentos`.
 
 ```bash
 agentos [--version] [--help]
-agentos run --once "Prompt" [--provider mock|codex|codex-cli] [--json]  # sends one message and exits — stateless, no continuing session
+agentos run --once "Prompt" [--provider mock|codex|codex-cli|claude] [--json]  # sends one message and exits — stateless, no continuing session
 agentos setup [--home PATH]
 agentos skill install SKILL_DIRECTORY
 agentos skill status [--json]
@@ -23,7 +23,7 @@ agentos hook list
 agentos hook enable NAME
 agentos hook disable NAME
 agentos hook config show
-agentos llm status|login|logout --provider mock|codex|codex-cli [--json]
+agentos llm status|login|logout --provider mock|codex|codex-cli|claude [--json]
 agentos harness --project-root PATH [engine args...]
 python -m agentos.runtime.bench --prompt "Prompt" [--provider mock|codex] [--format json] [--assert-warm-faster]
 ```
@@ -591,5 +591,43 @@ authenticated Codex account only runs when you explicitly opt in:
 AGENTOS_CODEX_INTEGRATION=1 uv run agentos llm status --provider codex --json
 AGENTOS_CODEX_INTEGRATION=1 uv run pytest tests/test_codex_session_integration.py -q
 ```
+
+## Native Claude Sign-In (`--provider claude`)
+
+`agentos llm login --provider claude` starts the AgentOS-owned Claude
+Pro/Max account-login flow:
+
+1. AgentOS opens a local callback server and your browser to the Claude
+   sign-in page. Unlike Codex, there is no device-code fallback — Anthropic
+   does not publicly offer one, so a failed browser launch ends the login
+   attempt directly.
+2. After sign-in, run `agentos llm status --provider claude --json` to
+   confirm `authenticated: true`.
+
+Session refresh is transparent: an expired access token is refreshed from
+the stored refresh token the next time status or a run is checked, with no
+user action required unless the refresh token itself has expired (in which
+case `agentos llm login --provider claude` is required again).
+
+`agentos llm logout --provider claude` removes the local native Claude auth
+record. Running it again when the session is **already logged out** is a
+sanitized no-op success, not an error.
+
+**이 통합은 Anthropic이 공식 지원을 문서화한 대상이 아니며, Anthropic이 예고 없이 이
+로그인 방식을 차단할 수 있습니다.** AgentOS는 Anthropic이 공식 Claude Code CLI에
+발급한 OAuth client_id를 재사용하고, Claude Code로 인식되는 요청 헤더를 함께
+보냅니다(client_secret이 없는 공개 OAuth 클라이언트이므로 이 값 자체는 비밀정보가
+아닙니다). Anthropic이 이 방식을 차단하면 두 가지 다른 메시지 중 하나를 보게 됩니다:
+
+- 일반 로그인 만료: "Claude 로그인이 만료되었습니다. 다시 로그인하세요." — `agentos
+  llm login --provider claude`로 재로그인하면 해결됩니다.
+- 정책 차단 추정: "Claude 로그인 연동이 Anthropic 정책 변경으로 차단되었을 수
+  있습니다(알려진 리스크). 재로그인으로 해결되지 않으면 AgentOS 업데이트를
+  확인하세요." — 이 경우 재로그인으로는 해결되지 않으며, 이는 버그가 아니라
+  알려진 정책 리스크입니다.
+
+Claude Messages는 Codex Responses API의 서버 측 대화 연속(`previous_response_id`)
+기능이 없으므로, 매 턴 전체 대화 기록을 다시 전송합니다. WebSocket 전송도
+지원하지 않으며 SSE(server-sent events) 스트리밍만 사용합니다.
 
 Without `AGENTOS_CODEX_INTEGRATION=1`, these real-network checks do not run.

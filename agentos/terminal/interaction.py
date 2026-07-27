@@ -43,6 +43,10 @@ def _default_model_for_provider(provider: str) -> str:
         from agentos.llm.providers.codex_native import DEFAULT_MODEL
 
         return DEFAULT_MODEL
+    if provider == "claude":
+        from agentos.llm.providers.claude_native import DEFAULT_MODEL as CLAUDE_DEFAULT_MODEL
+
+        return CLAUDE_DEFAULT_MODEL
     return f"{provider}-default"
 
 

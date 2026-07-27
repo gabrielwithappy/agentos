@@ -54,7 +54,7 @@ def test_mock_provider_stream_events_are_deterministic():
 
 
 def test_registry_reports_supported_provider_names():
-    assert supported_providers() == ("codex", "codex-cli", "mock")
+    assert supported_providers() == ("claude", "codex", "codex-cli", "mock")
 
 
 def test_registry_rejects_duplicate_provider_registration():
@@ -171,8 +171,8 @@ def test_unsupported_provider_jsonl_failure_schema():
     assert event["provider"] == "unknown"
     assert event["mode"] == "unsupported"
     assert event["error"]["code"] == "unsupported_provider"
-    assert "codex, codex-cli, mock" in event["error"]["message"]
-    assert "codex, codex-cli, mock" in event["recovery"]
+    assert "claude, codex, codex-cli, mock" in event["error"]["message"]
+    assert "claude, codex, codex-cli, mock" in event["recovery"]
     assert "SENTINEL_SECRET" not in result.stdout
     assert "SENTINEL_SECRET" not in result.stderr
 

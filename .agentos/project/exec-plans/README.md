@@ -3,15 +3,17 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-26T23:15:54Z
+> Generated at: 2026-07-27T05:29:00Z
 
 ## Active Plans
 - older active plans omitted=0
+- `리뷰 대기 (완료 후 '완료'로 변경)` [Claude(Anthropic) OAuth LLM Provider 추가 구현 계획](.agentos/project/exec-plans/active/2026-07-27-claude-oauth-provider.md) | progress: 계획 초안 작성 완료. hermes-agent(`/references/pi`) 참고 조사 완료, `add-llm-provider` 스킬(`/references/pi/.pi/skills/add-llm-provider.md`) 체크리스트를 AgentOS…
 - `구현 계획 (실행 대기)` [Codex 도구 결과 상관관계 복구 구현 계획](.agentos/project/exec-plans/active/2026-07-26-codex-tool-result-correlation.md) | reviewed_evidence=missing | outcome: TUI 사용자는 도구 호출 후 멈춤이나 API 형식 오류 없이 결과와 후속 답변을 받는다. | progress: 계획 초안 작성, Gate 2 리뷰 대기.
 
 ## Archived Plans
-- archive summary: completed=32, parked=6
-- older archived plans omitted=18
+- archive summary: completed=33, parked=6
+- older archived plans omitted=19
+- `완료` [TUI 도구 활동 정보량·승인 팝업 가시성 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-tui-tool-activity-and-approval-visibility.md) | reviewed_evidence=invalid | progress: 구현·전체 검증·Gate 2 리뷰 모두 완료.
 - `완료` [YOLO 도구 실행 모드 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-yolo-tool-execution.md) | reviewed_evidence=missing | outcome: `agentos --yolo` 또는 `agentos run --yolo`로 작업 중 승인 중단 없이 연속 도구 실행을 사용할 수 있고, 옵션이 없으면 현재 동작이 그대로 유지된다.
 - `완료 (구현·검증 완료)` [TUI 테마 색상·스크롤바·입력창·상태 패널 개선 계획](.agentos/project/exec-plans/archive/2026-07-26-tui-theme-and-status-panel.md) | reviewed_evidence=invalid | progress: Gate 2 리뷰 후 Task 1–5 구현과 focused 회귀, dark/light SVG 증거까지 완료. 아카이빙 완료.
 - `완료` [AgentOS TUI 요청·결과 분리 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-tui-request-result-separation.md) | reviewed_evidence=invalid | progress: 마일스톤 0-6 구현 및 테스트 완료. closeout 본문 갱신으로 fresh Gate 2 재검토와 archive 결정만 남았다.
@@ -31,7 +33,6 @@
 - `완료` [AgentOS pi-style LLM runtime native auth/transport 구현 계획](.agentos/project/exec-plans/archive/2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport.md) | reviewed_evidence=invalid | progress: core foundation은 완료됐고, native OAuth/transport 범위는 아직 구현되지 않았다. 이번 계획은 deferred 범위를 implementation-ready execution plan으로 구체화하는 단계다.
 - `완료` [AgentOS LLM 호출 런타임 아키텍처 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-23-agentos-llm-invocation-runtime-architecture.md) | reviewed_evidence=invalid | outcome: 사용자는 설치된 `agentos` command를 기본 경로로 써야 하는지, `uv run`이 실제 병목인지, 후속 daemon 분리를 진행해도 되는지를 benchmark와 복구 절차로 명확히 판단할 수 있다. 바뀌지 않는 경계는 현재 `codex`… | progress: 측정 우선의 invocation runtime surface, typed invocation contract, launcher/recovery guidance, docs/project boundary, focused tests, isolated in…
 - `완료` [AgentOS LLM Codex Streaming Structure 구현 계획](.agentos/project/exec-plans/archive/2026-07-23-agentos-llm-codex-streaming-structure.md) | reviewed_evidence=invalid | outcome: 사용자는 `agentos run --once --provider codex --json`과 TUI에서 Codex 응답이 프로세스 종료 후 한꺼번에 나타나는 대신, 생각 중 표시와 도구 실행 표시, 답변 텍스트를 더 빨리 보게 된다. 바뀌지 않는 경계… | progress: Gate 2 리뷰를 현재 plan hash 기준으로 재기록해 닫은 뒤, `CodexCliProvider`를 live stdout streaming 구조로 전환하고 focused/full verification까지 완료했다.
-- `완료` [AgentOS TUI — pi/hermes TUI 클론 (Phase 4: 메시지 포커스 이동 및 클립보드 복사) 구현 계획](.agentos/project/exec-plans/archive/2026-07-22-tui-pi-clone-phase4.md) | reviewed_evidence=invalid | progress: 계획 초안 작성, 리뷰 대기 중
 
 ## Reference Docs
 - older reference docs omitted=0

@@ -812,3 +812,119 @@ def test_prompt_is_stable_across_continuation_reuse(monkeypatch):
     monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context_other)
     list(other_runtime.submit_turn("third"))
     assert other_captured[0].continuation is None
+
+
+# ── Task 3: legacy session and malformed call regression (2026-07-26 plan) ───
+
+
+def test_codex_runtime_emits_legacy_tool_result_unavailable_for_session_without_call_metadata(monkeypatch):
+    """Regression: resumed legacy session with tool messages lacking call_id.
+
+    The runtime must emit `legacy_tool_result_unavailable` before the next
+    provider call, and must continue processing — the new request must still
+    reach the provider and yield a final answer.
+    """
+    from dataclasses import replace
+    from agentos.conversation.types import BranchHead, ConversationMessage, ConversationState
+
+    # Build a state with a legacy tool message (no call_id in metadata)
+    branch_id = "main"
+    user_msg = ConversationMessage(id="m1", role="user", text="list .", source="user")
+    legacy_tool_msg = ConversationMessage(
+        id="m2",
+        role="tool",
+        text="README.md",
+        source="codex",
+        tool_name="list",
+        metadata={},  # No call_id — legacy session
+    )
+    state = ConversationState(
+        session_id="s-legacy",
+        active_branch_id=branch_id,
+        branches={
+            branch_id: BranchHead(
+                branch_id=branch_id,
+                label="main",
+                head_message_id="m2",
+            )
+        },
+        messages={"m1": user_msg, "m2": legacy_tool_msg},
+        parent_message_id={"m1": None, "m2": "m1"},
+    )
+    runtime = ConversationRuntime(state, provider="codex", model="gpt-5-codex")
+
+    call_count = {"n": 0}
+    captured_requests: list = []
+
+    def fake_stream_context(request, provider="codex"):
+        call_count["n"] += 1
+        captured_requests.append(request)
+        # Legacy tool message may appear in InvocationRequest.messages,
+        # but must lack call_id/name/arguments in metadata (no correlation data).
+        # build_transport_request will exclude it from the actual Codex request body.
+        for m in request.messages:
+            if m.role == "tool":
+                # Must not have complete correlation data
+                assert not (
+                    isinstance(m.metadata.get("call_id"), str)
+                    and isinstance(m.metadata.get("name"), str)
+                    and isinstance(m.metadata.get("arguments"), str)
+                ), "Legacy tool message must not have full correlation metadata"
+        yield LLMEvent(type="start", provider="codex", mode="native")
+        yield LLMEvent(type="message_delta", provider="codex", mode="native", text="final answer")
+        yield LLMEvent(type="done", provider="codex", mode="native")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    events = list(runtime.submit_turn("new list request", tool_names=["list"]))
+
+    event_types = [e.type for e in events]
+    # legacy_tool_result_unavailable must appear before the provider's response
+    assert "legacy_tool_result_unavailable" in event_types
+    # Provider must still be called and yield a final answer
+    assert "message_delta" in event_types
+    assert "done" in event_types
+    assert call_count["n"] == 1
+    # legacy notification must not abort the turn
+    final_state = runtime.state
+    messages = final_state.branch_messages(branch_id)
+    assert any(m.role == "assistant" for m in messages)
+
+
+def test_codex_runtime_malformed_call_without_call_id_yields_error_and_does_not_execute_tool(tmp_path, monkeypatch):
+    """Regression: Codex native tool_call with missing call_id must not execute.
+
+    The runtime must emit an `error` event with code `tool_call_uncorrelated`
+    and the Korean recovery message. The turn must end without executing the
+    tool or committing a tool message.
+    """
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="codex", model="gpt-5-codex")
+
+    def fake_stream_context(request, provider="codex"):
+        yield LLMEvent(type="start", provider="codex", mode="native")
+        # Malformed: call_id is missing
+        yield LLMEvent(
+            type="tool_call",
+            provider="codex",
+            mode="native",
+            metadata={"name": "list", "arguments": {"path": "."}},
+            # No call_id key
+        )
+        yield LLMEvent(type="done", provider="codex", mode="native")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    events = list(runtime.submit_turn("list .", cwd=tmp_path, tool_names=["list"]))
+
+    event_types = [e.type for e in events]
+    # Must yield an error event with the correct code
+    assert "error" in event_types
+    error_events = [e for e in events if e.type == "error"]
+    assert error_events[0].error["code"] == "tool_call_uncorrelated"
+    assert "도구 호출을 연결할 수 없습니다" in error_events[0].error["message"]
+    assert error_events[0].recovery == "retry the request"
+    # Tool must not have been executed — no tool message in state
+    branch = runtime.state.active_branch()
+    messages = runtime.state.branch_messages(branch.branch_id)
+    assert not any(m.role == "tool" for m in messages)

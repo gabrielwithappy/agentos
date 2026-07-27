@@ -285,3 +285,124 @@ def test_run_interactive_tool_call_limit_shows_recovery_message(tmp_path, monkey
     assert exit_code == 0
     joined = "\n".join(printed)
     assert "도구 호출 한도(" in joined and "Next:" in joined
+
+
+# ── Task 3: CLI legacy/malformed recovery rendering (2026-07-26 plan) ────────
+
+
+def test_run_interactive_legacy_tool_result_unavailable_rendered_in_korean_not_raw_provider_id(tmp_path, monkeypatch):
+    """Regression: legacy_tool_result_unavailable event must render in Korean.
+
+    The CLI must NOT show blank screens or raw provider identifiers like
+    'codex', 'native', or internal event type strings. It must show the
+    Korean recovery message and 'Next:' guidance.
+    """
+    from agentos.terminal.interaction import run_interactive
+    from agentos.terminal.paths import initialize_state
+    from agentos.conversation import runtime as runtime_module
+    from agentos.llm.types import LLMEvent
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    initialize_state()
+
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    monkeypatch.chdir(project_dir)
+
+    def fake_stream_context(request, provider="mock"):
+        # Emit legacy_tool_result_unavailable before any message
+        yield LLMEvent(type="legacy_tool_result_unavailable", provider="codex", mode="tool", recovery="retry the request")
+        yield LLMEvent(type="start", provider="codex", mode="native")
+        yield LLMEvent(type="message_delta", provider="codex", mode="native", text="final answer after legacy warning")
+        yield LLMEvent(type="done", provider="codex", mode="native")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    inputs = iter(["resume session", ""])
+
+    def fake_input(_prompt: str = "") -> str:
+        try:
+            return next(inputs)
+        except StopIteration:
+            raise EOFError
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    printed: list[str] = []
+    monkeypatch.setattr(
+        "agentos.terminal.interaction.console.print",
+        lambda text="", **kwargs: printed.append(str(text)),
+    )
+
+    exit_code = run_interactive(provider="mock")
+
+    assert exit_code == 0
+    joined = "\n".join(printed)
+    # Must contain the Korean recovery message
+    assert "이전 도구 결과" in joined or "다시 보내세요" in joined or "Next:" in joined
+    # Must NOT show raw provider identifiers or event type strings
+    assert "codex_native_error" not in joined
+    assert "legacy_tool_result_unavailable" not in joined
+
+
+def test_run_interactive_malformed_codex_call_rendered_as_korean_error_not_blank(tmp_path, monkeypatch, capsys):
+    """Regression: tool_call_uncorrelated error must render in Korean, not blank.
+
+    When Codex returns a tool_call without call_id, the CLI must show the
+    Korean error message and 'Next: retry the request.' guidance, not a
+    blank screen or raw provider identifiers.
+    """
+    from agentos.terminal.interaction import run_interactive
+    from agentos.terminal.paths import initialize_state
+    from agentos.conversation import runtime as runtime_module
+    from agentos.llm.types import LLMEvent
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    initialize_state()
+
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    monkeypatch.chdir(project_dir)
+
+    def fake_stream_context(request, provider="mock"):
+        yield LLMEvent(type="start", provider="codex", mode="native")
+        yield LLMEvent(
+            type="error",
+            provider="codex",
+            mode="tool",
+            error={"code": "tool_call_uncorrelated", "message": "도구 호출을 연결할 수 없습니다. 같은 요청을 다시 시도하세요."},
+            recovery="retry the request",
+        )
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    inputs = iter(["list files", ""])
+
+    def fake_input(_prompt: str = "") -> str:
+        try:
+            return next(inputs)
+        except StopIteration:
+            raise EOFError
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    printed: list[str] = []
+    monkeypatch.setattr(
+        "agentos.terminal.interaction.console.print",
+        lambda text="", **kwargs: printed.append(str(text)),
+    )
+
+    exit_code = run_interactive(provider="mock")
+
+    assert exit_code == 0
+    # CLI writes errors to stderr, not console.print — capture both
+    captured = capsys.readouterr()
+    all_output = "\n".join(printed) + captured.err
+    # Must surface the Korean error message — not blank
+    assert "도구 호출을 연결할 수 없습니다" in all_output
+    # Must not show blank output for the error turn (something was printed)
+    assert len(all_output.strip()) > 0
+
+
+def test_default_model_for_provider_returns_claude_sonnet_for_claude():
+    from agentos.terminal.interaction import _default_model_for_provider
+
+    assert _default_model_for_provider("claude") == "claude-sonnet-5"

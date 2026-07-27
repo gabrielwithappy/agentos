@@ -776,3 +776,97 @@ def test_login_updates_surfaces_device_code_verification_url_and_user_code(tmp_p
     assert any("ABCD-1234" in text for text in hint_texts)
     assert updates[-1]["type"] == "result"
     assert updates[-1]["payload"]["authenticated"] is False
+
+
+# ── Task 3: two-request native replay regression (2026-07-26 plan) ──────────
+
+
+def test_codex_native_two_request_replay_includes_function_call_and_output_for_list_success():
+    """Regression: fake Codex-native provider, two requests.
+
+    First response emits a `list` function_call with call_id. The second
+    request must contain the matching function_call + function_call_output
+    pair with the same call_id, and the output must carry the tool result
+    (success path).
+    """
+    invocation_request_second_turn = InvocationRequest(
+        messages=[
+            InvocationMessage(role="user", text="list files"),
+            InvocationMessage(
+                role="tool",
+                text="README.md\nagentos/\ntests/",
+                metadata={"call_id": "call_list_success", "name": "list", "arguments": '{"path":"."}'},
+            ),
+        ]
+    )
+    body = build_transport_request(
+        model="gpt-5-codex", invocation_request=invocation_request_second_turn
+    ).to_request_body()
+
+    input_items = body["input"]
+    # Must contain user message, then function_call, then function_call_output
+    assert {"role": "user", "content": "list files"} in input_items
+    fc_items = [i for i in input_items if i.get("type") == "function_call"]
+    fco_items = [i for i in input_items if i.get("type") == "function_call_output"]
+    assert len(fc_items) == 1
+    assert len(fco_items) == 1
+    assert fc_items[0]["call_id"] == "call_list_success"
+    assert fc_items[0]["name"] == "list"
+    assert fc_items[0]["arguments"] == '{"path":"."}'
+    assert fco_items[0]["call_id"] == "call_list_success"
+    assert "README.md" in fco_items[0]["output"]
+    # function_call must come before function_call_output
+    fc_index = input_items.index(fc_items[0])
+    fco_index = input_items.index(fco_items[0])
+    assert fc_index < fco_index
+
+
+def test_codex_native_two_request_replay_includes_function_call_and_output_for_list_error():
+    """Regression: same as success path but with an error result.
+
+    Error output (e.g. 'Error: not a directory') must be preserved in
+    function_call_output, not silenced.
+    """
+    invocation_request = InvocationRequest(
+        messages=[
+            InvocationMessage(role="user", text="list /notadir"),
+            InvocationMessage(
+                role="tool",
+                text="Error: not a directory: /notadir",
+                metadata={"call_id": "call_list_err", "name": "list", "arguments": '{"path":"/notadir"}'},
+            ),
+        ]
+    )
+    body = build_transport_request(
+        model="gpt-5-codex", invocation_request=invocation_request
+    ).to_request_body()
+
+    fco_items = [i for i in body["input"] if i.get("type") == "function_call_output"]
+    assert len(fco_items) == 1
+    assert fco_items[0]["call_id"] == "call_list_err"
+    assert "Error" in fco_items[0]["output"]
+    assert "not a directory" in fco_items[0]["output"]
+
+
+def test_codex_native_two_request_replay_no_orphan_output_without_function_call():
+    """Regression: legacy tool messages (no call_id) must be silently excluded.
+
+    Sending a function_call_output without its matching function_call in the
+    same input is invalid for the Codex backend. Legacy messages with no
+    correlation data must be dropped entirely from the request body.
+    """
+    invocation_request = InvocationRequest(
+        messages=[
+            InvocationMessage(role="user", text="continue"),
+            # Legacy tool message: no call_id/name/arguments
+            InvocationMessage(role="tool", text="old result with no correlation"),
+        ]
+    )
+    body = build_transport_request(
+        model="gpt-5-codex", invocation_request=invocation_request
+    ).to_request_body()
+
+    # Neither function_call nor function_call_output must appear
+    for item in body["input"]:
+        assert item.get("type") not in ("function_call", "function_call_output")
+    assert body["input"] == [{"role": "user", "content": "continue"}]
