@@ -77,6 +77,7 @@
     ".agents/hooks/adapters/claude-code/settings.json",
     ".agents/hooks/adapters/claude/README.md",
     ".agents/hooks/adapters/codex/hooks.json",
+    ".agents/hooks/scripts/check-alignment.py",
     ".agents/hooks/scripts/check-careful.sh",
     ".agents/hooks/scripts/post_tool_use_review.py",
     ".agents/hooks/scripts/stop_review_gate.py",
