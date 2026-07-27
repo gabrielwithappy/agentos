@@ -103,7 +103,7 @@
 - `loop-state.md`는 **루프 실행 상태 파일**이다. 루프를 사용하지 않는 일반 계획 리뷰/실행의 전역 허가 파일로 해석하지 마라.
 - `usability-reviewer`는 사용자 관점 이해 가능성과 복구 가능성을 검토하는 추가 게이트이며, `plan-reviewer`, `principle-auditor`, `qa-reviewer`, secret redaction, prompt boundary, protected-path approval을 대체하거나 override할 수 없다.
 
-**Claude Code 환경**(Task 도구 사용 가능)에서 자기검토 fallback은 허용되지 않는다. Task 도구를 사용할 수 없는 환경(Antigravity 등)에서만 자기검토 fallback이 허용된다.
+**서브 에이전트 호출 기능**(Task 도구, `invoke_subagent` 등)을 지원하는 모든 런타임 환경에서는 자기검토 fallback이 절대 허용되지 않으며 독립적인 서브 에이전트 호출을 통해서만 리뷰해야 한다. 어떠한 형태의 서브 에이전트 생성 도구도 제공되지 않는 제한된 환경에서만 예외적으로 자기검토 fallback이 허용된다. (특정 벤더명에 의존하지 않고 도구 지원 여부로 판단한다.)
 
 ### Rule 7: 계획 수립 및 구현 전 브랜치 생성
 
@@ -113,6 +113,12 @@
 ### Rule 8: 프로젝트 문서화 및 참조 (SSOT)
 
 프로젝트 컨텍스트를 파악하거나 계획을 수립할 때는 가장 먼저 `.agentos/project/00-project-index.md`를 읽고 SSOT 맵을 파악하라. 새로운 정보를 추가할 때는 단일 파일이 아닌 6종 루트 문서 중 가장 알맞은 곳을 찾아 업데이트하라.
+
+### Rule 9: AgentOS 통합 훅(Unified Hooks) 강제화
+
+모든 CLI 벤더(Claude Code, Codex, Antigravity)는 AgentOS의 공통 훅 스크립트(`.agents/hooks/scripts/`)를 우회할 수 없다. 
+이 훅 파이프라인은 `agentos setup` 명령어 실행 시(내부적으로 `scripts/install-hooks.sh` 호출) 각 벤더의 네이티브 설정 폴더(`.claude/settings.json`, `.codex/hooks.json`, `agy plugin`)로 자동 주입(Link)된다.
+따라서 새로운 개발 환경을 설정하거나 어댑터 로직을 수정한 후에는 반드시 `agentos setup`을 실행하여 훅 연결 상태를 갱신해야 한다.
 
 ---
 

@@ -17,3 +17,6 @@ GEMINI.md
 .agentos/mission/
 .agents/mission/
 .agentos/worktrees/
+.claude/
+.codex/
+.gemini/

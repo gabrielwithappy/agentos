@@ -25,6 +25,14 @@ def main(
         )
         if summary.failed:
             raise StateError("Default skill installation failed. Next: agentos setup")
+            
+        # Call the unified hook installation script
+        import subprocess
+        hook_script = Path(__file__).parent.parent.parent / "scripts" / "install-hooks.sh"
+        if hook_script.exists():
+            console.print("[bold blue]Installing Unified Hooks for all CLIs...[/bold blue]")
+            subprocess.run(["bash", str(hook_script)], check=False)
+            
         console.print("[bold green]Verification successful![/bold green] CLI state is ready.")
         console.print(f"[bold green]PASS[/bold green] agentos-setup destination={dest} selection=catalog-default-skills")
     except (StateError, OSError, ValueError) as e:

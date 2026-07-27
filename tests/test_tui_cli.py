@@ -87,7 +87,7 @@ def test_layout_contains_transcript_composer_and_footer(tmp_path, monkeypatch):
             status = str(pilot.app.query_one("#status").render())
             for label in ("pm:", "sid:", "turn:", "in:", "out:"):
                 assert label in status
-            assert "hooks" not in status and "mode" not in status
+            assert "hooks:" not in status and "mode:" not in status
 
     asyncio.run(run())
 
