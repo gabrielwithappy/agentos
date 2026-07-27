@@ -10,6 +10,17 @@ from agentos.cli import app
 runner = CliRunner()
 
 
+def test_yolo_is_available_on_top_level_and_run_help():
+    assert "--yolo" in runner.invoke(app, ["--help"]).output
+    assert "--yolo" in runner.invoke(app, ["run", "--help"]).output
+
+
+def test_yolo_rejected_for_stateless_once():
+    result = runner.invoke(app, ["run", "--once", "--yolo", "hello"])
+    assert result.exit_code == 2
+    assert "cannot be combined with --once" in result.output
+
+
 def test_root_without_tty_exits_2():
     result = runner.invoke(app, [])
     assert result.exit_code == 2

@@ -1006,7 +1006,16 @@ def test_footer_usage_accumulates_and_survives_status_updates(tmp_path, monkeypa
 # ── Milestone 4: tool_call/tool_result bordered, reasoning unbordered ──────────
 
 def test_tool_border_tool_call_has_tool_class(tmp_path, monkeypatch):
-    """tool_call event adds a ChatMessage with class 'tool', not 'reasoning'."""
+    """tool_call event adds a ChatMessage with class 'tool', not 'reasoning'.
+
+    Each round's tool_call and its matching tool_result merge into a single
+    message, so a completed round is one Activity block, not two. The mock
+    provider drives two rounds for a plain "hello" turn: a bare `read`
+    tool_call that `ConversationRuntime` executes (yielding its own
+    `tool_result`), then a re-invoke where the provider itself emits
+    `reasoning` + `tool_call(mock_tool)` + `tool_result(mock_tool)` — so two
+    merged tool messages are expected, one per round.
+    """
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
         app = AgentOSTui(provider="mock", create_session_on_start=False)
@@ -1014,12 +1023,11 @@ def test_tool_border_tool_call_has_tool_class(tmp_path, monkeypatch):
             composer = pilot.app.query_one("#composer")
             composer.value = "hello"
             await pilot.press("enter")
-            await pilot.pause()
+            await await_transcript(pilot, "Mock response from AgentOS")
             messages = list(pilot.app.query(ChatMessage))
             tool_messages = [m for m in messages if m.has_class("tool")]
             reasoning_messages = [m for m in messages if m.has_class("reasoning")]
-            # Mock provider emits tool_call + tool_result → at least 2 tool messages
-            assert len(tool_messages) >= 2, f"Expected ≥2 tool messages, got {tool_messages}"
+            assert len(tool_messages) == 2, f"Expected 2 merged tool messages, got {tool_messages}"
             # tool messages must NOT also have the reasoning class
             for m in tool_messages:
                 assert not m.has_class("reasoning"), "tool message should not have reasoning class"
@@ -2172,7 +2180,7 @@ def test_activity_turn_contract_preserves_event_order_and_turn_id(tmp_path, monk
             await pilot.press("enter")
             await await_transcript(pilot, "Answer")
             messages = [m for m in pilot.app.query(ChatMessage) if m.role in {"reasoning", "tool", "assistant"}]
-            assert [m.role for m in messages] == ["reasoning", "tool", "tool", "assistant"]
+            assert [m.role for m in messages] == ["reasoning", "tool", "assistant"]
             assert len({m.turn_id for m in messages}) == 1
             presentation = _presentation_text(pilot)
             assert presentation.index("Activity · Thinking") < presentation.index("Activity · Tool") < presentation.index("AgentOS · complete")
@@ -2264,6 +2272,43 @@ def test_tui_confirm_screen_defaults_focus_to_deny():
             await pilot.press("enter")
             await pilot.pause()
             assert result == [False], result
+
+    asyncio.run(run())
+
+
+def test_tui_confirm_screen_keeps_options_visible_with_long_body():
+    """A long approval body must not push the 승인/거부 options off-screen —
+    the body scrolls in its own bounded region instead of growing the modal
+    past `max-height` and clipping whatever no longer fits."""
+    from pathlib import Path
+
+    from agentos.llm.tools.approval import approval_prompt
+    from agentos.terminal.tui.widgets import ConfirmToolScreen
+
+    long_command = " && ".join(f"echo step-{i}" for i in range(400))
+    body = approval_prompt("bash", {"command": long_command}, cwd=Path("."))
+
+    async def run() -> None:
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            screen = ConfirmToolScreen("도구 실행 승인 필요 — bash", body)
+            result: list = []
+            pilot.app.push_screen(screen, result.append)
+            await pilot.pause()
+
+            container = screen.query_one("#confirm-container")
+            options = screen.query_one("#confirm-options")
+            body_scroll = screen.query_one("#confirm-body-scroll")
+
+            assert options.is_mounted
+            assert options.region.height > 0, "options must actually be rendered, not clipped to zero height"
+            assert options.region.y + options.region.height <= container.region.y + container.region.height, (
+                "options must stay within the container's screen bounds"
+            )
+            assert body_scroll.virtual_size.height > body_scroll.size.height, (
+                "body content must overflow its own scroll region — that's what absorbs the long body "
+                "instead of pushing the options out of view"
+            )
 
     asyncio.run(run())
 

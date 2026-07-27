@@ -81,7 +81,7 @@ def _print_bootstrap_banner(runtime: ConversationRuntime) -> None:
     console.print(f"부트스트랩 컨텍스트: {file_count}개 파일, {skill_count}개 스킬 로드됨 — /status로 확인")
 
 
-def run_interactive(provider: str = "mock") -> int:
+def run_interactive(provider: str = "mock", yolo: bool = False) -> int:
     initialize_state()
     session_id = create_session(provider=provider, mode="interactive")
     runtime = ConversationRuntime(
@@ -89,6 +89,8 @@ def run_interactive(provider: str = "mock") -> int:
     )
     console.print(f"AgentOS interactive session {session_id}. Type /help or /exit.")
     _print_bootstrap_banner(runtime)
+    if yolo:
+        console.print("YOLO: enabled (write/edit/bash approvals skipped; Ctrl+C cancels)")
     cancelling = False
     while True:
         try:
@@ -197,6 +199,7 @@ def run_interactive(provider: str = "mock") -> int:
                 allowed_read_paths=global_skill_read_paths(),
                 blocked_read_roots=(global_skills_dir(),),
                 confirm_tool_call=_confirm_tool_call,
+                yolo=yolo,
             ):
                 payload = event.to_dict()
                 append_event(

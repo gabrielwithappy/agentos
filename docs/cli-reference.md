@@ -122,13 +122,15 @@ what the provider did before answering:
 
 - `Activity · Thinking` — reasoning steps, displayed in a muted secondary
   region belonging to the current turn.
-- `Activity · Tool` — tool invocations, displayed with a theme-adaptive
-  emphasis colour to visually separate them from reasoning and the final answer.
-- Tool results also appear as `Activity · Tool`. Some
-  tools have a registered custom renderer instead of this plain-text line;
-  today the mock provider's `mock_tool` result renders as a
-  `| field | value |` table. Tools without a registered renderer keep the
-  plain-text `Tool result: ...` line unchanged.
+- `Activity · Tool` — a tool call and its result share one block: the call
+  line appears first, then the result is appended to the same block once it
+  arrives, instead of opening a second block. This keeps a busy turn (several
+  tool calls) from filling the transcript with twice as many entries as tool
+  calls actually happened. Some tools have a registered custom renderer for
+  the result line instead of plain text; today the mock provider's
+  `mock_tool` result renders as a `| field | value |` table, appended to the
+  same block the same way. Tools without a registered renderer keep the
+  plain-text `Tool result: ...` line.
 
 Activity preserves provider event order and is not part of the final assistant
 result; the final answer is rendered last.
@@ -361,6 +363,18 @@ AgentOS가 파일을 찾고·읽고·고치고(write/edit) 명령을 실행할(b
 되돌리기 어려운 도구는 실행 전마다 승인을 요청합니다.
 ```
 
+For uninterrupted interactive work, opt in explicitly with `--yolo`:
+
+```bash
+agentos --yolo
+agentos run --yolo
+```
+
+YOLO skips approval prompts for `write`, `edit`, and `bash` and removes the
+per-turn tool-call cap. It can affect files outside the project through
+`bash`; use `Esc`/`Ctrl+C` to cancel and omit `--yolo` to return to the default
+approval mode. `--yolo` is intentionally unavailable with `--once`.
+
 ### 도구 (Tools)
 
 AgentOS offers the model seven tools, all boundary-checked against the
@@ -376,9 +390,10 @@ session's working directory (`cwd`) through one shared resolver:
 | `edit` | Replace one exact, unique string in a file. | **필수 — 매 호출** |
 | `bash` | Run a shell command from `cwd`. | **필수 — 매 호출** |
 
-`write`, `edit`, and `bash` ask for approval before every single call,
-independent of any environment variable. If no approval callback is
-available, the call is denied rather than run unattended.
+By default, `write`, `edit`, and `bash` ask for approval before every single
+call, independent of any environment variable. If no approval callback is
+available, the call is denied rather than run unattended. The explicit
+interactive `--yolo` mode is the only exception.
 
 **The approval screen shows the full action, not a truncated summary.** A
 `bash` call displays the entire command, wrapped rather than cut off at a
@@ -389,6 +404,10 @@ existing one (with its current size). An `edit` call shows the old and new
 text side by side. When several tool calls happen in one turn, the screen
 also shows a running count ("이번 턴 N번째 도구 승인") so repeated approvals
 stay visible instead of becoming a reflex.
+
+In the TUI, a long action description scrolls inside its own region of the
+popup rather than growing the popup itself — the 승인 (approve) / 거부 (deny)
+options always stay on screen, no matter how long the command or diff is.
 
 **`bash`는 샌드박스가 아닙니다.** Unlike the other six tools, an approved
 `bash` command can affect files outside the session's working directory —

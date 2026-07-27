@@ -132,6 +132,7 @@ class ConversationRuntime:
         blocked_read_roots: tuple[Path, ...] = (),
         tool_names: list[ToolName] | None = None,
         confirm_tool_call: Callable[[str, dict], bool] | None = None,
+        yolo: bool = False,
     ) -> Iterator[LLMEvent]:
         """`force_full_replay=True` is a benchmarking/diagnostic hook: it
         skips continuation reuse for this turn even if a valid one exists,
@@ -145,7 +146,7 @@ class ConversationRuntime:
         responds with a `tool_call` instead of `done`, this method executes
         the tool, appends a `role="tool"` message, and re-invokes the
         provider with the extended context — up to `MAX_TOOL_CALLS_PER_TURN`
-        times — before yielding the final assistant response. Turns with no
+        times by default, or without that per-turn cap when `yolo=True` — before yielding the final assistant response. Turns with no
         tool_call are unaffected: exactly one provider call, identical to
         the pre-tool-loop behavior.
 
@@ -249,7 +250,7 @@ class ConversationRuntime:
                 # event): commit nothing.
                 return
 
-            if tool_calls_executed >= MAX_TOOL_CALLS_PER_TURN:
+            if not yolo and tool_calls_executed >= MAX_TOOL_CALLS_PER_TURN:
                 assistant_text_parts.append(
                     "\n\n[도구 호출 한도 초과: 한 턴에 최대 "
                     f"{MAX_TOOL_CALLS_PER_TURN}회까지만 도구를 호출할 수 있습니다.]"
@@ -277,7 +278,7 @@ class ConversationRuntime:
             # Mutating tools are checked first and unconditionally: folding
             # them into the env-gated branch below would leave writes and
             # shell commands running unannounced on a default install.
-            if requires_confirmation(tool_name):
+            if requires_confirmation(tool_name) and not yolo:
                 approved = (
                     confirm_tool_call(tool_name, tool_arguments)
                     if confirm_tool_call is not None

@@ -26,9 +26,13 @@ def main(
         ),
     ),
     provider: str | None = typer.Option(None, "--provider", help="LLM provider name"),
+    yolo: bool = typer.Option(False, "--yolo", help="Skip write/edit/bash approval prompts (use with care)."),
 ):
     """Start the interactive agent chat session."""
     selected_provider = provider or read_preferred_provider() or "mock"
+    if yolo and once:
+        typer.echo("--yolo requires an interactive session; it cannot be combined with --once.", err=True)
+        raise typer.Exit(2)
     if json_output and not once:
         typer.echo("--json requires --once.", err=True)
         raise typer.Exit(2)
@@ -80,4 +84,4 @@ def main(
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         typer.echo('Interactive mode requires a TTY. Next: agentos run --once "<prompt>".', err=True)
         raise typer.Exit(2)
-    raise typer.Exit(run_tui(provider=selected_provider))
+    raise typer.Exit(run_tui(provider=selected_provider, yolo=yolo))

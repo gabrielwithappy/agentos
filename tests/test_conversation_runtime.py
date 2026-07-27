@@ -630,6 +630,42 @@ def test_mutating_tool_always_confirms_regardless_of_env(tmp_path, monkeypatch):
     assert (tmp_path / "out.txt").read_text(encoding="utf-8") == "x"
 
 
+def test_yolo_mutating_tool_skips_confirmation_only_when_explicit(tmp_path, monkeypatch):
+    monkeypatch.delenv("AGENTOS_TOOL_READ_CONFIRM", raising=False)
+    runtime = ConversationRuntime(_empty_state(), provider="mock", model="mock-model")
+    _write_tool_stream(monkeypatch, runtime)
+    confirm_calls = []
+
+    list(runtime.submit_turn(
+        "write it", cwd=tmp_path, tool_names=["write"],
+        confirm_tool_call=lambda name, args: confirm_calls.append((name, args)) or False,
+        yolo=True,
+    ))
+
+    assert confirm_calls == []
+    assert (tmp_path / "out.txt").read_text(encoding="utf-8") == "x"
+
+
+def test_yolo_allows_more_than_default_tool_limit_with_finite_provider(tmp_path, monkeypatch):
+    runtime = ConversationRuntime(_empty_state(), provider="mock", model="mock-model")
+    (tmp_path / "AGENTS.md").write_text("content", encoding="utf-8")
+    calls = {"n": 0}
+
+    def finite_stream(request, provider="mock"):
+        calls["n"] += 1
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        if calls["n"] <= MAX_TOOL_CALLS_PER_TURN + 2:
+            yield LLMEvent(type="tool_call", provider="mock", mode="tool",
+                            metadata={"name": "read", "arguments": {"path": "AGENTS.md"}})
+        else:
+            yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", finite_stream)
+    events = list(runtime.submit_turn("inspect", cwd=tmp_path, tool_names=["read"], yolo=True))
+    assert calls["n"] == MAX_TOOL_CALLS_PER_TURN + 3
+    assert "tool_call_limit_reached" not in [event.type for event in events]
+
+
 def test_readonly_tool_confirmation_still_env_gated(tmp_path, monkeypatch):
     """The mutating policy must not leak into read-only tools."""
     monkeypatch.delenv("AGENTOS_TOOL_READ_CONFIRM", raising=False)
