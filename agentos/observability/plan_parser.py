@@ -60,14 +60,17 @@ def parse_exec_plan(text: str) -> ExecPlanSummary:
 
 
 def status_to_board_status(status_text: str, reviewed: str) -> str:
-    """Map an exec-plan's status text + reviewed field to a 4-stage board status.
+    """Map an exec-plan's status text + reviewed field to a 5-stage board status.
 
     판단 순서 (계획 문서 아키텍처 섹션 참고):
     1. 주 상태 문구(괄호 앞)가 "완료"로 시작하면 → Done.
     2. 그 외 reviewed가 true가 아니면 → Backlog (Gate 2 리뷰 미통과).
     3. reviewed가 true이고 주 상태 문구에 "완료"가 없으면 → Ready.
-    4. 나머지(reviewed true + "완료"가 주 상태 문구에 있지만 "완료"로 시작하지
-       않는 경우, 예: "구현 완료") → In Progress.
+    4. reviewed가 true이고 "완료"가 주 상태 문구에 있지만 "완료"로 시작하지
+       않고, 상태 문구 전체(괄호 포함)에 "사용자 실사용 확인 대기"가
+       포함되면 → Awaiting Verification (자동 검증은 끝났고 사람의 수동
+       확인만 남은 상태).
+    5. 나머지(예: "구현 완료") → In Progress.
     """
     primary_status = status_text.split("(", 1)[0].strip()
     is_reviewed = reviewed.strip().lower().startswith("true")
@@ -78,6 +81,8 @@ def status_to_board_status(status_text: str, reviewed: str) -> str:
         return "Backlog"
     if "완료" not in primary_status:
         return "Ready"
+    if "사용자 실사용 확인 대기" in status_text:
+        return "Awaiting Verification"
     return "In Progress"
 
 
