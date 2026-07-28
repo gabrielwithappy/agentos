@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -11,7 +12,11 @@ class ExecPlanSummary:
     reviewed: str
     active_agent: str
     active_session: str
+    dashboard_item_id: str
     goal: str
+    user_result_summary: str
+    progress_snapshot: str
+    worktree_info: str
     last_review_entry: str
 
 
@@ -39,6 +44,11 @@ def _find_section(text: str, heading: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def _find_h2_section(text: str, heading: str) -> str:
+    match = re.search(rf"^##\s*{re.escape(heading)}\s*\n(.+?)(?=\n##\s|\Z)", text, re.DOTALL | re.MULTILINE)
+    return match.group(1).strip() if match else ""
+
+
 def _find_last_review_entry(text: str) -> str:
     match = re.search(r"^##\s*리뷰 반영 이력\s*\n(.+?)(?=\n##\s|\Z)", text, re.DOTALL | re.MULTILINE)
     if not match:
@@ -54,9 +64,36 @@ def parse_exec_plan(text: str) -> ExecPlanSummary:
         reviewed=_find_meta_field(text, "reviewed"),
         active_agent=_find_meta_field(text, "active_agent"),
         active_session=_find_meta_field(text, "active_session"),
+        dashboard_item_id=_find_meta_field(text, "dashboard_item_id"),
         goal=_find_section(text, "목표"),
+        user_result_summary=_find_h2_section(text, "사용자 결과 요약"),
+        progress_snapshot=_find_h2_section(text, "진행 스냅샷"),
+        worktree_info=_find_h2_section(text, "Worktree 정보"),
         last_review_entry=_find_last_review_entry(text),
     )
+
+
+def upsert_meta_field(text: str, key: str, value: str) -> str:
+    """Set a `> key: value<br>` metadata line in an exec-plan's header block.
+
+    Updates the line in place if `key` already exists (blank or filled);
+    otherwise inserts a new line directly after the `active_session:` line,
+    the fixed anchor point every exec-plan header already has. Used to write
+    the GitHub dashboard card's identity back onto the plan document after a
+    sync, so a reader can confirm which card a plan is linked to (and vice
+    versa) without re-running a title-based lookup.
+    """
+    field_re = re.compile(rf"^>\s*{re.escape(key)}:\s*.*$", re.MULTILINE)
+    new_line = f"> {key}: {value}<br>"
+    if field_re.search(text):
+        return field_re.sub(new_line, text, count=1)
+
+    anchor_re = re.compile(r"^>\s*active_session:\s*.*$", re.MULTILINE)
+    match = anchor_re.search(text)
+    if not match:
+        return text
+    insert_at = match.end()
+    return text[:insert_at] + "\n" + new_line + text[insert_at:]
 
 
 def status_to_board_status(status_text: str, reviewed: str) -> str:
@@ -89,14 +126,26 @@ def status_to_board_status(status_text: str, reviewed: str) -> str:
 def render_card_body(summary: ExecPlanSummary, plan_path: str) -> str:
     lines = [
         f"## 목표\n{summary.goal}" if summary.goal else "## 목표\n(없음)",
+        f"\n## 사용자 결과 요약\n{summary.user_result_summary}" if summary.user_result_summary else "\n## 사용자 결과 요약\n(없음)",
+        f"\n## 진행 스냅샷\n{summary.progress_snapshot}" if summary.progress_snapshot else "\n## 진행 스냅샷\n(없음)",
         "\n## 상태",
         f"- {summary.status}" if summary.status else "- (없음)",
         "\n## 담당 에이전트 / 세션",
         f"- active_agent: {summary.active_agent}" if summary.active_agent else "- active_agent: (없음)",
         f"- active_session: {summary.active_session}" if summary.active_session else "- active_session: (없음)",
-        "\n## 최근 리뷰 이력",
-        f"- {summary.last_review_entry}" if summary.last_review_entry else "- (없음)",
-        "\n## 참조",
-        f"exec-plan: {plan_path}",
     ]
+    if summary.worktree_info:
+        # Worktree Decision Gate가 필요한 계획에만 있는 선택적 섹션이므로,
+        # 없는 계획의 카드까지 "(없음)" placeholder로 채워 늘리지 않는다.
+        lines.append(f"\n## Worktree 정보\n{summary.worktree_info}")
+    lines.extend(
+        [
+            "\n## 최근 리뷰 이력",
+            f"- {summary.last_review_entry}" if summary.last_review_entry else "- (없음)",
+            "\n## 참조",
+            f"exec-plan: {plan_path}",
+            f"plan_id: {Path(plan_path).stem}",
+            f"dashboard_item_id: {summary.dashboard_item_id}" if summary.dashboard_item_id else "dashboard_item_id: (없음)",
+        ]
+    )
     return "\n".join(lines)

@@ -1,4 +1,4 @@
-from agentos.observability.plan_parser import parse_exec_plan, status_to_board_status
+from agentos.observability.plan_parser import parse_exec_plan, render_card_body, status_to_board_status
 
 # 실제 exec-plan 파일(2026-07-27-github-projectv2-dashboard-adapter.md)의
 # 헤더/목표/리뷰 이력 구조를 그대로 옮긴 고정 픽스처. 이 파일을 직접
@@ -17,6 +17,20 @@ SAMPLE_PLAN_TEXT = """# GitHub Projects v2(GraphQL) 대시보드 어댑터 교�
 
 **목표:**
 - 기존 `GithubDashboardAdapter`(REST `/repos/{repo}/projects/{project_id}/columns`, Classic Projects API)는 GitHub이 신규 계정/리포에서 Classic Projects REST 엔드포인트를 은퇴시켜 실제로 404로 실패한다.
+
+## 진행 스냅샷
+
+| 필드 | 현재 값 |
+|---|---|
+| 진행 요약 | 구현 및 검증 완료 |
+| 완료됨 | Milestone 1-3 전체 |
+
+## 사용자 결과 요약
+
+| 질문 | 답변 |
+|---|---|
+| 사용자가 무엇을 얻게 되는가? | Classic Projects API 404 없이 대시보드 카드가 정상 생성/갱신됨 |
+| 누구를 위한 것인가? | exec-plan을 GitHub Projects로 추적하는 프로젝트 오너 |
 
 ## 리뷰 반영 이력
 - 2026-07-27 (Gate 2 1차 리뷰): principle-auditor PASS, plan-reviewer FAIL.
@@ -51,6 +65,37 @@ def test_parses_reviewed_field():
     assert summary.reviewed.startswith("true")
 
 
+def test_parses_user_result_summary_section():
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
+
+    assert "Classic Projects API 404" in summary.user_result_summary
+    assert "프로젝트 오너" in summary.user_result_summary
+    # 다음 H2 섹션(리뷰 반영 이력) 내용이 섞여 들어가지 않아야 한다.
+    assert "리뷰" not in summary.user_result_summary
+
+
+def test_parses_progress_snapshot_section():
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
+
+    assert "Milestone 1-3" in summary.progress_snapshot
+    # 다음 H2 섹션(사용자 결과 요약) 내용이 섞여 들어가지 않아야 한다.
+    assert "Classic Projects API 404" not in summary.progress_snapshot
+
+
+def test_worktree_info_absent_when_not_present():
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
+
+    assert summary.worktree_info == ""
+
+
+def test_render_card_body_includes_plan_id_stem_in_reference_section():
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
+
+    body = render_card_body(summary, ".agentos/project/exec-plans/active/2026-07-28-dashboard-plan-id-in-card.md")
+
+    assert "plan_id: 2026-07-28-dashboard-plan-id-in-card" in body
+
+
 def test_missing_fields_return_empty_string():
     text = "# 제목만 있는 계획\n\n내용 없음\n"
     summary = parse_exec_plan(text)
@@ -59,6 +104,7 @@ def test_missing_fields_return_empty_string():
     assert summary.status == ""
     assert summary.active_agent == ""
     assert summary.goal == ""
+    assert summary.user_result_summary == ""
 
 
 def test_status_to_board_status_real_backlog_cases():

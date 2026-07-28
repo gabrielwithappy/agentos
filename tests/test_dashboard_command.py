@@ -203,7 +203,7 @@ def test_sync_plan_missing_owner_exits_nonzero(tmp_path):
 
 
 def test_sync_plan_no_path_and_no_all_exits_nonzero():
-    result = runner.invoke(app, ["--owner", "x", "--project-number", "1"])
+    result = runner.invoke(app, ["--owner", "x", "--project-number", "1"], env={"OBSERVABILITY_GITHUB_OWNER": "", "OBSERVABILITY_GITHUB_PROJECT_NUMBER": ""})
     assert result.exit_code == 1
     assert "--all" in result.output
 

@@ -15,6 +15,13 @@ GitHub Projects **v2**(GraphQL 기반) 연동을 위해서는 아래 4개의 환
 
 대상 보드에는 `Status` 단일 선택 필드가 있어야 하며, `Todo` / `In Progress` / `Done` 옵션이 있으면 이벤트 종류에 따라 자동으로 매핑됩니다. 옵션이 없으면 상태 갱신은 건너뛰고 draft item 생성만 됩니다.
 
+### 추천하는 Project 보드 이름 (Naming Convention)
+
+GitHub에서 새 Project를 생성하실 때, 직관적인 관리를 위해 다음과 같은 명명 규칙을 권장합니다:
+* **`AgentOS Observability - [프로젝트/리포지토리명]`**
+  * 예시: `AgentOS Observability - agentos`
+* 이렇게 생성해 두시면 여러 프로젝트를 관리할 때 런타임 이벤트와 실행 계획이 어디에 연동되는지 쉽게 식별할 수 있습니다.
+
 ## `agentos dashboard sync-plan` — exec-plan 문서 동기화
 
 런타임 이벤트 알림과 별개로, `.agentos/project/exec-plans/` 아래의 exec-plan 문서를 GitHub Projects v2 보드 카드로 직접 동기화하는 커맨드도 제공합니다.
