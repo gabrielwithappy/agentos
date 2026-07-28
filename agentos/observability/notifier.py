@@ -1,8 +1,15 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import Any, Dict, Protocol, List
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class AdapterOutcome:
+    adapter_name: str
+    ok: bool
+    error: str | None
 
 class DashboardAdapter(Protocol):
     async def send_notification(self, payload: Dict[str, Any]) -> None:
@@ -37,6 +44,21 @@ class DashboardNotifier:
                     asyncio.run(self._safe_send(adapter, payload))
                 thread = threading.Thread(target=_run_in_thread, daemon=True)
                 thread.start()
+
+    def notify_and_wait(self, payload: Dict[str, Any]) -> list[AdapterOutcome]:
+        """
+        Notify all registered adapters synchronously.
+        Wait for completion and return outcomes.
+        """
+        outcomes = []
+        for adapter in self._adapters:
+            adapter_name = adapter.__class__.__name__
+            try:
+                asyncio.run(adapter.send_notification(payload))
+                outcomes.append(AdapterOutcome(adapter_name=adapter_name, ok=True, error=None))
+            except Exception as e:
+                outcomes.append(AdapterOutcome(adapter_name=adapter_name, ok=False, error=str(e)))
+        return outcomes
 
     async def _safe_send(self, adapter: DashboardAdapter, payload: Dict[str, Any]) -> None:
         """Safely send notification, catching and logging any errors to prevent crashes."""

@@ -3,12 +3,12 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-28T13:56:47Z
+> Generated at: 2026-07-28T22:06:51Z
 
 ## Active Plans
 - older active plans omitted=0
-- `리뷰 대기` [계획 문서 작성 시작 시점 대시보드 발행 구현 계획](.agentos/project/exec-plans/active/2026-07-28-writing-plans-dashboard-announce.md) | progress: 계획 초안 작성 완료, Gate 2 리뷰 대기 중
-- `구현 계획 (실행 대기)` [계획 상태 변경 이벤트 기반 대시보드 동기화 구현 계획](.agentos/project/exec-plans/active/2026-07-28-plan-status-event-dashboard-sync.md) | reviewed | progress: Gate 2 리뷰 통과(3라운드), 구현 실행 대기 중
+- `완료` [계획 문서 작성 시작 시점 대시보드 발행 구현 계획](.agentos/project/exec-plans/active/2026-07-28-writing-plans-dashboard-announce.md) | reviewed_evidence=missing | progress: 계획 초안 작성 완료, Gate 2 리뷰 대기 중
+- `완료` [계획 상태 변경 이벤트 기반 대시보드 동기화 구현 계획](.agentos/project/exec-plans/active/2026-07-28-plan-status-event-dashboard-sync.md) | reviewed_evidence=invalid | progress: Gate 2 리뷰 통과(3라운드), 구현 실행 대기 중
 - `완료` [대시보드 카드에 Plan ID 표시 구현 계획](.agentos/project/exec-plans/active/2026-07-28-dashboard-plan-id-in-card.md) | reviewed | outcome: 대시보드 카드 본문에 `plan_id` 필드가 노출되어, 사용자가 카드를 보고 연관된 계획 문서를 즉각적으로 식별하고 찾을 수 있다. | progress: Gate 2 6차 리뷰(plan-reviewer PASS, principle-auditor CLEAN, usability-reviewer PASS) 통과 후 구현·검증 완료
 
 ## Archived Plans

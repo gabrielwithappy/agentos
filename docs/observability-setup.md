@@ -79,3 +79,23 @@ export OBSERVABILITY_GITHUB_PROJECT_NUMBER="6"
 
 ## 에러 복구(Error Recovery) 메커니즘
 네트워크 단절이나 토큰 만료(401) 등 통신에 실패하더라도 AgentOS 메인 프로세스는 절대 중단되지 않습니다. 실패 시엔 CLI 콘솔과 `agentos.log`에 `[Observability Warning]` 경고 메시지만 출력됩니다.
+수동 동기화(`agentos dashboard sync-plan`) 도중 어댑터에서 오류가 발생하더라도 계획 실행 흐름을 차단하지 않으며, 아래와 같은 형태의 non-blocking 경고 메시지만 출력됩니다.
+```
+[WARNING] GitHub Dashboard sync 실패: <오류 요약>.
+수동 재동기화: agentos dashboard sync-plan <plan-path>
+```
+
+## 옵저버빌리티 이벤트 기반 아키텍처
+
+AgentOS의 대시보드 동기화는 이벤트 기반(Event-driven) 아키텍처로 동작합니다.
+- `PLAN_STATUS_CHANGED`, `PLAN_WRITING_STARTED` 등 단일 이벤트가 발생하면, 등록된 **여러 어댑터로 팬아웃(Fan-out)**됩니다.
+- GitHub이 아닌 **새로운 대시보드(예: Linear, Jira) 연동을 추가**하려면, `DashboardAdapter` 프로토콜을 구현하는 새 클래스를 만들고 `send_notification(payload)` 메서드만 구현하면 됩니다. 코어 CLI 로직이나 이벤트 발송 코드를 수정할 필요가 없습니다.
+- 대시보드 환경변수가 설정되어 있지 않으면 어댑터가 0개 등록되므로, 모든 알림 전송 호출은 **지연이나 에러 없이 즉시 안전하게 통과(no-op)**합니다. 따라서 대시보드를 사용하지 않는 환경에서도 AgentOS 런타임 성능 저하나 실패 위험이 없습니다.
+
+### `PLAN_WRITING_STARTED` 이벤트
+에이전트가 계획 작성(`writing-plans`)을 시작하는 즉시 발생하는 이벤트입니다.
+- **발생 시점:** 계획 문서 파일이 생성되거나 제목이 확정된 직후
+- **Payload 필드:** `user_request`(사용자 요청 요약), `agent`, `session`, `plan_path`, `plan_title`
+- **동작:** 즉시 카드를 생성하고 상태를 `Backlog`로 강제 설정합니다. 본문에는 에이전트 정보와 사용자의 요청 문맥이 포함됩니다.
+- **`user_request` 활용:** 계획 문서 헤더 영역에 `> user_request: <요청 요약 1-2문장>` 메타 필드를 기록하면 대시보드 카드의 `## 사용자 요청` 섹션에 반영되어 어떤 의도로 작성 중인 계획인지 대시보드에서 바로 파악할 수 있습니다.
+- **명시적 비목표:** Gate 2 리뷰를 통과하지 못해 계획이 폐기될 경우, 이미 대시보드에 발행된 "작성 중" (Backlog) 고아 카드를 시스템이 자동으로 찾아 지워주지 않습니다. 이 카드는 사용자가 대시보드에서 직접 삭제해야 합니다.

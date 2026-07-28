@@ -18,6 +18,7 @@ class ExecPlanSummary:
     progress_snapshot: str
     worktree_info: str
     last_review_entry: str
+    user_request: str
 
 
 def _find_h1(text: str) -> str:
@@ -70,6 +71,7 @@ def parse_exec_plan(text: str) -> ExecPlanSummary:
         progress_snapshot=_find_h2_section(text, "진행 스냅샷"),
         worktree_info=_find_h2_section(text, "Worktree 정보"),
         last_review_entry=_find_last_review_entry(text),
+        user_request=_find_meta_field(text, "user_request"),
     )
 
 
@@ -124,7 +126,14 @@ def status_to_board_status(status_text: str, reviewed: str) -> str:
 
 
 def render_card_body(summary: ExecPlanSummary, plan_path: str) -> str:
-    lines = [
+    lines = []
+    if summary.user_request:
+        lines.extend([
+            "## 사용자 요청",
+            summary.user_request,
+            ""
+        ])
+    lines.extend([
         f"## 목표\n{summary.goal}" if summary.goal else "## 목표\n(없음)",
         f"\n## 사용자 결과 요약\n{summary.user_result_summary}" if summary.user_result_summary else "\n## 사용자 결과 요약\n(없음)",
         f"\n## 진행 스냅샷\n{summary.progress_snapshot}" if summary.progress_snapshot else "\n## 진행 스냅샷\n(없음)",
@@ -133,7 +142,7 @@ def render_card_body(summary: ExecPlanSummary, plan_path: str) -> str:
         "\n## 담당 에이전트 / 세션",
         f"- active_agent: {summary.active_agent}" if summary.active_agent else "- active_agent: (없음)",
         f"- active_session: {summary.active_session}" if summary.active_session else "- active_session: (없음)",
-    ]
+    ])
     if summary.worktree_info:
         # Worktree Decision Gate가 필요한 계획에만 있는 선택적 섹션이므로,
         # 없는 계획의 카드까지 "(없음)" placeholder로 채워 늘리지 않는다.
