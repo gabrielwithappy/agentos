@@ -5,6 +5,7 @@
 > reviewed: false (리뷰 증거 파일 생성 전까지 절대 true로 변경 불가)<br>
 > active_agent: <br>
 > active_session: <br>
+> dashboard_item_id: (agentos dashboard sync-plan 실행 시 자동 기록됨)<br>
 > implementation_started_at: <br>
 > implementation_completed_at: <br>
 > implementation_duration: <br>

@@ -6,7 +6,12 @@ import typer
 from rich.console import Console
 
 from agentos.observability.adapters.github import GithubDashboardAdapter
-from agentos.observability.plan_parser import parse_exec_plan, render_card_body, status_to_board_status
+from agentos.observability.plan_parser import (
+    parse_exec_plan,
+    render_card_body,
+    status_to_board_status,
+    upsert_meta_field,
+)
 from agentos.observability.setup import get_gh_token
 
 app = typer.Typer(help="Sync exec-plan documents to an external dashboard")
@@ -44,6 +49,13 @@ def _sync_one(adapter: GithubDashboardAdapter, path: Path) -> None:
             f"[yellow]Status option '{board_status}' not found on board — "
             "card created/updated but status not set. Run Milestone 3's board setup first.[/yellow]"
         )
+
+    board_url = f"https://github.com/users/{adapter.owner}/projects/{adapter.project_number}"
+    if summary.dashboard_item_id != project_item_id:
+        updated_text = upsert_meta_field(text, "dashboard_item_id", project_item_id)
+        path.write_text(updated_text, encoding="utf-8")
+    console.print(f"[green]dashboard_item_id: {project_item_id}[/green]")
+    console.print(f"[green]board: {board_url}[/green]")
 
 
 @app.command("sync-plan")
