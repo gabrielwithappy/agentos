@@ -86,6 +86,22 @@ def test_prepare_browser_login_redirect_uri_uses_callback_not_auth_callback():
         prepared._server.server_close()
 
 
+def test_prepare_browser_login_uses_pkce_verifier_as_state():
+    """Regression: this previously sent a separate random `state` (Codex's
+    convention), but Anthropic's flow uses the PKCE verifier itself as
+    `state` (see pi's anthropic.ts: `state: verifier`, not a random token).
+    With a separate random state, the claude.ai approval page never
+    redirected anywhere after clicking Allow — it just kept spinning."""
+    import agentos.llm.auth.anthropic_claude as claude_auth
+
+    prepared = claude_auth.prepare_browser_login()
+    try:
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(prepared.auth_url).query)
+        assert query["state"] == [prepared._pkce.code_verifier]
+    finally:
+        prepared._server.server_close()
+
+
 # --- pkce / authorize url ---
 
 

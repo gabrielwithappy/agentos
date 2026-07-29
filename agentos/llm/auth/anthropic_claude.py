@@ -22,7 +22,6 @@ from agentos.llm.auth.openai_codex import (
     _make_callback_handler,
     _require_fixed_port,
     generate_pkce,
-    generate_state,
 )
 from agentos.llm.auth.store import AuthFileStore
 from agentos.llm.auth.types import AuthRecord
@@ -110,7 +109,13 @@ def prepare_browser_login(
     # client" even when the host/port are otherwise correct.
     redirect_uri = f"http://localhost:{port}{CALLBACK_PATH}"
     pkce = generate_pkce()
-    state = generate_state()
+    # Anthropic's flow uses the PKCE verifier itself as `state` (see pi's
+    # anthropic.ts, which sends `state: verifier` rather than a separate
+    # random token like Codex's flow does). A separate random state was the
+    # last divergence from the working reference: after clicking Allow, the
+    # page never redirected anywhere and just kept spinning — matching this
+    # exact mismatch.
+    state = pkce.code_verifier
 
     result = _CallbackResult()
     handler_cls = _make_callback_handler(state, result, callback_path=CALLBACK_PATH)
