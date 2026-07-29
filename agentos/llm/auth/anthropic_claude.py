@@ -12,14 +12,15 @@ from typing import Any
 from agentos.llm.auth.openai_codex import (
     AuthError,
     BrowserLaunchFailedError,
+    CallbackPortUnavailableError,
     CallbackTimeoutError,
     HttpTransport,
     PkceCodes,
     StateMismatchError,
     UrllibHttpTransport,
     _CallbackResult,
-    _find_free_port,
     _make_callback_handler,
+    _require_fixed_port,
     generate_pkce,
     generate_state,
 )
@@ -31,7 +32,6 @@ DEFAULT_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"  # gitleaks:allow — Anthropic's public OAuth client_id (no client_secret), matches the Claude Code CLI's; not a secret
 SCOPES = "org:create_api_key user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload"
 DEFAULT_CALLBACK_PORT = 53692
-FALLBACK_CALLBACK_PORT = 53693
 AUTH_PROVIDER_NAME = "claude"
 CREDENTIAL_TYPE = "account-login"
 _REFRESH_LOCK = threading.Lock()
@@ -95,7 +95,7 @@ def prepare_browser_login(
     resolved_token_url = token_url or _env_token_url()
     resolved_client_id = client_id or _env_client_id()
 
-    port = _find_free_port(DEFAULT_CALLBACK_PORT, FALLBACK_CALLBACK_PORT)
+    port = _require_fixed_port(DEFAULT_CALLBACK_PORT)
     redirect_uri = f"http://localhost:{port}/auth/callback"
     pkce = generate_pkce()
     state = generate_state()

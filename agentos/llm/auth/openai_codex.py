@@ -22,7 +22,6 @@ from agentos.llm.redaction import redact_text
 DEFAULT_ISSUER = "https://auth.openai.com"
 CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 DEFAULT_CALLBACK_PORT = 1455
-FALLBACK_CALLBACK_PORT = 1457
 DEVICE_CODE_MAX_WAIT_SECONDS = 15 * 60
 AUTH_PROVIDER_NAME = "codex"
 CREDENTIAL_TYPE = "account-login"
@@ -128,6 +127,17 @@ class DeviceCodeCancelledError(AuthError):
         super().__init__("device_code_cancelled", "Device sign-in was cancelled.")
 
 
+class CallbackPortUnavailableError(AuthError):
+    def __init__(self, port: int) -> None:
+        super().__init__(
+            "callback_port_unavailable",
+            f"Could not start the local sign-in callback server on port {port} "
+            "(it may already be in use by another sign-in attempt). "
+            "Close whatever is using that port and try again.",
+            retryable=True,
+        )
+
+
 @dataclass(frozen=True)
 class TokenResult:
     id_token: str
@@ -137,17 +147,28 @@ class TokenResult:
     expires_in: float | None = None
 
 
-def _find_free_port(preferred: int, fallback: int) -> int:
-    for candidate in (preferred, fallback):
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-                probe.bind(("127.0.0.1", candidate))
-                return candidate
-        except OSError:
-            continue
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        return probe.getsockname()[1]
+def _require_fixed_port(port: int) -> int:
+    """Confirms `port` is free without actually holding it open, then hands
+    it back so the caller can bind an `HTTPServer` there.
+
+    There is no fallback port: the OAuth client (both Codex's and Claude's)
+    only has this exact `http://localhost:{port}/...` redirect_uri
+    registered, matching the port their respective official CLI reference
+    implementations use. Silently trying a different port used to produce a
+    redirect_uri the identity provider rejects outright ("Redirect URI ...
+    is not supported by client"), so a busy port must surface as a clear,
+    catchable error instead of quietly choosing one that can never work.
+
+    `port=0` is the one exception, with its normal POSIX meaning ("any free
+    port, OS-assigned") — tests exercising the real callback server use this
+    to avoid depending on the actual fixed port being free on the host.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", port))
+            return probe.getsockname()[1]
+    except OSError as exc:
+        raise CallbackPortUnavailableError(port) from exc
 
 
 def build_authorize_url(*, issuer: str, client_id: str, redirect_uri: str, state: str, pkce: PkceCodes) -> str:
@@ -246,7 +267,7 @@ def prepare_browser_login(
     resolved_issuer = issuer or _env_issuer()
     resolved_client_id = client_id or _env_client_id()
 
-    port = _find_free_port(DEFAULT_CALLBACK_PORT, FALLBACK_CALLBACK_PORT)
+    port = _require_fixed_port(DEFAULT_CALLBACK_PORT)
     redirect_uri = f"http://localhost:{port}/auth/callback"
     pkce = generate_pkce()
     state = generate_state()

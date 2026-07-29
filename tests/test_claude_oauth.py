@@ -8,6 +8,7 @@ import urllib.request
 
 import pytest
 
+from agentos.llm.auth import anthropic_claude as auth_module
 from agentos.llm.auth.anthropic_claude import (
     TokenResult,
     build_authorize_url,
@@ -24,6 +25,18 @@ from agentos.llm.auth.store import AuthFileStore
 from agentos.llm.auth.types import AuthRecord
 
 SENTINEL = os.environ.get("AGENTOS_TEST_SECRET", "sk-ant-oat-test-secret-value")
+
+
+@pytest.fixture(autouse=True)
+def _use_ephemeral_callback_port(monkeypatch):
+    """These tests exercise the real local callback `HTTPServer`, but must
+    not depend on the actual fixed port (53692) being free on the host —
+    it's a single shared port with no fallback now (see
+    `test_require_fixed_port_raises_when_port_is_busy` in
+    test_codex_oauth.py), so any other process (or a stuck previous run)
+    holding it would make these tests flaky. `port=0` asks the OS for any
+    free port instead."""
+    monkeypatch.setattr(auth_module, "DEFAULT_CALLBACK_PORT", 0)
 
 
 class FakeTransport:

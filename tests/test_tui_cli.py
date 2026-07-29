@@ -1848,7 +1848,18 @@ def test_login_command_shows_sanitized_failure_when_browser_and_device_code_both
     import agentos.llm.auth.openai_codex as auth_module
 
     async def run() -> None:
+        from types import SimpleNamespace
+
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        # `prepare_browser_login()` binds an actual local port (1455) for the
+        # OAuth callback server, which makes this test order-dependent on any
+        # machine where that port happens to be busy; only `.auth_url` is
+        # read here since `complete_browser_login` is mocked separately.
+        monkeypatch.setattr(
+            auth_module,
+            "prepare_browser_login",
+            lambda **kwargs: SimpleNamespace(auth_url="https://auth.openai.com/oauth/authorize?fake=1"),
+        )
         monkeypatch.setattr(
             auth_module,
             "complete_browser_login",

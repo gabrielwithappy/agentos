@@ -657,6 +657,20 @@ def test_stream_context_request_and_events_never_expose_raw_sentinel(monkeypatch
 # ── bugfix regression: device-code fallback failure must not crash login() ──
 
 
+def _fake_prepared_login(auth_url: str = "https://auth.openai.com/oauth/authorize?fake=1"):
+    """Stand-in for `PreparedBrowserLogin` that never binds a real socket.
+
+    `prepare_browser_login()` binds an actual local port (1455) for the OAuth
+    callback server, which makes tests that don't mock it flaky/order-
+    dependent on any machine where that port happens to be busy. Only
+    `.auth_url` is read by the code paths these tests exercise, since
+    `complete_browser_login` itself is mocked separately.
+    """
+    from types import SimpleNamespace
+
+    return SimpleNamespace(auth_url=auth_url)
+
+
 def test_login_device_code_fallback_failure_returns_sanitized_status_not_exception(tmp_path, monkeypatch):
     """When the browser cannot be launched AND the device-code fallback also
     fails (e.g. no network access to the auth issuer), `login()` must return
@@ -675,6 +689,7 @@ def test_login_device_code_fallback_failure_returns_sanitized_status_not_excepti
     def fake_request_device_code(*args, **kwargs):
         raise auth_module.AuthError("device_code_request_failed", "Could not start device sign-in.")
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(auth_module, "complete_browser_login", fake_complete_browser_login)
     monkeypatch.setattr(auth_module, "request_device_code", fake_request_device_code)
 
@@ -692,6 +707,7 @@ def test_login_updates_device_code_fallback_failure_yields_result_not_exception(
     import agentos.llm.providers.codex_native as codex_native_module
     from agentos.llm.auth.store import AuthFileStore
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",
@@ -717,6 +733,49 @@ def test_login_updates_device_code_fallback_failure_yields_result_not_exception(
 # ── bugfix regression: browser login URL/device-code must actually be shown ──
 
 
+def test_login_updates_falls_back_to_device_code_when_callback_port_busy(tmp_path, monkeypatch):
+    """Regression: when the fixed local callback port is already in use,
+    `prepare_browser_login()` raises `CallbackPortUnavailableError` (no more
+    silent fallback to a second, unregistered port — see
+    `test_require_fixed_port_raises_when_port_is_busy`). The device-code
+    flow needs no local port at all, so login should transparently fall back
+    to it instead of failing outright."""
+    import agentos.llm.auth.openai_codex as auth_module
+    import agentos.llm.providers.codex_native as codex_native_module
+    from agentos.llm.auth.store import AuthFileStore
+
+    monkeypatch.setattr(
+        auth_module,
+        "prepare_browser_login",
+        lambda **kwargs: (_ for _ in ()).throw(auth_module.CallbackPortUnavailableError(1455)),
+    )
+    monkeypatch.setattr(
+        auth_module,
+        "request_device_code",
+        lambda *a, **k: auth_module.DeviceCode(
+            verification_url="https://auth.openai.com/codex/device",
+            user_code="ABCD-1234",
+            device_auth_id="dev-1",
+            interval=0.01,
+        ),
+    )
+    monkeypatch.setattr(
+        auth_module,
+        "poll_device_code",
+        lambda *a, **k: auth_module.TokenResult(
+            id_token="id-1", access_token="access-1", refresh_token="refresh-1"
+        ),
+    )
+
+    provider = codex_native_module.CodexNativeProvider(store=AuthFileStore(home=tmp_path))
+    updates = list(provider.login_updates())
+
+    hint_texts = [u["text"] for u in updates if u["type"] == "hint"]
+    assert any("https://auth.openai.com/codex/device" in text for text in hint_texts)
+    assert updates[-1]["type"] == "result"
+    assert updates[-1]["payload"]["authenticated"] is True
+
+
 def test_login_updates_surfaces_the_real_browser_auth_url_before_waiting(tmp_path, monkeypatch):
     """Regression: `login_updates()` previously yielded a static hint with no
     URL at all ("Complete sign-in in the browser, then return here."), so
@@ -727,6 +786,7 @@ def test_login_updates_surfaces_the_real_browser_auth_url_before_waiting(tmp_pat
     import agentos.llm.providers.codex_native as codex_native_module
     from agentos.llm.auth.store import AuthFileStore
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",
@@ -747,6 +807,7 @@ def test_login_updates_surfaces_device_code_verification_url_and_user_code(tmp_p
     import agentos.llm.providers.codex_native as codex_native_module
     from agentos.llm.auth.store import AuthFileStore
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",

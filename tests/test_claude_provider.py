@@ -39,9 +39,25 @@ def test_status_authenticated_after_persisted_tokens(tmp_path):
     assert status.message == "Signed in with Claude account-login."
 
 
+def _fake_prepared_login(auth_url: str = "https://claude.ai/oauth/authorize?fake=1"):
+    """Stand-in for `PreparedBrowserLogin` that never binds a real socket.
+
+    `prepare_browser_login()` binds an actual local port (53692) for the
+    OAuth callback server, which makes tests that don't mock it flaky/order-
+    dependent on any machine where that port happens to be busy (e.g. a
+    leftover login attempt, or an unrelated process). Only `.auth_url` is
+    read by the code paths these tests exercise, since `complete_browser_login`
+    itself is mocked separately.
+    """
+    from types import SimpleNamespace
+
+    return SimpleNamespace(auth_url=auth_url)
+
+
 def test_login_persists_tokens_on_success(tmp_path, monkeypatch):
     import agentos.llm.auth.anthropic_claude as auth_module
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",
@@ -57,9 +73,32 @@ def test_login_persists_tokens_on_success(tmp_path, monkeypatch):
     assert store.get("claude").secrets["access_token"] == "access-1"
 
 
+def test_login_updates_prepare_failure_yields_failed_status_without_crashing(tmp_path, monkeypatch):
+    """Regression: `prepare_browser_login()` (e.g. the fixed local callback
+    port already in use) used to be called outside any try/except in
+    `_login_steps()`, so its `AuthError` propagated uncaught instead of
+    producing a normal failed status. There is no URL yet in this case, so
+    no hint should be yielded — just a failed result."""
+    import agentos.llm.auth.anthropic_claude as auth_module
+
+    monkeypatch.setattr(
+        auth_module,
+        "prepare_browser_login",
+        lambda **kwargs: (_ for _ in ()).throw(auth_module.CallbackPortUnavailableError(53692)),
+    )
+
+    provider = ClaudeNativeProvider(store=AuthFileStore(home=tmp_path))
+    updates = list(provider.login_updates())
+
+    assert all(u["type"] != "hint" for u in updates)
+    assert updates[-1]["type"] == "result"
+    assert updates[-1]["payload"]["authenticated"] is False
+
+
 def test_login_failure_returns_sanitized_status_not_exception(tmp_path, monkeypatch):
     import agentos.llm.auth.anthropic_claude as auth_module
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",
@@ -77,6 +116,7 @@ def test_login_failure_returns_sanitized_status_not_exception(tmp_path, monkeypa
 def test_login_updates_surfaces_the_real_browser_auth_url_before_waiting(tmp_path, monkeypatch):
     import agentos.llm.auth.anthropic_claude as auth_module
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",

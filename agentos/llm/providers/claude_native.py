@@ -97,7 +97,13 @@ class ClaudeNativeProvider:
         There is no device-code fallback here (unlike Codex): Anthropic does
         not publicly offer one, so a failed browser launch ends the attempt
         directly rather than trying a second flow."""
-        prepared = auth.prepare_browser_login()
+        try:
+            prepared = auth.prepare_browser_login()
+        except auth.AuthError as exc:
+            # e.g. the fixed local callback port is already in use — there is
+            # no URL to hint at yet, so this fails straight to a status.
+            yield ("status", self._login_failed_status(exc))
+            return
         yield ("hint", f"Open this URL to sign in:\n{prepared.auth_url}")
         try:
             tokens = auth.complete_browser_login(prepared)
