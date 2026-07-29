@@ -19,6 +19,9 @@ class ExecPlanSummary:
     worktree_info: str
     last_review_entry: str
     user_request: str
+    implementation_started_at: str
+    implementation_completed_at: str
+    implementation_duration: str
 
 
 def _find_h1(text: str) -> str:
@@ -72,6 +75,9 @@ def parse_exec_plan(text: str) -> ExecPlanSummary:
         worktree_info=_find_h2_section(text, "Worktree 정보"),
         last_review_entry=_find_last_review_entry(text),
         user_request=_find_meta_field(text, "user_request"),
+        implementation_started_at=_find_meta_field(text, "implementation_started_at"),
+        implementation_completed_at=_find_meta_field(text, "implementation_completed_at"),
+        implementation_duration=_find_meta_field(text, "implementation_duration"),
     )
 
 
@@ -143,6 +149,14 @@ def render_card_body(summary: ExecPlanSummary, plan_path: str) -> str:
         f"- active_agent: {summary.active_agent}" if summary.active_agent else "- active_agent: (없음)",
         f"- active_session: {summary.active_session}" if summary.active_session else "- active_session: (없음)",
     ])
+    lines.extend(
+        [
+            "\n## 구현 시간 정보",
+            f"- implementation_started_at: {summary.implementation_started_at}" if summary.implementation_started_at else "- implementation_started_at: (없음)",
+            f"- implementation_completed_at: {summary.implementation_completed_at}" if summary.implementation_completed_at else "- implementation_completed_at: (없음)",
+            f"- implementation_duration: {summary.implementation_duration}" if summary.implementation_duration else "- implementation_duration: (없음)",
+        ]
+    )
     if summary.worktree_info:
         # Worktree Decision Gate가 필요한 계획에만 있는 선택적 섹션이므로,
         # 없는 계획의 카드까지 "(없음)" placeholder로 채워 늘리지 않는다.

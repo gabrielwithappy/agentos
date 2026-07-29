@@ -3,12 +3,12 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-29T10:41:05Z
+> Generated at: 2026-07-29T11:10:07Z
 
 ## Active Plans
 - older active plans omitted=0
 - `완료` [Gemini 컨텍스트 주기적 재주입 훅 구현 계획](.agentos/project/exec-plans/active/2026-07-29-gemini-context-reinjection-hook.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
-- `구현 계획 (실행 대기)` [대시보드 카드 구현 소요 시간 표기 구현 계획](.agentos/project/exec-plans/active/2026-07-29-dashboard-implementation-duration.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
+- `완료` [대시보드 카드 구현 소요 시간 표기 구현 계획](.agentos/project/exec-plans/active/2026-07-29-dashboard-implementation-duration.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
 
 ## Archived Plans
 - archive summary: completed=52, parked=0
