@@ -79,12 +79,12 @@ Load plan, review critically, execute all tasks, report when complete.
 8. **SSOT 점유(Lock) 선언 + 실행 위치 기록 (MANDATORY)**: 계획을 실행하기 직전에, 다른 에이전트와의 충돌을 막기 위해 계획 문서 최상단의 `active_agent`에 자신의 이름(예: antigravity, claude)을, `active_session`에 Step 7에서 확인한 실제 실행 위치를 반드시 기록(저장)하여 점유를 선언한다.
    - worktree에서 실행 중이면: `active_session`에 worktree 절대 경로와 브랜치를 함께 적는다 (예: `.agentos/worktrees/<name> (branch: <branch>)`). 계획 문서에 `## Worktree 정보`(또는 동등한) 표가 있으면, 그 표의 값도 Step 7에서 확인한 실제 git 상태와 일치하도록 함께 갱신한다.
    - main checkout에서 직접 실행 중이면: `active_session`에 이를 명시적으로 적는다 (예: `main checkout (no worktree)`). 값을 비워두거나 이전 worktree 경로를 그대로 남겨두지 않는다 — 다음에 이 계획을 읽는 사람/에이전트가 실행 위치를 추측하지 않게 한다.
-   - 기록 후, 대시보드 연동 환경(`OBSERVABILITY_GITHUB_OWNER`/`OBSERVABILITY_GITHUB_PROJECT_NUMBER`/`GITHUB_TOKEN` 또는 `gh auth`)이 설정되어 있으면 즉시 재동기화해 실행 위치가 카드에도 반영되게 한다:
+   - 기록 후, 대시보드 연동 환경(`OBSERVABILITY_GITHUB_OWNER`/`OBSERVABILITY_GITHUB_PROJECT_NUMBER`/`GITHUB_TOKEN` 또는 `gh auth`)이 설정되어 있으면 즉시 재동기화해 실행 위치가 카드에도 반영되게 한다 (실행 시작 - In Progress 상태 전환):
      ```bash
      python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh
-     agentos dashboard sync-plan <plan-path> --owner <owner> --project-number <project-number>
+     agentos dashboard sync-plan <plan-path>
      ```
-     대시보드 환경변수나 토큰이 설정되어 있지 않으면 이 재동기화는 건너뛰고, 그 사실을 사용자에게 알린다(선택적 외부 의존성이며 실행을 막지 않는다).
+     대시보드 환경변수나 토큰이 설정되어 있지 않으면 이 재동기화는 건너뛰고 안전하게 스킵된다. (선택적 외부 의존성이며 실행을 막지 않는다).
 9. If no concerns: Create TodoWrite and proceed
 
 ### Step 2: Execute Tasks
@@ -138,9 +138,9 @@ After all tasks complete and verified:
   ```bash
   python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh
   ```
-- 대시보드 연동이 설정되어 있으면(Step 8 참고) 완료 상태도 재동기화한다:
+- 대시보드 연동이 설정되어 있으면 완료 상태도 재동기화한다. (대시보드 미설정 시 이 호출은 안전하게 스킵되며 실행을 막지 않는다):
   ```bash
-  agentos dashboard sync-plan <plan-path> --owner <owner> --project-number <project-number>
+  agentos dashboard sync-plan <plan-path>
   ```
 - archive는 사용자가 명시적으로 요청한 경우에만 실행한다:
   ```bash
