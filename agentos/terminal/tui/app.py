@@ -687,7 +687,12 @@ class AgentOSTui(App[None]):
             if url.startswith("http://") or url.startswith("https://"):
                 lead = "\n".join(parts[:-1]).strip()
                 prefix = f"{lead}\n\n" if lead else ""
-                return f"{prefix}[Open Codex login URL]({url})\n\nRaw URL:\n<{url}>"
+                label = provider.capitalize()
+                # The URL is rendered inside a fenced code block (not a markdown
+                # link/autolink) so Rich does not word-wrap it or hide it behind
+                # a short link label — the whole line stays intact and
+                # selectable/copyable in the terminal.
+                return f"{prefix}Open this {label} login URL in your browser:\n\n```\n{url}\n```"
             return text_content
 
         if action == "login":
@@ -705,7 +710,7 @@ class AgentOSTui(App[None]):
             payload = llm_command.build_logout_payload(provider)
         status_value = str(payload.get("status", "unknown"))
         last_turn = "done" if status_value in {"authenticated", "logged_out", "unauthenticated"} else "error"
-        rendered = self._format_auth_result(f"Codex {action} result", payload)
+        rendered = self._format_auth_result(f"{provider.capitalize()} {action} result", payload)
         self.call_from_thread(self._clear_loading_message)
         self.call_from_thread(add_system_message, rendered)
         self.call_from_thread(
