@@ -176,6 +176,46 @@ class ThemeScreen(ModalScreen[str]):
             event.stop()
 
 
+class LoginProviderScreen(ModalScreen[str]):
+    DEFAULT_CSS = """
+    LoginProviderScreen {
+        align: center middle;
+    }
+    #login-provider-container {
+        width: 50;
+        height: auto;
+        max-height: 24;
+        border: solid $text-primary;
+        background: $surface;
+        padding: 1 2;
+    }
+    #login-provider-title {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 1;
+        text-style: bold;
+    }
+    """
+
+    def __init__(self, providers: list[str]) -> None:
+        super().__init__()
+        self._providers = providers
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="login-provider-container"):
+            yield Label("Select an LLM provider to sign in (Esc to cancel)", id="login-provider-title")
+            yield OptionList(*self._providers, id="login-provider-options")
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if 0 <= event.option_index < len(self._providers):
+            self.dismiss(self._providers[event.option_index])
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            self.dismiss("")
+            event.stop()
+
+
 class ConfirmToolScreen(ModalScreen[bool]):
     """Approval prompt for an irreversible tool call.
 

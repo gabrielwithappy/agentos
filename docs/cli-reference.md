@@ -72,9 +72,9 @@ Use `/status` whenever the complete, untruncated status is needed.
 Type `/` or `/help` to show the command palette. The MVP commands are:
 
 - `/help`
-- `/login` — start the AgentOS-owned Codex account-login flow. If the current provider is not `codex`, AgentOS auto-switches the session provider to `codex` first. The flow attempts browser login first (default); if the browser cannot be opened, AgentOS falls back to device-code sign-in automatically within the same login flow.
-- `/status` — show the current TUI/session footer state and, when the active provider is `codex`, append Codex auth status and recovery guidance. On other providers it explains that `/login` or `/logout` will auto-switch to `codex`.
-- `/logout` — end the current Codex account-login session. If the current provider is not `codex`, AgentOS auto-switches to `codex` first; if the session is already logged out, AgentOS reports that as a sanitized no-op success with guidance.
+- `/login` — choose an LLM provider to sign in. With no argument, opens a provider selection prompt (codex / claude); press Esc to close the prompt without starting a login (you're returned to the composer, nothing changes). `/login codex` or `/login claude` skips the prompt and starts that provider's account-login flow directly. The flow attempts browser login first (default); if the browser cannot be opened, AgentOS falls back to device-code sign-in automatically within the same login flow (codex only — claude has no device-code fallback).
+- `/status` — show the current TUI/session footer state and, when the active provider is `codex` or `claude`, append that provider's auth status and recovery guidance. On other providers (e.g. `mock`) it points you to `/login`.
+- `/logout` — end the current account-login session for whichever provider is currently active (no forced switch to `codex`). If the session is already logged out, AgentOS reports that as a sanitized no-op success with guidance.
 - `/hotkeys` — show all keyboard shortcuts in the transcript
 - `/theme` — open a theme-picker modal; select a Textual built-in theme (21 available) to apply it immediately; `Esc` cancels without changing the theme; the choice is session-scoped and reverts to the default on restart
 - `/session`

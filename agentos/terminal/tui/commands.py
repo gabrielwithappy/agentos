@@ -13,7 +13,7 @@ class SlashCommand:
 
 COMMANDS: tuple[SlashCommand, ...] = (
     SlashCommand("/help", "Show commands and keyboard help", "", "help"),
-    SlashCommand("/login", "Codex login via the existing CLI account flow", "", "login"),
+    SlashCommand("/login", "Choose an LLM provider (codex/claude) and sign in", "[provider]", "login"),
     SlashCommand("/status", "Show provider, session, hooks, last turn, and Codex auth status", "", "status"),
     SlashCommand("/logout", "Codex logout for the current CLI account session", "", "logout"),
     SlashCommand("/hotkeys", "Show all keyboard shortcuts", "", "hotkeys"),
