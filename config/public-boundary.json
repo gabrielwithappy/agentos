@@ -80,6 +80,7 @@
     ".agents/hooks/adapters/codex/hooks.json",
     ".agents/hooks/scripts/check-alignment.py",
     ".agents/hooks/scripts/check-careful.sh",
+    ".agents/hooks/scripts/dashboard_sync_on_plan_write.py",
     ".agents/hooks/scripts/post_tool_use_review.py",
     ".agents/hooks/scripts/stop_review_gate.py",
     ".agents/shims/readlink",
