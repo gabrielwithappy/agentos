@@ -154,6 +154,8 @@ class CodexNativeProvider:
         )
 
     def _login_failed_status(self, exc: auth.AuthError) -> ProviderStatus:
+        # `AuthError.message` is already sanitized (never contains raw
+        # secrets — see its docstring), so it's safe to surface directly.
         return ProviderStatus(
             provider=self.name,
             mode=self.mode,
@@ -161,7 +163,7 @@ class CodexNativeProvider:
             authenticated=False,
             persistent_credential=False,
             status="failed",
-            message="Codex sign-in did not complete successfully.",
+            message=f"Codex sign-in did not complete successfully: {exc.message}",
             recovery=RECOVERY_LOGIN,
             next_command="agentos llm login --provider codex",
         )

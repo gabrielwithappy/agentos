@@ -126,6 +126,12 @@ class ClaudeNativeProvider:
         )
 
     def _login_failed_status(self, exc: auth.AuthError) -> ProviderStatus:
+        # `AuthError.message` is already sanitized (never contains raw
+        # secrets — see its docstring), so it's safe to surface directly.
+        # Without it, e.g. the local callback port already being in use
+        # (which — since Claude has no device-code fallback — means no
+        # sign-in URL is ever shown at all) looked identical in the UI to
+        # any other failure, with no clue why there was "no link".
         return ProviderStatus(
             provider=self.name,
             mode=self.mode,
@@ -133,7 +139,7 @@ class ClaudeNativeProvider:
             authenticated=False,
             persistent_credential=False,
             status="failed",
-            message="Claude sign-in did not complete successfully.",
+            message=f"Claude sign-in did not complete successfully: {exc.message}",
             recovery=RECOVERY_LOGIN,
             next_command="agentos llm login --provider claude",
         )
