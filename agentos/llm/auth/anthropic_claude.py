@@ -32,6 +32,7 @@ DEFAULT_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"  # gitleaks:allow — Anthropic's public OAuth client_id (no client_secret), matches the Claude Code CLI's; not a secret
 SCOPES = "org:create_api_key user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload"
 DEFAULT_CALLBACK_PORT = 53692
+CALLBACK_PATH = "/callback"
 AUTH_PROVIDER_NAME = "claude"
 CREDENTIAL_TYPE = "account-login"
 _REFRESH_LOCK = threading.Lock()
@@ -96,12 +97,16 @@ def prepare_browser_login(
     resolved_client_id = client_id or _env_client_id()
 
     port = _require_fixed_port(DEFAULT_CALLBACK_PORT)
-    redirect_uri = f"http://localhost:{port}/auth/callback"
+    # Anthropic's registered redirect_uri path is "/callback", not "/auth/callback"
+    # (that's Codex's convention) — see pi's anthropic.ts CALLBACK_PATH. Using the
+    # wrong path is exactly what produces "Redirect URI ... is not supported by
+    # client" even when the host/port are otherwise correct.
+    redirect_uri = f"http://localhost:{port}{CALLBACK_PATH}"
     pkce = generate_pkce()
     state = generate_state()
 
     result = _CallbackResult()
-    handler_cls = _make_callback_handler(state, result)
+    handler_cls = _make_callback_handler(state, result, callback_path=CALLBACK_PATH)
     server = HTTPServer(("127.0.0.1", port), handler_cls)
 
     auth_url = build_authorize_url(

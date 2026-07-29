@@ -193,11 +193,13 @@ class _CallbackResult:
         self.error: str | None = None
 
 
-def _make_callback_handler(expected_state: str, result: _CallbackResult) -> type[BaseHTTPRequestHandler]:
+def _make_callback_handler(
+    expected_state: str, result: _CallbackResult, *, callback_path: str = "/auth/callback"
+) -> type[BaseHTTPRequestHandler]:
     class CallbackHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             parsed = urllib.parse.urlparse(self.path)
-            if parsed.path != "/auth/callback":
+            if parsed.path != callback_path:
                 self.send_response(404)
                 self.end_headers()
                 return

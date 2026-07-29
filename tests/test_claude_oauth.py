@@ -65,8 +65,25 @@ def _fire_callback(port: int, *, state: str, code: str | None = "auth-code-123",
     if error is not None:
         params["error"] = error
     query = urllib.parse.urlencode(params)
-    url = f"http://127.0.0.1:{port}/auth/callback?{query}"
+    url = f"http://127.0.0.1:{port}/callback?{query}"
     urllib.request.urlopen(url, timeout=5).read()  # noqa: S310
+
+
+def test_prepare_browser_login_redirect_uri_uses_callback_not_auth_callback():
+    """Regression: this previously built redirect_uri as
+    "http://localhost:{port}/auth/callback" (Codex's convention, reused by
+    copy-paste), but Anthropic's OAuth client only has "/callback"
+    registered (see pi's anthropic.ts CALLBACK_PATH) — so login always
+    failed with "Redirect URI ... is not supported by client", even on the
+    otherwise-correct port."""
+    import agentos.llm.auth.anthropic_claude as claude_auth
+
+    prepared = claude_auth.prepare_browser_login()
+    try:
+        assert prepared._redirect_uri.endswith("/callback")
+        assert not prepared._redirect_uri.endswith("/auth/callback")
+    finally:
+        prepared._server.server_close()
 
 
 # --- pkce / authorize url ---
@@ -78,7 +95,7 @@ def test_build_authorize_url_includes_pkce_state_and_scopes():
     url = build_authorize_url(
         authorize_url="https://claude.ai/oauth/authorize",
         client_id="client-123",
-        redirect_uri="http://localhost:53692/auth/callback",
+        redirect_uri="http://localhost:53692/callback",
         state=state,
         pkce=pkce,
     )
