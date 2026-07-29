@@ -688,11 +688,16 @@ class AgentOSTui(App[None]):
                 lead = "\n".join(parts[:-1]).strip()
                 prefix = f"{lead}\n\n" if lead else ""
                 label = provider.capitalize()
-                # The URL is rendered inside a fenced code block (not a markdown
-                # link/autolink) so Rich does not word-wrap it or hide it behind
-                # a short link label — the whole line stays intact and
-                # selectable/copyable in the terminal.
-                return f"{prefix}Open this {label} login URL in your browser:\n\n```\n{url}\n```"
+                # Use the URL itself as the markdown link's visible text (not a
+                # short generic label like "Open Codex login URL"). Rich still
+                # renders this as a styled/underlined link, but because the
+                # exact URL is what's on screen, it (a) reads and copies as the
+                # real URL instead of a hidden label, and (b) most terminal
+                # emulators additionally auto-detect the raw http(s) text and
+                # make it natively clickable — Textual itself does not emit
+                # OSC 8 hyperlink escapes, so this terminal-side auto-linking is
+                # the only way clicking can work here.
+                return f"{prefix}Open this {label} login URL in your browser:\n\n[{url}]({url})"
             return text_content
 
         if action == "login":

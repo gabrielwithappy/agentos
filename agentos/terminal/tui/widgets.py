@@ -364,7 +364,12 @@ class ChatMessage(Static):
         turn_id: str | None = None,
         presentation_status: str | None = None,
     ) -> None:
-        super().__init__("")
+        # `markup=False`: message bodies are plain application text (which can
+        # legitimately contain literal "[...]" — e.g. a markdown-style login
+        # link, or just user input), never Textual's own console markup.
+        # Rendering as markup here previously crashed (`MarkupError`) on
+        # bracketed text such as a login hint's `[url](url)` link.
+        super().__init__("", markup=False)
         self.role = role
         # `text` is the source message body.  Role labels, borders, and turn
         # state are presentation-only so copy/fork/persistence never acquire
@@ -483,13 +488,22 @@ class ChatMessage(Static):
 
     def _render_presentation(self) -> None:
         header = self._presentation_header()
-        if header is None:
-            self.update(self.text)
-        elif self.rendered_as_markdown and self.text.strip():
-            if self._uses_left_border():
+        if self.rendered_as_markdown and self.text.strip():
+            # System messages (e.g. login hints) have no header — `header is
+            # None` used to short-circuit straight to `self.update(self.text)`
+            # below, which silently ignored `rendered_as_markdown` entirely.
+            # That meant Markdown links such as the OAuth login URL were never
+            # actually rendered as links; they went through Static's raw
+            # markup parser instead, which either printed the literal
+            # `[text](url)` syntax or crashed on it.
+            if header is None:
+                self.update(self._markdown())
+            elif self._uses_left_border():
                 self.update(Group(Text(header), Text("│"), self._markdown()))
             else:
                 self.update(Group(Text(header), self._markdown()))
+        elif header is None:
+            self.update(self.text)
         else:
             self.update(self.presentation_text)
 

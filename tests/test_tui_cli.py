@@ -1875,15 +1875,16 @@ def test_login_command_shows_sanitized_failure_when_browser_and_device_code_both
     asyncio.run(run())
 
 
-def test_login_command_shows_browser_url_as_copyable_code_block(tmp_path, monkeypatch):
+def test_login_command_shows_browser_url_as_clickable_link(tmp_path, monkeypatch):
     """Regression: the TUI's `/login` previously never showed any URL at all
     ("browser 로그인 주소가 발생하지 않음") since `login_updates()`'s hint was
     static placeholder text with no URL in it. `format_login_hint()` in
     `run_auth_action` turns a hint whose last line is a bare URL into a
-    fenced code block containing the raw URL — this only works if the hint
-    actually contains one. Using a fenced code block (rather than a markdown
-    `[label](url)` link) keeps the full URL visible on one unwrapped line so
-    it stays easy to select/copy in the terminal."""
+    markdown link whose visible text is the URL itself (`[url](url)`) — this
+    only works if the hint actually contains one. Using the URL as its own
+    link label (rather than a short generic label like "Open Codex login
+    URL") keeps the real URL on screen so it renders as a link and stays
+    selectable/copyable, instead of hiding it behind other text."""
 
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
@@ -1920,6 +1921,7 @@ def test_login_command_shows_browser_url_as_copyable_code_block(tmp_path, monkey
 
             transcript_text = _transcript_text(pilot)
             assert "https://auth.openai.com/oauth/authorize" in transcript_text
+            assert "[https://auth.openai.com/oauth/authorize?x=1](https://auth.openai.com/oauth/authorize?x=1)" in transcript_text
 
     asyncio.run(run())
 
@@ -1965,7 +1967,7 @@ def test_login_command_claude_url_hint_uses_claude_label_not_codex(tmp_path, mon
 
             transcript_text = _transcript_text(pilot)
             assert "https://claude.ai/oauth/authorize" in transcript_text
-            assert "```" in transcript_text or "https://claude.ai/oauth/authorize?x=1" in transcript_text
+            assert "[https://claude.ai/oauth/authorize?x=1](https://claude.ai/oauth/authorize?x=1)" in transcript_text
             assert "Codex" not in transcript_text
 
     asyncio.run(run())
