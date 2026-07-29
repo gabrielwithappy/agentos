@@ -88,6 +88,36 @@ def test_worktree_info_absent_when_not_present():
     assert summary.worktree_info == ""
 
 
+def test_parses_implementation_duration_fields():
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
+
+    assert summary.implementation_started_at == "2026-07-27T09:30:00Z"
+    assert summary.implementation_completed_at == "2026-07-27T09:55:00Z"
+    assert summary.implementation_duration == "약 25분"
+
+
+def test_render_card_body_includes_implementation_duration_section():
+    summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
+
+    body = render_card_body(summary, ".agentos/project/exec-plans/active/sample.md")
+
+    assert "## 구현 시간 정보" in body
+    assert "implementation_started_at: 2026-07-27T09:30:00Z" in body
+    assert "implementation_completed_at: 2026-07-27T09:55:00Z" in body
+    assert "implementation_duration: 약 25분" in body
+
+
+def test_render_card_body_shows_placeholder_when_duration_fields_missing():
+    text = "# 제목만 있는 계획\n\n내용 없음\n"
+    summary = parse_exec_plan(text)
+
+    body = render_card_body(summary, ".agentos/project/exec-plans/active/sample.md")
+
+    assert "implementation_started_at: (없음)" in body
+    assert "implementation_completed_at: (없음)" in body
+    assert "implementation_duration: (없음)" in body
+
+
 def test_render_card_body_includes_plan_id_stem_in_reference_section():
     summary = parse_exec_plan(SAMPLE_PLAN_TEXT)
 
