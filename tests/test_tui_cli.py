@@ -329,17 +329,17 @@ def test_matching_commands_filters_by_name_and_description():
 def test_auth_commands_are_explicitly_scoped_to_codex():
     commands = {command.name: command for command in all_commands()}
 
-    assert commands["/login"].description.startswith("Codex login")
+    assert commands["/login"].description.startswith("Choose an LLM provider")
     assert commands["/logout"].description.startswith("Codex logout")
     assert "auth status" in commands["/status"].description.lower()
 
 
-def test_login_command_catalog_marks_codex_scope():
+def test_login_command_catalog_marks_provider_choice():
     palette = command_palette_text()
 
     assert "/login" in palette
     assert "/logout" in palette
-    assert "Codex login" in palette
+    assert "Choose an LLM provider (codex/claude) and sign in" in palette
     assert "Codex logout" in palette
 
 
@@ -353,7 +353,7 @@ def test_status_auth_non_codex_provider_keeps_footer_and_shows_autoswitch_hint(t
             await pilot.press("enter")
             transcript = _transcript_text(pilot)
             assert "provider mock" in transcript
-            assert "Codex auth commands inactive for provider mock. Next: /model codex" in transcript
+            assert "Auth commands inactive for provider mock. Next: /login" in transcript
 
     asyncio.run(run())
 
@@ -476,7 +476,7 @@ def test_login_autoswitches_to_codex_provider(tmp_path, monkeypatch):
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
             transcript = _transcript_text(pilot)
@@ -533,7 +533,7 @@ def test_login_success_shows_external_approval_copy_and_result(tmp_path, monkeyp
         app = AgentOSTui(provider="codex", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
             transcript = _transcript_text(pilot)
@@ -1551,7 +1551,7 @@ def test_login_autoswitch_persists_preferred_provider(tmp_path, monkeypatch):
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
             assert read_preferred_provider() == "codex"
@@ -1864,7 +1864,7 @@ def test_login_command_shows_sanitized_failure_when_browser_and_device_code_both
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
 
@@ -1912,12 +1912,73 @@ def test_login_command_shows_browser_url_as_clickable_link(tmp_path, monkeypatch
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
 
             transcript_text = _transcript_text(pilot)
             assert "https://auth.openai.com/oauth/authorize" in transcript_text
+
+    asyncio.run(run())
+
+
+def test_login_bare_opens_provider_picker(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+
+            from agentos.terminal.tui.widgets import LoginProviderScreen
+
+            assert isinstance(pilot.app.screen, LoginProviderScreen)
+
+    asyncio.run(run())
+
+
+def test_login_picker_selecting_claude_starts_claude_login(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "iter_login_updates",
+            lambda provider: iter([
+                {"type": "result", "payload": {
+                    "provider": provider,
+                    "mode": "account-login",
+                    "status": "authenticated",
+                    "message": "Claude sign-in completed.",
+                }},
+            ]),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+            await pilot.press("down")
+            await pilot.press("enter")
+            await await_transcript(pilot, "Claude sign-in completed.")
+
+            transcript = _transcript_text(pilot)
+            assert "Provider switched: mock → claude" in transcript
+            assert "Starting Claude login… External browser approval may follow." in transcript
+            assert pilot.app.provider == "claude"
+
+    asyncio.run(run())
+
+
+def test_login_unknown_provider_argument_shows_error(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login foo"
+            await pilot.press("enter")
+            assert pilot.app.provider == "mock"
 
     asyncio.run(run())
 

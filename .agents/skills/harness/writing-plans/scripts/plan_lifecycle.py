@@ -287,6 +287,29 @@ def build_readme(data: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
+def _try_dashboard_sync(root: Path) -> None:
+    """Best-effort dashboard sync after a lifecycle refresh. Never raises —
+    missing `OBSERVABILITY_ENABLED`, missing `agentos` on PATH, missing
+    GitHub token, or any sync failure must not block the caller (skill
+    script or hook), matching `notify_lifecycle_event()`'s fail-open
+    contract in `agentos/terminal/hooks.py`."""
+    import os
+    import subprocess
+
+    if os.environ.get("OBSERVABILITY_ENABLED") != "1":
+        return
+    try:
+        subprocess.run(
+            ["agentos", "dashboard", "sync-plan", "--all"],
+            cwd=root,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+    except Exception:
+        pass
+
+
 def refresh(root: Path) -> None:
     active, reference, archived = collect_plans(root)
     plan_json = build_plan_json(root, active, reference, archived)
@@ -300,6 +323,8 @@ def refresh(root: Path) -> None:
 
     readme_path = root / ".agentos" / "project" / "exec-plans" / "README.md"
     readme_path.write_text(build_readme(plan_json), encoding="utf-8")
+
+    _try_dashboard_sync(root)
 
 
 def resolve_plan_path(root: Path, plan_path: str) -> Path:

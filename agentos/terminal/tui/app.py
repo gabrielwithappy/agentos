@@ -47,7 +47,7 @@ TOOLS_ANNOUNCEMENT = (
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
 from agentos.terminal.tui.state import TuiStatus, get_git_branch
-from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, ConfirmToolScreen, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
+from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, ConfirmToolScreen, LoginProviderScreen, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
 
 # Keyboard shortcut reference table shown by /hotkeys
 _HOTKEYS_TABLE = """\
@@ -303,7 +303,17 @@ class AgentOSTui(App[None]):
             self._open_theme_picker()
             return
         if command and command.handler_id == "login":
-            self._handle_auth_action("login", transcript)
+            arg = text[len("/login"):].strip().lower()
+            if not arg:
+                self._open_login_picker(transcript)
+                return
+            if arg not in self._LOGIN_CAPABLE_PROVIDERS:
+                self._notify_error(
+                    f"Unknown provider: {arg!r}. Available: {' | '.join(self._LOGIN_CAPABLE_PROVIDERS)}"
+                )
+                self._focus_composer()
+                return
+            self._handle_auth_action("login", transcript, provider=arg)
             return
         if command and command.handler_id == "status":
             transcript.update(self._status_summary())
@@ -426,6 +436,17 @@ class AgentOSTui(App[None]):
 
         self.push_screen(ThemeScreen(themes), theme_callback)
 
+    _LOGIN_CAPABLE_PROVIDERS = ("codex", "claude")
+
+    def _open_login_picker(self, transcript: Transcript) -> None:
+        def login_callback(selected: str) -> None:
+            if selected:
+                self._handle_auth_action("login", transcript, provider=selected)
+            else:
+                self._focus_composer()
+
+        self.push_screen(LoginProviderScreen(list(self._LOGIN_CAPABLE_PROVIDERS)), login_callback)
+
     def _update_status(self, status: TuiStatus) -> None:
         self.status = status
         self._render_status_footer()
@@ -471,10 +492,10 @@ class AgentOSTui(App[None]):
             self.total_input_chars += usage.get("input_chars", 0)
             self.total_output_chars += usage.get("output_chars", 0)
 
-    def _auth_provider_autoswitch_copy(self, action: str, previous_provider: str) -> str:
+    def _auth_provider_autoswitch_copy(self, action: str, previous_provider: str, provider: str) -> str:
         return (
-            f"Provider switched: {previous_provider} → codex\n"
-            f"Starting Codex {action}… External browser approval may follow."
+            f"Provider switched: {previous_provider} → {provider}\n"
+            f"Starting {provider.capitalize()} {action}… External browser approval may follow."
         )
 
     def _format_auth_result(self, heading: str, payload: dict[str, object]) -> str:
@@ -495,10 +516,11 @@ class AgentOSTui(App[None]):
 
     def _status_summary(self) -> str:
         summary = self.status.footer_text() + "\n" + self._bootstrap_status_text()
-        if self.provider != "codex":
-            return summary + f"\nCodex auth commands inactive for provider {self.provider}. Next: /model codex"
-        payload = llm_command.build_status_payload("codex")
-        return summary + "\n" + self._format_auth_result("Codex auth status", payload)
+        if self.provider in self._LOGIN_CAPABLE_PROVIDERS:
+            payload = llm_command.build_status_payload(self.provider)
+            heading = f"{self.provider.capitalize()} auth status"
+            return summary + "\n" + self._format_auth_result(heading, payload)
+        return summary + f"\nAuth commands inactive for provider {self.provider}. Next: /login"
 
     def _bootstrap_status_text(self) -> str:
         from agentos.conversation.bootstrap import find_bootstrap_message
@@ -527,35 +549,44 @@ class AgentOSTui(App[None]):
         lines.extend(f"  {path}" for path in truncated_files)
         return "\n".join(lines)
 
-    def _handle_auth_action(self, action: str, transcript: Transcript) -> None:
-        if self.provider != "codex":
+    def _handle_auth_action(self, action: str, transcript: Transcript, provider: str | None = None) -> None:
+        target_provider = provider if provider is not None else self.provider
+        if self.provider != target_provider:
             previous_provider = self.provider
-            self.provider = "codex"
+            self.provider = target_provider
             write_preferred_provider(self.provider)
             if self.session_id:
                 self._update_status(
                     self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn=self.status.last_turn)
                 )
-            transcript.add_message("system", self._auth_provider_autoswitch_copy(action, previous_provider))
+            transcript.add_message("system", self._auth_provider_autoswitch_copy(action, previous_provider, target_provider))
         else:
-            transcript.add_message("system", f"Starting Codex {action}… External browser approval may follow.")
+            transcript.add_message(
+                "system",
+                f"Starting {target_provider.capitalize()} {action}… External browser approval may follow.",
+            )
         if not self.session_id:
             self.session_id = create_session(provider=self.provider, mode="tui")
         if action == "logout":
-            status_payload = llm_command.build_status_payload("codex")
+            status_payload = llm_command.build_status_payload(target_provider)
             if status_payload.get("status") == "unauthenticated":
-                transcript.add_message("system", "Codex logout not needed.\nStatus: already signed out\nNext: /login")
+                transcript.add_message(
+                    "system",
+                    f"{target_provider.capitalize()} logout not needed.\nStatus: already signed out\nNext: /login",
+                )
                 self._focus_composer()
                 return
             if status_payload.get("status") == "missing_cli":
-                transcript.add_message("system", self._format_auth_result("Codex auth status", status_payload))
+                transcript.add_message(
+                    "system", self._format_auth_result(f"{target_provider.capitalize()} auth status", status_payload)
+                )
                 self._focus_composer()
                 return
         self._loading_message = transcript.add_message("spinner", "", style=self._indicator_style)
         self._update_status(
             self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn="running")
         )
-        self._active_turn_worker = self.run_auth_action(action, self.session_id, self.provider)
+        self._active_turn_worker = self.run_auth_action(action, self.session_id, target_provider)
         self._focus_composer()
 
     # ── Indicator style handler (Milestone 2) ─────────────────────────────
