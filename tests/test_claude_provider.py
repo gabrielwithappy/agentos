@@ -231,3 +231,28 @@ def test_stream_via_native_provider_transport_error_diagnostics_never_expose_sen
 
     assert events[-1].type == "error"
     assert SENTINEL not in serialized
+
+
+def test_rate_limited_transport_error_preserves_safe_wait_time_and_recovery(tmp_path):
+    store = AuthFileStore(home=tmp_path)
+    persist_tokens(TokenResult(access_token="access-1", refresh_token="refresh-1", expires_in=3600), store=store)
+
+    class RateLimitedTransport:
+        def stream(self, request):
+            raise TransportError(
+                "sse_http_error",
+                "Streaming request failed (HTTP 429): token=" + SENTINEL,
+                retryable=True,
+                metadata={"http_status": 429, "retry_after_seconds": 42, "raw": SENTINEL},
+            )
+            yield  # pragma: no cover
+
+    provider = ClaudeNativeProvider(store=store, transport_factory=lambda token: RateLimitedTransport())
+    events = list(provider.stream_context(InvocationRequest(messages=[InvocationMessage(role="user", text="hello")])))
+
+    error_event = events[-1]
+    assert error_event.error["code"] == "sse_http_error"
+    assert error_event.metadata["retry_after_seconds"] == 42
+    assert error_event.metadata["retryable"] is True
+    assert "42초 후" in error_event.recovery
+    assert SENTINEL not in str(error_event.to_dict())

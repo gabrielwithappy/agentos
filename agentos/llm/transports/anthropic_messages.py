@@ -5,6 +5,8 @@ import os
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any, Protocol
 
 from agentos.llm.auth.anthropic_claude import classify_auth_failure
@@ -12,8 +14,21 @@ from agentos.llm.redaction import redact_text
 from agentos.llm.transports.base import ProviderEvent, TransportError, TransportRequest
 
 DEFAULT_CLAUDE_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
-CLAUDE_CLI_VERSION_STRING = "1.0.0"
+# Keep the OAuth request identity aligned with pi's current Claude Code
+# compatibility contract. OAuth account tokens are accepted only on this path.
+CLAUDE_CLI_VERSION_STRING = "2.1.75"
 ANTHROPIC_VERSION = "2023-06-01"
+CLAUDE_CODE_IDENTITY = "You are Claude Code, Anthropic's official CLI for Claude."
+
+_CLAUDE_CODE_TOOL_NAMES = {
+    "read": "Read",
+    "write": "Write",
+    "edit": "Edit",
+    "bash": "Bash",
+    "grep": "Grep",
+    "glob": "Glob",
+}
+_AGENTOS_TOOL_NAMES = {canonical: name for name, canonical in _CLAUDE_CODE_TOOL_NAMES.items()}
 
 
 def _env_base_url() -> str:
@@ -28,7 +43,7 @@ def _tools_to_claude_schema(tools: list[dict[str, Any]]) -> list[dict[str, Any]]
     Claude-specific."""
     return [
         {
-            "name": tool["name"],
+            "name": _CLAUDE_CODE_TOOL_NAMES.get(tool["name"], tool["name"]),
             "description": tool.get("description", ""),
             "input_schema": tool.get("parameters", {"type": "object", "properties": {}}),
         }
@@ -36,14 +51,42 @@ def _tools_to_claude_schema(tools: list[dict[str, Any]]) -> list[dict[str, Any]]
     ]
 
 
-def _build_request_body(request: TransportRequest) -> dict[str, Any]:
+def _from_claude_code_tool_name(name: str) -> str:
+    return _AGENTOS_TOOL_NAMES.get(name, name)
+
+
+def _retry_after_seconds(value: str | None, *, now: datetime | None = None) -> int | None:
+    """Return a bounded retry delay without ever surfacing a raw header value."""
+    if not value:
+        return None
+    stripped = value.strip()
+    if stripped.isdigit():
+        seconds = int(stripped)
+    else:
+        try:
+            retry_at = parsedate_to_datetime(stripped)
+        except (TypeError, ValueError, IndexError, OverflowError):
+            return None
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=UTC)
+        current_time = now or datetime.now(UTC)
+        seconds = max(0, int((retry_at - current_time).total_seconds()))
+    return seconds if seconds <= 86_400 else None
+
+
+def _build_request_body(request: TransportRequest, *, oauth: bool = False) -> dict[str, Any]:
     body: dict[str, Any] = {
         "model": request.model,
         "messages": request.messages,
         "max_tokens": 8192,
         "stream": True,
     }
-    if request.instructions:
+    if oauth:
+        system = [{"type": "text", "text": CLAUDE_CODE_IDENTITY}]
+        if request.instructions:
+            system.append({"type": "text", "text": request.instructions})
+        body["system"] = system
+    elif request.instructions:
         body["system"] = request.instructions
     if request.tools:
         body["tools"] = _tools_to_claude_schema(request.tools)
@@ -70,10 +113,12 @@ class UrllibSseHttpClient:
                     yield raw_line.decode("utf-8", errors="replace").rstrip("\n")
         except urllib.error.HTTPError as exc:
             detail = redact_text(exc.read().decode("utf-8", errors="replace"))[:500]
+            retry_after = _retry_after_seconds(exc.headers.get("Retry-After") if exc.headers else None)
             raise TransportError(
                 "sse_http_error",
                 f"Streaming request failed (HTTP {exc.code}): {detail}",
                 retryable=exc.code in (429, 500, 502, 503, 504),
+                metadata={"http_status": exc.code, **({"retry_after_seconds": retry_after} if retry_after is not None else {})},
             ) from exc
         except urllib.error.URLError as exc:
             raise TransportError(
@@ -150,7 +195,8 @@ def map_claude_frame(frame: dict[str, Any], state: _BlockState) -> ProviderEvent
         state.block_type[index] = block_type
         if block_type == "tool_use":
             state.tool_id[index] = content_block.get("id", "")
-            state.tool_name[index] = content_block.get("name", "")
+            raw_name = content_block.get("name", "")
+            state.tool_name[index] = _from_claude_code_tool_name(raw_name) if isinstance(raw_name, str) else ""
             state.tool_json_buffer[index] = ""
         return None
 
@@ -234,7 +280,8 @@ class ClaudeMessagesTransport:
         return {
             "content-type": "application/json",
             "authorization": f"Bearer {token}",
-            "accept": "text/event-stream",
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
             "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
             "anthropic-version": ANTHROPIC_VERSION,
             "user-agent": f"claude-cli/{CLAUDE_CLI_VERSION_STRING}",
@@ -242,7 +289,7 @@ class ClaudeMessagesTransport:
         }
 
     def stream(self, request: TransportRequest) -> Iterator[ProviderEvent]:
-        body = _build_request_body(request)
+        body = _build_request_body(request, oauth=True)
         url = self._base_url or _env_base_url()
         frames_source = self._sse_client.stream_lines(url, headers=self._headers(), body=body)
 

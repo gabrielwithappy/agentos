@@ -234,11 +234,24 @@ class ClaudeNativeProvider:
         except TransportError as exc:
             if not started:
                 yield LLMEvent(type="start", provider=self.name, mode=self.mode, metadata={"transport": "claude-messages"})
+            retry_after = exc.metadata.get("retry_after_seconds")
+            recovery = "Resend your message."
+            if exc.metadata.get("http_status") == 429:
+                recovery = (
+                    f"Claude 요청 한도에 도달했습니다. {retry_after}초 후 다시 시도하세요."
+                    if isinstance(retry_after, int)
+                    else "Claude 요청 한도에 도달했습니다. 잠시 후 다시 시도하세요."
+                )
             yield self._error_event(
                 code=exc.code,
                 message=redact_text(exc.message),
-                recovery="Resend your message.",
+                recovery=recovery,
                 retryable=exc.retryable,
+                metadata={
+                    key: value
+                    for key, value in exc.metadata.items()
+                    if key in {"http_status", "retry_after_seconds"} and isinstance(value, int)
+                },
             )
 
     def _to_llm_event(self, event: ProviderEvent) -> LLMEvent:
@@ -271,12 +284,17 @@ class ClaudeNativeProvider:
             metadata=sanitize(metadata) if metadata else {},
         )
 
-    def _error_event(self, *, code: str, message: str, recovery: str, retryable: bool) -> LLMEvent:
+    def _error_event(
+        self, *, code: str, message: str, recovery: str, retryable: bool, metadata: dict[str, Any] | None = None
+    ) -> LLMEvent:
+        event_metadata = {"retryable": retryable}
+        if metadata:
+            event_metadata.update(sanitize(metadata))
         return LLMEvent(
             type="error",
             provider=self.name,
             mode=self.mode,
             error={"code": code, "message": message},
             recovery=recovery,
-            metadata={"retryable": retryable},
+            metadata=event_metadata,
         )

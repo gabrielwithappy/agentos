@@ -64,6 +64,9 @@ def render_event(event: dict[str, Any]) -> str:
             message = error.get("message", "Provider error.")
         else:
             message = "Provider error."
+        recovery = safe.get("recovery")
+        if isinstance(recovery, str) and recovery:
+            return f"{message} {recovery}"
         return f"{message} Next: /status"
     if event_type == "hook_error":
         return "Hook failed. Next: /hooks"

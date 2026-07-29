@@ -67,11 +67,14 @@ class ProviderEvent:
 
 
 class TransportError(Exception):
-    def __init__(self, code: str, message: str, *, retryable: bool = False):
+    def __init__(
+        self, code: str, message: str, *, retryable: bool = False, metadata: dict[str, Any] | None = None
+    ):
         super().__init__(message)
         self.code = code
         self.message = message
         self.retryable = retryable
+        self.metadata = dict(metadata or {})
 
 
 class TransportProtocol(Protocol):
