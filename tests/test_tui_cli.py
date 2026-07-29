@@ -1885,14 +1885,28 @@ def test_transport_error_shows_sanitized_recovery_message_in_transcript(tmp_path
             composer = pilot.app.query_one("#composer")
             composer.value = "hello"
             await pilot.press("enter")
-            await await_transcript(pilot, "Next: /status")
+            await await_transcript(pilot, "Resend your message.")
 
             transcript_text = _transcript_text(pilot)
             assert "SENTINEL_SECRET" not in transcript_text
-            assert "Thinking" not in transcript_text.split("Next: /status")[0][-20:]
+            assert "Thinking" not in transcript_text.split("Resend your message.")[0][-20:]
             assert "turn:error" in str(pilot.app.query_one("#status").render())
 
     asyncio.run(run())
+
+
+def test_error_renderer_shows_sanitized_rate_limit_recovery(monkeypatch):
+    monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+    rendered = render_event(
+        {
+            "type": "error",
+            "error": {"code": "sse_http_error", "message": "rate limited token=SENTINEL_SECRET"},
+            "recovery": "Claude 요청 한도에 도달했습니다. 42초 후 다시 시도하세요. token=SENTINEL_SECRET",
+        }
+    )
+    assert "42초 후" in rendered
+    assert "SENTINEL_SECRET" not in rendered
+    assert "Next: /status" not in rendered
 
 
 def test_login_command_shows_sanitized_failure_when_browser_and_device_code_both_fail(tmp_path, monkeypatch):
@@ -2392,7 +2406,7 @@ def test_stream_status_partial_error_preserves_body_and_marks_failed(tmp_path, m
             composer = pilot.app.query_one("#composer")
             composer.value = "fail after delta"
             await pilot.press("enter")
-            await await_transcript(pilot, "Next: /status")
+            await await_transcript(pilot, "Resend your message.")
             assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
             assert assistant.text == "Partial result"
             assert assistant.presentation_status == "failed"
