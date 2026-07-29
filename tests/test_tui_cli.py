@@ -458,6 +458,61 @@ def test_status_shows_blocked_status_for_injected_agents_md(tmp_path, monkeypatc
     asyncio.run(run())
 
 
+def test_login_second_attempt_while_first_in_progress_is_refused(tmp_path, monkeypatch):
+    """Regression: Claude's OAuth callback server is bound to a single fixed
+    port with no fallback, so a second concurrent /login doesn't queue — it
+    immediately fails with "port already in use". Since that failure message
+    can land in the transcript after the first attempt's own success
+    message, a login that actually succeeded looked like it failed ("로그인은
+    성공했는데 TUI는 실패라고 함"). A second /login while one is already
+    running must be refused outright instead of starting a second attempt."""
+    call_count = {"n": 0}
+    release_first = threading.Event()
+
+    def fake_iter_login_updates(provider, **kwargs):
+        call_count["n"] += 1
+        release_first.wait(timeout=5)
+        yield {
+            "type": "result",
+            "payload": {
+                "provider": provider,
+                "mode": "account-login",
+                "status": "authenticated",
+                "authenticated": True,
+                "credential_present": True,
+                "persistent_credential": True,
+                "message": "Claude sign-in completed.",
+            },
+        }
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(llm_command, "iter_login_updates", fake_iter_login_updates)
+
+    async def run() -> None:
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login claude"
+            await pilot.press("enter")
+            for _ in range(50):
+                if call_count["n"] >= 1:
+                    break
+                await pilot.pause(0.05)
+            assert call_count["n"] == 1
+
+            composer.value = "/login claude"
+            await pilot.press("enter")
+            await pilot.pause(0.1)
+
+            assert "already in progress" in _transcript_text(pilot)
+            assert call_count["n"] == 1
+
+            release_first.set()
+            await await_transcript(pilot, "Claude login result")
+
+    asyncio.run(run())
+
+
 def test_login_autoswitches_to_codex_provider(tmp_path, monkeypatch):
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
