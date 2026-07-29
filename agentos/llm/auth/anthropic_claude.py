@@ -7,21 +7,23 @@ import urllib.error
 import urllib.parse
 from dataclasses import dataclass
 from http.server import HTTPServer
+from collections.abc import Callable
 from typing import Any
 
 from agentos.llm.auth.openai_codex import (
     AuthError,
     BrowserLaunchFailedError,
+    CallbackPortUnavailableError,
     CallbackTimeoutError,
     HttpTransport,
     PkceCodes,
     StateMismatchError,
     UrllibHttpTransport,
     _CallbackResult,
-    _find_free_port,
     _make_callback_handler,
+    _http_error_detail,
+    _require_fixed_port,
     generate_pkce,
-    generate_state,
 )
 from agentos.llm.auth.store import AuthFileStore
 from agentos.llm.auth.types import AuthRecord
@@ -31,10 +33,18 @@ DEFAULT_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"  # gitleaks:allow — Anthropic's public OAuth client_id (no client_secret), matches the Claude Code CLI's; not a secret
 SCOPES = "org:create_api_key user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload"
 DEFAULT_CALLBACK_PORT = 53692
-FALLBACK_CALLBACK_PORT = 53693
+CALLBACK_PATH = "/callback"
 AUTH_PROVIDER_NAME = "claude"
+MANUAL_CODE_GRACE_SECONDS = 5.0
 CREDENTIAL_TYPE = "account-login"
 _REFRESH_LOCK = threading.Lock()
+# Matches anthropic_messages.CLAUDE_CLI_VERSION_STRING (duplicated, not
+# imported, to avoid a circular import — that module imports from this one).
+# Cloudflare in front of platform.claude.com fingerprints and 403s
+# (error 1010) urllib's default `Python-urllib/x.y` User-Agent, so the
+# token endpoint needs to look like a real CLI client same as the streaming
+# endpoint already does.
+_CLAUDE_CLI_USER_AGENT = "claude-cli/1.0.0"
 
 
 def _env_authorize_url() -> str:
@@ -58,6 +68,13 @@ class TokenResult:
 
 def build_authorize_url(*, authorize_url: str, client_id: str, redirect_uri: str, state: str, pkce: PkceCodes) -> str:
     params = {
+        # Anthropic's authorize endpoint otherwise treats this as an in-page
+        # "connect this app" approval that never redirects anywhere — the
+        # browser stays on the approval page after clicking Allow instead of
+        # navigating to redirect_uri, which is exactly the "계속 스피닝" symptom.
+        # `code=true` (per pi's anthropic.ts) is what makes it perform the
+        # actual authorization-code redirect a CLI loopback flow needs.
+        "code": "true",
         "response_type": "code",
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -95,13 +112,23 @@ def prepare_browser_login(
     resolved_token_url = token_url or _env_token_url()
     resolved_client_id = client_id or _env_client_id()
 
-    port = _find_free_port(DEFAULT_CALLBACK_PORT, FALLBACK_CALLBACK_PORT)
-    redirect_uri = f"http://localhost:{port}/auth/callback"
+    port = _require_fixed_port(DEFAULT_CALLBACK_PORT)
+    # Anthropic's registered redirect_uri path is "/callback", not "/auth/callback"
+    # (that's Codex's convention) — see pi's anthropic.ts CALLBACK_PATH. Using the
+    # wrong path is exactly what produces "Redirect URI ... is not supported by
+    # client" even when the host/port are otherwise correct.
+    redirect_uri = f"http://localhost:{port}{CALLBACK_PATH}"
     pkce = generate_pkce()
-    state = generate_state()
+    # Anthropic's flow uses the PKCE verifier itself as `state` (see pi's
+    # anthropic.ts, which sends `state: verifier` rather than a separate
+    # random token like Codex's flow does). A separate random state was the
+    # last divergence from the working reference: after clicking Allow, the
+    # page never redirected anywhere and just kept spinning — matching this
+    # exact mismatch.
+    state = pkce.code_verifier
 
     result = _CallbackResult()
-    handler_cls = _make_callback_handler(state, result)
+    handler_cls = _make_callback_handler(state, result, callback_path=CALLBACK_PATH)
     server = HTTPServer(("127.0.0.1", port), handler_cls)
 
     auth_url = build_authorize_url(
@@ -123,14 +150,40 @@ def prepare_browser_login(
     )
 
 
+def _parse_authorization_input(value: str) -> tuple[str | None, str | None]:
+    """Parses a manually pasted authorization code or full redirect URL,
+    mirroring pi's anthropic.ts `parseAuthorizationInput`. Returns
+    `(code, state)`; `state` is `None` when the user pasted a bare code
+    (the caller falls back to the expected state in that case)."""
+    text = value.strip()
+    if not text:
+        return None, None
+
+    parsed = urllib.parse.urlparse(text)
+    if parsed.scheme and parsed.netloc:
+        query = urllib.parse.parse_qs(parsed.query)
+        return query.get("code", [None])[0], query.get("state", [None])[0]
+
+    if "#" in text:
+        code, _, state = text.partition("#")
+        return code or None, state or None
+
+    if "code=" in text:
+        query = urllib.parse.parse_qs(text)
+        return query.get("code", [None])[0], query.get("state", [None])[0]
+
+    return text, None
+
+
 def complete_browser_login(
     prepared: PreparedBrowserLogin,
     *,
     transport: HttpTransport | None = None,
     timeout_seconds: float = 300.0,
     open_browser: bool = True,
+    manual_code_input: Callable[[], str | None] | None = None,
 ) -> TokenResult:
-    http = transport or UrllibHttpTransport()
+    http = transport or UrllibHttpTransport(user_agent=_CLAUDE_CLI_USER_AGENT)
     server = prepared._server
     server_thread = threading.Thread(target=server.handle_request, daemon=True)
     server_thread.start()
@@ -140,6 +193,38 @@ def complete_browser_login(
         if not opened:
             server.server_close()
             raise BrowserLaunchFailedError()
+
+    if manual_code_input is not None:
+        # Races a manually pasted code/URL against the local callback server
+        # (mirroring pi's Promise.race of the two) — the automatic redirect
+        # does not always complete (browser can't reach localhost, the
+        # approval page just never navigates away, ...), so this gives the
+        # user a way to finish sign-in without waiting on the server alone.
+        # Both paths report through the same `_CallbackResult`/`event`, so
+        # whichever finishes first wins.
+        def _manual_worker() -> None:
+            # Give the automatic redirect a head start so the common/fast
+            # case (it just works) never even prompts for manual input.
+            if prepared._result.event.wait(timeout=MANUAL_CODE_GRACE_SECONDS):
+                return
+            try:
+                raw = manual_code_input()
+            except Exception:
+                return
+            if prepared._result.event.is_set() or not raw:
+                return
+            code, state = _parse_authorization_input(raw)
+            if not code:
+                return
+            resolved_state = state or prepared._pkce.code_verifier
+            if resolved_state != prepared._pkce.code_verifier:
+                prepared._result.error = "state_mismatch"
+            else:
+                prepared._result.code = code
+                prepared._result.state = resolved_state
+            prepared._result.event.set()
+
+        threading.Thread(target=_manual_worker, daemon=True).start()
 
     completed = prepared._result.event.wait(timeout=timeout_seconds)
     server.server_close()
@@ -202,7 +287,9 @@ def _exchange_code_for_tokens(
             },
         )
     except (urllib.error.URLError, OSError, ValueError) as exc:
-        raise AuthError("token_exchange_failed", "Token exchange failed.", retryable=True) from exc
+        raise AuthError(
+            "token_exchange_failed", f"Token exchange failed: {_http_error_detail(exc)}", retryable=True
+        ) from exc
     return _token_result_from_payload(payload)
 
 
@@ -261,7 +348,7 @@ def refresh_access_token(
     """
     resolved_token_url = token_url or _env_token_url()
     resolved_client_id = client_id or _env_client_id()
-    http = transport or UrllibHttpTransport()
+    http = transport or UrllibHttpTransport(user_agent=_CLAUDE_CLI_USER_AGENT)
 
     with _REFRESH_LOCK:
         try:

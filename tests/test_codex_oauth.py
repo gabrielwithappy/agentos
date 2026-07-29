@@ -11,11 +11,13 @@ from agentos.llm.auth import openai_codex as auth_module
 from agentos.llm.auth.openai_codex import (
     AuthError,
     BrowserLaunchFailedError,
+    CallbackPortUnavailableError,
     DeviceCodeCancelledError,
     DeviceCodeExpiredError,
     StateMismatchError,
     TokenResult,
     _PendingAuthorization,
+    _require_fixed_port,
     build_authorize_url,
     generate_pkce,
     generate_state,
@@ -32,6 +34,17 @@ from agentos.llm.auth.store import AuthFileStore
 from agentos.llm.auth.types import AuthRecord
 
 SENTINEL = os.environ.get("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+
+
+@pytest.fixture(autouse=True)
+def _use_ephemeral_callback_port(monkeypatch):
+    """These tests exercise the real local callback `HTTPServer`, but must
+    not depend on the actual fixed port (1455) being free on the host — it's
+    a single shared port with no fallback now (see
+    `test_require_fixed_port_raises_when_port_is_busy`), so any other
+    process (or a stuck previous run) holding it would make these tests
+    flaky. `port=0` asks the OS for any free port instead."""
+    monkeypatch.setattr(auth_module, "DEFAULT_CALLBACK_PORT", 0)
 
 
 class FakeTransport:
@@ -166,6 +179,43 @@ def test_browser_failure_raises_browser_launch_failed_error():
     transport = FakeTransport(browser_opens=False)
     with pytest.raises(BrowserLaunchFailedError):
         run_browser_login(transport=transport, timeout_seconds=1)
+
+
+# --- fixed callback port (regression: silently trying a different port ---
+# --- than the OAuth client's registered redirect_uri always fails with  ---
+# --- "Redirect URI ... is not supported by client") ---
+
+
+def test_require_fixed_port_returns_port_when_free():
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        free_port = probe.getsockname()[1]
+
+    assert _require_fixed_port(free_port) == free_port
+
+
+def test_require_fixed_port_raises_when_port_is_busy():
+    """Regression: `_find_free_port()` used to silently fall back to a
+    second, unregistered port when the preferred one was busy. Both Codex's
+    and Claude's OAuth client only accept the exact redirect_uri they have
+    registered (matching their official CLI's fixed port), so a busy port
+    must raise a clear, catchable error instead of quietly handing back a
+    port whose redirect_uri the identity provider will reject outright."""
+    import socket
+
+    holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        holder.bind(("127.0.0.1", 0))
+        holder.listen(1)
+        busy_port = holder.getsockname()[1]
+
+        with pytest.raises(CallbackPortUnavailableError) as excinfo:
+            _require_fixed_port(busy_port)
+        assert str(busy_port) in excinfo.value.message
+    finally:
+        holder.close()
 
 
 # --- device_code / slow_down / pending / cancel ---

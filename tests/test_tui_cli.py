@@ -329,17 +329,17 @@ def test_matching_commands_filters_by_name_and_description():
 def test_auth_commands_are_explicitly_scoped_to_codex():
     commands = {command.name: command for command in all_commands()}
 
-    assert commands["/login"].description.startswith("Codex login")
+    assert commands["/login"].description.startswith("Choose an LLM provider")
     assert commands["/logout"].description.startswith("Codex logout")
     assert "auth status" in commands["/status"].description.lower()
 
 
-def test_login_command_catalog_marks_codex_scope():
+def test_login_command_catalog_marks_provider_choice():
     palette = command_palette_text()
 
     assert "/login" in palette
     assert "/logout" in palette
-    assert "Codex login" in palette
+    assert "Choose an LLM provider (codex/claude) and sign in" in palette
     assert "Codex logout" in palette
 
 
@@ -353,7 +353,7 @@ def test_status_auth_non_codex_provider_keeps_footer_and_shows_autoswitch_hint(t
             await pilot.press("enter")
             transcript = _transcript_text(pilot)
             assert "provider mock" in transcript
-            assert "Codex auth commands inactive for provider mock. Next: /model codex" in transcript
+            assert "Auth commands inactive for provider mock. Next: /login" in transcript
 
     asyncio.run(run())
 
@@ -458,13 +458,68 @@ def test_status_shows_blocked_status_for_injected_agents_md(tmp_path, monkeypatc
     asyncio.run(run())
 
 
+def test_login_second_attempt_while_first_in_progress_is_refused(tmp_path, monkeypatch):
+    """Regression: Claude's OAuth callback server is bound to a single fixed
+    port with no fallback, so a second concurrent /login doesn't queue — it
+    immediately fails with "port already in use". Since that failure message
+    can land in the transcript after the first attempt's own success
+    message, a login that actually succeeded looked like it failed ("로그인은
+    성공했는데 TUI는 실패라고 함"). A second /login while one is already
+    running must be refused outright instead of starting a second attempt."""
+    call_count = {"n": 0}
+    release_first = threading.Event()
+
+    def fake_iter_login_updates(provider, **kwargs):
+        call_count["n"] += 1
+        release_first.wait(timeout=5)
+        yield {
+            "type": "result",
+            "payload": {
+                "provider": provider,
+                "mode": "account-login",
+                "status": "authenticated",
+                "authenticated": True,
+                "credential_present": True,
+                "persistent_credential": True,
+                "message": "Claude sign-in completed.",
+            },
+        }
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(llm_command, "iter_login_updates", fake_iter_login_updates)
+
+    async def run() -> None:
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login claude"
+            await pilot.press("enter")
+            for _ in range(50):
+                if call_count["n"] >= 1:
+                    break
+                await pilot.pause(0.05)
+            assert call_count["n"] == 1
+
+            composer.value = "/login claude"
+            await pilot.press("enter")
+            await pilot.pause(0.1)
+
+            assert "already in progress" in _transcript_text(pilot)
+            assert call_count["n"] == 1
+
+            release_first.set()
+            await await_transcript(pilot, "Claude login result")
+
+    asyncio.run(run())
+
+
 def test_login_autoswitches_to_codex_provider(tmp_path, monkeypatch):
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter([
+            lambda provider, **kwargs: iter([
                 {"type": "result", "payload": {
                     "provider": provider,
                     "mode": "account-login",
@@ -476,7 +531,7 @@ def test_login_autoswitches_to_codex_provider(tmp_path, monkeypatch):
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
             transcript = _transcript_text(pilot)
@@ -520,7 +575,7 @@ def test_login_success_shows_external_approval_copy_and_result(tmp_path, monkeyp
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter([
+            lambda provider, **kwargs: iter([
                 {"type": "hint", "text": "Open this login URL if the browser did not open:\nhttps://auth.openai.com/oauth/authorize?code=abc"},
                 {"type": "result", "payload": {
                     "provider": provider,
@@ -533,7 +588,7 @@ def test_login_success_shows_external_approval_copy_and_result(tmp_path, monkeyp
         app = AgentOSTui(provider="codex", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
             transcript = _transcript_text(pilot)
@@ -1539,7 +1594,7 @@ def test_login_autoswitch_persists_preferred_provider(tmp_path, monkeypatch):
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter([
+            lambda provider, **kwargs: iter([
                 {"type": "result", "payload": {
                     "provider": provider,
                     "mode": "account-login",
@@ -1551,7 +1606,7 @@ def test_login_autoswitch_persists_preferred_provider(tmp_path, monkeypatch):
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
             assert read_preferred_provider() == "codex"
@@ -1830,14 +1885,28 @@ def test_transport_error_shows_sanitized_recovery_message_in_transcript(tmp_path
             composer = pilot.app.query_one("#composer")
             composer.value = "hello"
             await pilot.press("enter")
-            await await_transcript(pilot, "Next: /status")
+            await await_transcript(pilot, "Resend your message.")
 
             transcript_text = _transcript_text(pilot)
             assert "SENTINEL_SECRET" not in transcript_text
-            assert "Thinking" not in transcript_text.split("Next: /status")[0][-20:]
+            assert "Thinking" not in transcript_text.split("Resend your message.")[0][-20:]
             assert "turn:error" in str(pilot.app.query_one("#status").render())
 
     asyncio.run(run())
+
+
+def test_error_renderer_shows_sanitized_rate_limit_recovery(monkeypatch):
+    monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+    rendered = render_event(
+        {
+            "type": "error",
+            "error": {"code": "sse_http_error", "message": "rate limited token=SENTINEL_SECRET"},
+            "recovery": "Claude 요청 한도에 도달했습니다. 42초 후 다시 시도하세요. token=SENTINEL_SECRET",
+        }
+    )
+    assert "42초 후" in rendered
+    assert "SENTINEL_SECRET" not in rendered
+    assert "Next: /status" not in rendered
 
 
 def test_login_command_shows_sanitized_failure_when_browser_and_device_code_both_fail(tmp_path, monkeypatch):
@@ -1848,7 +1917,18 @@ def test_login_command_shows_sanitized_failure_when_browser_and_device_code_both
     import agentos.llm.auth.openai_codex as auth_module
 
     async def run() -> None:
+        from types import SimpleNamespace
+
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        # `prepare_browser_login()` binds an actual local port (1455) for the
+        # OAuth callback server, which makes this test order-dependent on any
+        # machine where that port happens to be busy; only `.auth_url` is
+        # read here since `complete_browser_login` is mocked separately.
+        monkeypatch.setattr(
+            auth_module,
+            "prepare_browser_login",
+            lambda **kwargs: SimpleNamespace(auth_url="https://auth.openai.com/oauth/authorize?fake=1"),
+        )
         monkeypatch.setattr(
             auth_module,
             "complete_browser_login",
@@ -1864,7 +1944,7 @@ def test_login_command_shows_sanitized_failure_when_browser_and_device_code_both
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
 
@@ -1880,15 +1960,18 @@ def test_login_command_shows_browser_url_as_clickable_link(tmp_path, monkeypatch
     ("browser 로그인 주소가 발생하지 않음") since `login_updates()`'s hint was
     static placeholder text with no URL in it. `format_login_hint()` in
     `run_auth_action` turns a hint whose last line is a bare URL into a
-    clickable markdown link plus the raw URL — this only works if the hint
-    actually contains one."""
+    markdown link whose visible text is the URL itself (`[url](url)`) — this
+    only works if the hint actually contains one. Using the URL as its own
+    link label (rather than a short generic label like "Open Codex login
+    URL") keeps the real URL on screen so it renders as a link and stays
+    selectable/copyable, instead of hiding it behind other text."""
 
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter(
+            lambda provider, **kwargs: iter(
                 [
                     {
                         "type": "hint",
@@ -1912,12 +1995,189 @@ def test_login_command_shows_browser_url_as_clickable_link(tmp_path, monkeypatch
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
             composer = pilot.app.query_one("#composer")
-            composer.value = "/login"
+            composer.value = "/login codex"
             await pilot.press("enter")
             await await_transcript(pilot, "Codex login result")
 
             transcript_text = _transcript_text(pilot)
             assert "https://auth.openai.com/oauth/authorize" in transcript_text
+            assert "[https://auth.openai.com/oauth/authorize?x=1](https://auth.openai.com/oauth/authorize?x=1)" in transcript_text
+
+    asyncio.run(run())
+
+
+def test_login_command_claude_url_hint_uses_claude_label_not_codex(tmp_path, monkeypatch):
+    """Regression: `format_login_hint()` and the auth-result heading used to
+    hardcode the "Codex" label regardless of which provider was actually
+    logging in, so Claude users saw a misleading "Open Codex login URL" /
+    "Codex login result" message. Both must reflect the requested provider."""
+
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "iter_login_updates",
+            lambda provider, **kwargs: iter(
+                [
+                    {
+                        "type": "hint",
+                        "text": "Open this URL to sign in:\nhttps://claude.ai/oauth/authorize?x=1",
+                    },
+                    {
+                        "type": "result",
+                        "payload": {
+                            "provider": provider,
+                            "mode": "account-login",
+                            "status": "failed",
+                            "authenticated": False,
+                            "credential_present": False,
+                            "persistent_credential": False,
+                            "message": "Claude sign-in did not complete successfully.",
+                        },
+                    },
+                ]
+            ),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login claude"
+            await pilot.press("enter")
+            await await_transcript(pilot, "Claude login result")
+
+            transcript_text = _transcript_text(pilot)
+            assert "https://claude.ai/oauth/authorize" in transcript_text
+            assert "[https://claude.ai/oauth/authorize?x=1](https://claude.ai/oauth/authorize?x=1)" in transcript_text
+            assert "Codex" not in transcript_text
+
+    asyncio.run(run())
+
+
+def test_login_manual_code_modal_completes_login_when_browser_never_redirects(tmp_path, monkeypatch):
+    """Regression: the browser's automatic OAuth redirect does not always
+    complete (it can't reach a locally-bound callback server, or the
+    provider's approval page just never navigates away) — this previously
+    left the TUI stuck waiting forever with no way out, matching "승인 선택
+    시 계속 스피너만 돈다". `run_auth_action`'s `manual_code_input` closure
+    (passed to `iter_login_updates`) should push `ManualLoginCodeScreen`,
+    and whatever the user submits there should reach the provider."""
+    from agentos.terminal.tui.widgets import ManualLoginCodeScreen
+
+    captured: dict = {}
+
+    def fake_iter_login_updates(provider, *, manual_code_input=None):
+        # Simulate the real auth layer: the automatic redirect never
+        # arrives, so it falls back to asking for manual input — from a
+        # background thread, exactly like `complete_browser_login` does.
+        yield {"type": "hint", "text": "Open this URL to sign in:\nhttps://claude.ai/oauth/authorize?x=1"}
+
+        result_holder: dict = {}
+
+        def call_manual_input():
+            result_holder["value"] = manual_code_input()
+
+        thread = threading.Thread(target=call_manual_input)
+        thread.start()
+        thread.join(timeout=5)
+        captured["manual_value"] = result_holder.get("value")
+
+        yield {
+            "type": "result",
+            "payload": {
+                "provider": provider,
+                "mode": "account-login",
+                "status": "authenticated" if result_holder.get("value") else "failed",
+                "authenticated": bool(result_holder.get("value")),
+                "credential_present": bool(result_holder.get("value")),
+                "persistent_credential": bool(result_holder.get("value")),
+                "message": "Claude sign-in completed." if result_holder.get("value") else "failed",
+            },
+        }
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(llm_command, "iter_login_updates", fake_iter_login_updates)
+
+    async def run() -> None:
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login claude"
+            await pilot.press("enter")
+
+            for _ in range(100):
+                if isinstance(pilot.app.screen, ManualLoginCodeScreen):
+                    break
+                await pilot.pause(0.05)
+            assert isinstance(pilot.app.screen, ManualLoginCodeScreen)
+
+            input_widget = pilot.app.screen.query_one("#manual-login-input")
+            input_widget.value = "https://localhost:53692/callback?code=pasted-code&state=xyz"
+            await pilot.press("enter")
+
+            await await_transcript(pilot, "Claude login result")
+            assert captured["manual_value"] == "https://localhost:53692/callback?code=pasted-code&state=xyz"
+            assert "Claude sign-in completed" in _transcript_text(pilot)
+
+    asyncio.run(run())
+
+
+def test_login_bare_opens_provider_picker(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+
+            from agentos.terminal.tui.widgets import LoginProviderScreen
+
+            assert isinstance(pilot.app.screen, LoginProviderScreen)
+
+    asyncio.run(run())
+
+
+def test_login_picker_selecting_claude_starts_claude_login(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr(
+            llm_command,
+            "iter_login_updates",
+            lambda provider, **kwargs: iter([
+                {"type": "result", "payload": {
+                    "provider": provider,
+                    "mode": "account-login",
+                    "status": "authenticated",
+                    "message": "Claude sign-in completed.",
+                }},
+            ]),
+        )
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login"
+            await pilot.press("enter")
+            await pilot.press("down")
+            await pilot.press("enter")
+            await await_transcript(pilot, "Claude sign-in completed.")
+
+            transcript = _transcript_text(pilot)
+            assert "Provider switched: mock → claude" in transcript
+            assert "Starting Claude login… External browser approval may follow." in transcript
+            assert pilot.app.provider == "claude"
+
+    asyncio.run(run())
+
+
+def test_login_unknown_provider_argument_shows_error(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login foo"
+            await pilot.press("enter")
+            assert pilot.app.provider == "mock"
 
     asyncio.run(run())
 
@@ -2146,7 +2406,7 @@ def test_stream_status_partial_error_preserves_body_and_marks_failed(tmp_path, m
             composer = pilot.app.query_one("#composer")
             composer.value = "fail after delta"
             await pilot.press("enter")
-            await await_transcript(pilot, "Next: /status")
+            await await_transcript(pilot, "Resend your message.")
             assistant = [m for m in pilot.app.query(ChatMessage) if m.role == "assistant"][-1]
             assert assistant.text == "Partial result"
             assert assistant.presentation_status == "failed"

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime, timedelta
 
 from agentos.llm.transports.anthropic_messages import (
     ClaudeMessagesTransport,
     _BlockState,
     _build_request_body,
+    _retry_after_seconds,
     _tools_to_claude_schema,
     map_claude_frame,
 )
@@ -24,10 +26,10 @@ def test_tools_to_claude_schema_renames_parameters_to_input_schema():
         {"name": "bash", "description": "Run a command.", "parameters": {"type": "object", "properties": {"command": {}}}},
     ]
     converted = _tools_to_claude_schema(tools)
-    assert converted[0]["name"] == "read"
+    assert converted[0]["name"] == "Read"
     assert converted[0]["input_schema"] == {"type": "object", "properties": {"path": {}}}
     assert "parameters" not in converted[0]
-    assert converted[1]["name"] == "bash"
+    assert converted[1]["name"] == "Bash"
 
 
 def test_tools_to_claude_schema_covers_all_seven_agentos_tools():
@@ -56,6 +58,15 @@ def test_build_request_body_maps_instructions_to_system_param():
     request = TransportRequest(model="claude-sonnet-5", messages=[], instructions="You are helpful.")
     body = _build_request_body(request)
     assert body["system"] == "You are helpful."
+
+
+def test_oauth_request_body_puts_claude_code_identity_first_and_preserves_instructions():
+    request = TransportRequest(model="claude-sonnet-5", messages=[], instructions="Keep this instruction.")
+    body = _build_request_body(request, oauth=True)
+    assert body["system"] == [
+        {"type": "text", "text": "You are Claude Code, Anthropic's official CLI for Claude."},
+        {"type": "text", "text": "Keep this instruction."},
+    ]
 
 
 def test_build_request_body_omits_system_when_absent():
@@ -166,6 +177,15 @@ def test_content_block_start_tool_use_registers_name_and_id():
     assert event is None
     assert state.tool_id[1] == "call-1"
     assert state.tool_name[1] == "read"
+
+
+def test_content_block_start_restores_claude_code_tool_name_to_agentos_registry_name():
+    state = _BlockState()
+    map_claude_frame(
+        {"type": "content_block_start", "index": 1, "content_block": {"type": "tool_use", "id": "call-1", "name": "Bash"}},
+        state,
+    )
+    assert state.tool_name[1] == "bash"
 
 
 def test_text_delta_maps_to_message_delta_event():
@@ -327,4 +347,14 @@ def test_stream_end_to_end_yields_events_and_sends_oauth_headers():
     _, headers, _ = fake_client.calls[0]
     assert headers["authorization"] == "Bearer sk-ant-oat-fake-token"
     assert headers["anthropic-beta"] == "claude-code-20250219,oauth-2025-04-20"
+    assert headers["anthropic-dangerous-direct-browser-access"] == "true"
+    assert headers["user-agent"] == "claude-cli/2.1.75"
     assert headers["x-app"] == "cli"
+
+
+def test_retry_after_seconds_accepts_delta_and_http_date_but_rejects_untrusted_values():
+    now = datetime(2026, 7, 29, 12, 0, tzinfo=UTC)
+    assert _retry_after_seconds("30", now=now) == 30
+    assert _retry_after_seconds("Tue, 29 Jul 2026 12:00:45 GMT", now=now) == 45
+    assert _retry_after_seconds("token=" + SENTINEL, now=now) is None
+    assert _retry_after_seconds("999999", now=now) is None

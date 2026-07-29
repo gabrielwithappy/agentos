@@ -373,6 +373,7 @@
     "tests/test_auth_store.py",
     "tests/test_claude_oauth.py",
     "tests/test_claude_provider.py",
+    "tests/test_claude_session_integration.py",
     "tests/test_claude_transport.py",
     "tests/test_cli.py",
     "tests/test_cli_contract.py",

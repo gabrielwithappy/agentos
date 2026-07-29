@@ -39,9 +39,25 @@ def test_status_authenticated_after_persisted_tokens(tmp_path):
     assert status.message == "Signed in with Claude account-login."
 
 
+def _fake_prepared_login(auth_url: str = "https://claude.ai/oauth/authorize?fake=1"):
+    """Stand-in for `PreparedBrowserLogin` that never binds a real socket.
+
+    `prepare_browser_login()` binds an actual local port (53692) for the
+    OAuth callback server, which makes tests that don't mock it flaky/order-
+    dependent on any machine where that port happens to be busy (e.g. a
+    leftover login attempt, or an unrelated process). Only `.auth_url` is
+    read by the code paths these tests exercise, since `complete_browser_login`
+    itself is mocked separately.
+    """
+    from types import SimpleNamespace
+
+    return SimpleNamespace(auth_url=auth_url)
+
+
 def test_login_persists_tokens_on_success(tmp_path, monkeypatch):
     import agentos.llm.auth.anthropic_claude as auth_module
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",
@@ -57,9 +73,32 @@ def test_login_persists_tokens_on_success(tmp_path, monkeypatch):
     assert store.get("claude").secrets["access_token"] == "access-1"
 
 
+def test_login_updates_prepare_failure_yields_failed_status_without_crashing(tmp_path, monkeypatch):
+    """Regression: `prepare_browser_login()` (e.g. the fixed local callback
+    port already in use) used to be called outside any try/except in
+    `_login_steps()`, so its `AuthError` propagated uncaught instead of
+    producing a normal failed status. There is no URL yet in this case, so
+    no hint should be yielded — just a failed result."""
+    import agentos.llm.auth.anthropic_claude as auth_module
+
+    monkeypatch.setattr(
+        auth_module,
+        "prepare_browser_login",
+        lambda **kwargs: (_ for _ in ()).throw(auth_module.CallbackPortUnavailableError(53692)),
+    )
+
+    provider = ClaudeNativeProvider(store=AuthFileStore(home=tmp_path))
+    updates = list(provider.login_updates())
+
+    assert all(u["type"] != "hint" for u in updates)
+    assert updates[-1]["type"] == "result"
+    assert updates[-1]["payload"]["authenticated"] is False
+
+
 def test_login_failure_returns_sanitized_status_not_exception(tmp_path, monkeypatch):
     import agentos.llm.auth.anthropic_claude as auth_module
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",
@@ -77,6 +116,7 @@ def test_login_failure_returns_sanitized_status_not_exception(tmp_path, monkeypa
 def test_login_updates_surfaces_the_real_browser_auth_url_before_waiting(tmp_path, monkeypatch):
     import agentos.llm.auth.anthropic_claude as auth_module
 
+    monkeypatch.setattr(auth_module, "prepare_browser_login", lambda **kwargs: _fake_prepared_login())
     monkeypatch.setattr(
         auth_module,
         "complete_browser_login",
@@ -191,3 +231,28 @@ def test_stream_via_native_provider_transport_error_diagnostics_never_expose_sen
 
     assert events[-1].type == "error"
     assert SENTINEL not in serialized
+
+
+def test_rate_limited_transport_error_preserves_safe_wait_time_and_recovery(tmp_path):
+    store = AuthFileStore(home=tmp_path)
+    persist_tokens(TokenResult(access_token="access-1", refresh_token="refresh-1", expires_in=3600), store=store)
+
+    class RateLimitedTransport:
+        def stream(self, request):
+            raise TransportError(
+                "sse_http_error",
+                "Streaming request failed (HTTP 429): token=" + SENTINEL,
+                retryable=True,
+                metadata={"http_status": 429, "retry_after_seconds": 42, "raw": SENTINEL},
+            )
+            yield  # pragma: no cover
+
+    provider = ClaudeNativeProvider(store=store, transport_factory=lambda token: RateLimitedTransport())
+    events = list(provider.stream_context(InvocationRequest(messages=[InvocationMessage(role="user", text="hello")])))
+
+    error_event = events[-1]
+    assert error_event.error["code"] == "sse_http_error"
+    assert error_event.metadata["retry_after_seconds"] == 42
+    assert error_event.metadata["retryable"] is True
+    assert "42초 후" in error_event.recovery
+    assert SENTINEL not in str(error_event.to_dict())

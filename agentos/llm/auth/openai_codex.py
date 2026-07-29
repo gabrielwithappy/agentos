@@ -22,7 +22,6 @@ from agentos.llm.redaction import redact_text
 DEFAULT_ISSUER = "https://auth.openai.com"
 CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 DEFAULT_CALLBACK_PORT = 1455
-FALLBACK_CALLBACK_PORT = 1457
 DEVICE_CODE_MAX_WAIT_SECONDS = 15 * 60
 AUTH_PROVIDER_NAME = "codex"
 CREDENTIAL_TYPE = "account-login"
@@ -50,12 +49,24 @@ class HttpTransport(Protocol):
 
 
 class UrllibHttpTransport:
+    """`user_agent`, when set, is sent as the `User-Agent` header on every
+    request. Anthropic's edge (Cloudflare) fingerprints and blocks the
+    default `Python-urllib/x.y` agent with HTTP 403 (Cloudflare error 1010)
+    even for an otherwise-correct token exchange — passing a browser/CLI-like
+    agent is what makes the request look legitimate instead of a bot."""
+
+    def __init__(self, *, user_agent: str | None = None) -> None:
+        self._user_agent = user_agent
+
     def post_json(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        if self._user_agent:
+            headers["User-Agent"] = self._user_agent
         request = urllib.request.Request(
             url,
             data=body,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             method="POST",
         )
         with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
@@ -128,6 +139,17 @@ class DeviceCodeCancelledError(AuthError):
         super().__init__("device_code_cancelled", "Device sign-in was cancelled.")
 
 
+class CallbackPortUnavailableError(AuthError):
+    def __init__(self, port: int) -> None:
+        super().__init__(
+            "callback_port_unavailable",
+            f"Could not start the local sign-in callback server on port {port} "
+            "(it may already be in use by another sign-in attempt). "
+            "Close whatever is using that port and try again.",
+            retryable=True,
+        )
+
+
 @dataclass(frozen=True)
 class TokenResult:
     id_token: str
@@ -137,17 +159,49 @@ class TokenResult:
     expires_in: float | None = None
 
 
-def _find_free_port(preferred: int, fallback: int) -> int:
-    for candidate in (preferred, fallback):
+def _http_error_detail(exc: Exception) -> str:
+    """Best-effort sanitized detail from a failed token-endpoint call.
+
+    Without this, every distinct cause (expired code, redirect_uri
+    mismatch, client_id rejected, network outage, ...) surfaced as the same
+    generic "Token exchange failed." with nothing to tell them apart —
+    exactly what made a real "login completed, exchange still fails"
+    report undiagnosable. `HTTPError.read()` carries the identity
+    provider's actual rejection reason, so it's worth the extra care to
+    extract it here rather than let the generic `except` swallow it.
+    """
+    if isinstance(exc, urllib.error.HTTPError):
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-                probe.bind(("127.0.0.1", candidate))
-                return candidate
-        except OSError:
-            continue
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        return probe.getsockname()[1]
+            body = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            body = ""
+        detail = redact_text(body).strip() or (exc.reason or "")
+        return f"HTTP {exc.code}: {detail[:300]}" if detail else f"HTTP {exc.code}"
+    return redact_text(str(exc))
+
+
+def _require_fixed_port(port: int) -> int:
+    """Confirms `port` is free without actually holding it open, then hands
+    it back so the caller can bind an `HTTPServer` there.
+
+    There is no fallback port: the OAuth client (both Codex's and Claude's)
+    only has this exact `http://localhost:{port}/...` redirect_uri
+    registered, matching the port their respective official CLI reference
+    implementations use. Silently trying a different port used to produce a
+    redirect_uri the identity provider rejects outright ("Redirect URI ...
+    is not supported by client"), so a busy port must surface as a clear,
+    catchable error instead of quietly choosing one that can never work.
+
+    `port=0` is the one exception, with its normal POSIX meaning ("any free
+    port, OS-assigned") — tests exercising the real callback server use this
+    to avoid depending on the actual fixed port being free on the host.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", port))
+            return probe.getsockname()[1]
+    except OSError as exc:
+        raise CallbackPortUnavailableError(port) from exc
 
 
 def build_authorize_url(*, issuer: str, client_id: str, redirect_uri: str, state: str, pkce: PkceCodes) -> str:
@@ -172,11 +226,13 @@ class _CallbackResult:
         self.error: str | None = None
 
 
-def _make_callback_handler(expected_state: str, result: _CallbackResult) -> type[BaseHTTPRequestHandler]:
+def _make_callback_handler(
+    expected_state: str, result: _CallbackResult, *, callback_path: str = "/auth/callback"
+) -> type[BaseHTTPRequestHandler]:
     class CallbackHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             parsed = urllib.parse.urlparse(self.path)
-            if parsed.path != "/auth/callback":
+            if parsed.path != callback_path:
                 self.send_response(404)
                 self.end_headers()
                 return
@@ -246,7 +302,7 @@ def prepare_browser_login(
     resolved_issuer = issuer or _env_issuer()
     resolved_client_id = client_id or _env_client_id()
 
-    port = _find_free_port(DEFAULT_CALLBACK_PORT, FALLBACK_CALLBACK_PORT)
+    port = _require_fixed_port(DEFAULT_CALLBACK_PORT)
     redirect_uri = f"http://localhost:{port}/auth/callback"
     pkce = generate_pkce()
     state = generate_state()
@@ -361,7 +417,9 @@ def _exchange_code_for_tokens(
             },
         )
     except (urllib.error.URLError, OSError, ValueError) as exc:
-        raise AuthError("token_exchange_failed", "Token exchange failed.", retryable=True) from exc
+        raise AuthError(
+            "token_exchange_failed", f"Token exchange failed: {_http_error_detail(exc)}", retryable=True
+        ) from exc
     return _token_result_from_payload(payload)
 
 

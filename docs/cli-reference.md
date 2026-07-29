@@ -72,9 +72,9 @@ Use `/status` whenever the complete, untruncated status is needed.
 Type `/` or `/help` to show the command palette. The MVP commands are:
 
 - `/help`
-- `/login` — start the AgentOS-owned Codex account-login flow. If the current provider is not `codex`, AgentOS auto-switches the session provider to `codex` first. The flow attempts browser login first (default); if the browser cannot be opened, AgentOS falls back to device-code sign-in automatically within the same login flow.
-- `/status` — show the current TUI/session footer state and, when the active provider is `codex`, append Codex auth status and recovery guidance. On other providers it explains that `/login` or `/logout` will auto-switch to `codex`.
-- `/logout` — end the current Codex account-login session. If the current provider is not `codex`, AgentOS auto-switches to `codex` first; if the session is already logged out, AgentOS reports that as a sanitized no-op success with guidance.
+- `/login` — choose an LLM provider to sign in. With no argument, opens a provider selection prompt (codex / claude); press Esc to close the prompt without starting a login (you're returned to the composer, nothing changes). `/login codex` or `/login claude` skips the prompt and starts that provider's account-login flow directly. The flow attempts browser login first (default); if the browser cannot be opened, AgentOS falls back to device-code sign-in automatically within the same login flow (codex only — claude has no device-code fallback).
+- `/status` — show the current TUI/session footer state and, when the active provider is `codex` or `claude`, append that provider's auth status and recovery guidance. On other providers (e.g. `mock`) it points you to `/login`.
+- `/logout` — end the current account-login session for whichever provider is currently active (no forced switch to `codex`). If the session is already logged out, AgentOS reports that as a sanitized no-op success with guidance.
 - `/hotkeys` — show all keyboard shortcuts in the transcript
 - `/theme` — open a theme-picker modal; select a Textual built-in theme (21 available) to apply it immediately; `Esc` cancels without changing the theme; the choice is session-scoped and reverts to the default on restart
 - `/session`
@@ -629,5 +629,23 @@ sanitized no-op success, not an error.
 Claude Messages는 Codex Responses API의 서버 측 대화 연속(`previous_response_id`)
 기능이 없으므로, 매 턴 전체 대화 기록을 다시 전송합니다. WebSocket 전송도
 지원하지 않으며 SSE(server-sent events) 스트리밍만 사용합니다.
+
+AgentOS는 OAuth 요청에 pi와 같은 Claude Code identity headers 및 direct-browser
+access header를 사용합니다. 도구 이름도 Claude Code 형식으로 보내고, 응답 도구
+호출은 AgentOS registry 이름으로 복원합니다. 이 계약은 OAuth account-login에만
+적용되며 Anthropic API key 지원을 추가하지 않습니다.
+
+실제 Claude 계정 호출은 기본 테스트에서 절대 실행하지 않습니다. 로그인 상태에서
+한 번 확인하려면 아래처럼 명시적으로 opt-in 하세요. 이 테스트는 `message_delta`
+뒤 `done` event를 확인하며, 미인증이면 `STOP claude-session-integration
+unauthenticated`와 종료 코드 2로 중단합니다.
+
+```bash
+AGENTOS_CLAUDE_INTEGRATION=1 uv run pytest tests/test_claude_session_integration.py -q
+```
+
+실제 요청 한도(HTTP 429)가 발생하면 AgentOS는 `Retry-After`의 유효한 대기 시간만
+표시합니다. 대기 시간이 없거나 유효하지 않으면 "잠시 후 다시 시도하세요"를
+표시합니다. 오류 본문, 인증 토큰, 원본 header 값은 복구 안내에 표시하지 않습니다.
 
 Without `AGENTOS_CODEX_INTEGRATION=1`, these real-network checks do not run.

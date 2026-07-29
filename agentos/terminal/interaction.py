@@ -239,6 +239,9 @@ def run_interactive(provider: str = "mock", yolo: bool = False) -> int:
                         print(SHELL_LOGIN_RECOVERY_TEXT, file=sys.stderr)
                     else:
                         print(error_payload.get("message", "Provider error."), file=sys.stderr)
+                        recovery = payload.get("recovery")
+                        if isinstance(recovery, str) and recovery:
+                            print(recovery, file=sys.stderr)
             if not has_error:
                 events_path = conversation_events_path(session_id)
                 snapshot_path = conversation_snapshot_path(session_id)

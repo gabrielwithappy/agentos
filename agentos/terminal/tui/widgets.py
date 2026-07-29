@@ -176,6 +176,103 @@ class ThemeScreen(ModalScreen[str]):
             event.stop()
 
 
+class LoginProviderScreen(ModalScreen[str]):
+    DEFAULT_CSS = """
+    LoginProviderScreen {
+        align: center middle;
+    }
+    #login-provider-container {
+        width: 50;
+        height: auto;
+        max-height: 24;
+        border: solid $text-primary;
+        background: $surface;
+        padding: 1 2;
+    }
+    #login-provider-title {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 1;
+        text-style: bold;
+    }
+    """
+
+    def __init__(self, providers: list[str]) -> None:
+        super().__init__()
+        self._providers = providers
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="login-provider-container"):
+            yield Label("Select an LLM provider to sign in (Esc to cancel)", id="login-provider-title")
+            yield OptionList(*self._providers, id="login-provider-options")
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if 0 <= event.option_index < len(self._providers):
+            self.dismiss(self._providers[event.option_index])
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            self.dismiss("")
+            event.stop()
+
+
+class ManualLoginCodeScreen(ModalScreen[str | None]):
+    """Fallback prompt for when the browser's automatic OAuth redirect
+    doesn't complete (it can't always reach a locally-bound callback
+    server, or the provider's approval page just never navigates away) —
+    lets the user paste the final redirect URL or bare authorization code
+    instead of waiting on the local server alone. Dismisses with `None` on
+    Escape/cancel, which the caller treats as "keep waiting on the browser"."""
+
+    DEFAULT_CSS = """
+    ManualLoginCodeScreen {
+        align: center middle;
+    }
+    #manual-login-container {
+        width: 76;
+        max-width: 90%;
+        height: auto;
+        border: solid $text-primary;
+        background: $surface;
+        padding: 1 2;
+    }
+    #manual-login-title {
+        width: 100%;
+        margin-bottom: 1;
+        text-style: bold;
+    }
+    #manual-login-input {
+        margin-bottom: 1;
+        border: round $accent-darken-2;
+    }
+    """
+
+    def __init__(self, provider_label: str) -> None:
+        super().__init__()
+        self._provider_label = provider_label
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="manual-login-container"):
+            yield Label(
+                f"Still waiting for the browser to finish {self._provider_label} sign-in.\n"
+                "Paste the authorization code or the final redirect URL here (Enter to submit, Esc to keep waiting):",
+                id="manual-login-title",
+            )
+            yield Input(placeholder="code or redirect URL", id="manual-login-input")
+
+    def on_mount(self) -> None:
+        self.query_one("#manual-login-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value or None)
+        event.stop()
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+            event.stop()
+
+
 class ConfirmToolScreen(ModalScreen[bool]):
     """Approval prompt for an irreversible tool call.
 
@@ -324,7 +421,12 @@ class ChatMessage(Static):
         turn_id: str | None = None,
         presentation_status: str | None = None,
     ) -> None:
-        super().__init__("")
+        # `markup=False`: message bodies are plain application text (which can
+        # legitimately contain literal "[...]" — e.g. a markdown-style login
+        # link, or just user input), never Textual's own console markup.
+        # Rendering as markup here previously crashed (`MarkupError`) on
+        # bracketed text such as a login hint's `[url](url)` link.
+        super().__init__("", markup=False)
         self.role = role
         # `text` is the source message body.  Role labels, borders, and turn
         # state are presentation-only so copy/fork/persistence never acquire
@@ -443,13 +545,22 @@ class ChatMessage(Static):
 
     def _render_presentation(self) -> None:
         header = self._presentation_header()
-        if header is None:
-            self.update(self.text)
-        elif self.rendered_as_markdown and self.text.strip():
-            if self._uses_left_border():
+        if self.rendered_as_markdown and self.text.strip():
+            # System messages (e.g. login hints) have no header — `header is
+            # None` used to short-circuit straight to `self.update(self.text)`
+            # below, which silently ignored `rendered_as_markdown` entirely.
+            # That meant Markdown links such as the OAuth login URL were never
+            # actually rendered as links; they went through Static's raw
+            # markup parser instead, which either printed the literal
+            # `[text](url)` syntax or crashed on it.
+            if header is None:
+                self.update(self._markdown())
+            elif self._uses_left_border():
                 self.update(Group(Text(header), Text("│"), self._markdown()))
             else:
                 self.update(Group(Text(header), self._markdown()))
+        elif header is None:
+            self.update(self.text)
         else:
             self.update(self.presentation_text)
 

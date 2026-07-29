@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 
 # Textual's Kitty keyboard protocol reports associated text in a way that
 # conflicts with Korean IME composition in several terminal emulators. Keep
@@ -47,7 +48,7 @@ TOOLS_ANNOUNCEMENT = (
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
 from agentos.terminal.tui.state import TuiStatus, get_git_branch
-from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, ConfirmToolScreen, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
+from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, ConfirmToolScreen, LoginProviderScreen, ManualLoginCodeScreen, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
 
 # Keyboard shortcut reference table shown by /hotkeys
 _HOTKEYS_TABLE = """\
@@ -148,6 +149,7 @@ class AgentOSTui(App[None]):
         self.last_tool_calls: list[dict[str, object]] = []
         self.last_usage: dict[str, int] | None = None
         self._active_turn_worker: Worker | None = None
+        self._auth_action_in_progress = False
         self._loading_message: ChatMessage | None = None
         self._active_assistant_message: ChatMessage | None = None
         self._last_turn_id: str | None = None
@@ -303,7 +305,17 @@ class AgentOSTui(App[None]):
             self._open_theme_picker()
             return
         if command and command.handler_id == "login":
-            self._handle_auth_action("login", transcript)
+            arg = text[len("/login"):].strip().lower()
+            if not arg:
+                self._open_login_picker(transcript)
+                return
+            if arg not in self._LOGIN_CAPABLE_PROVIDERS:
+                self._notify_error(
+                    f"Unknown provider: {arg!r}. Available: {' | '.join(self._LOGIN_CAPABLE_PROVIDERS)}"
+                )
+                self._focus_composer()
+                return
+            self._handle_auth_action("login", transcript, provider=arg)
             return
         if command and command.handler_id == "status":
             transcript.update(self._status_summary())
@@ -426,6 +438,17 @@ class AgentOSTui(App[None]):
 
         self.push_screen(ThemeScreen(themes), theme_callback)
 
+    _LOGIN_CAPABLE_PROVIDERS = ("codex", "claude")
+
+    def _open_login_picker(self, transcript: Transcript) -> None:
+        def login_callback(selected: str) -> None:
+            if selected:
+                self._handle_auth_action("login", transcript, provider=selected)
+            else:
+                self._focus_composer()
+
+        self.push_screen(LoginProviderScreen(list(self._LOGIN_CAPABLE_PROVIDERS)), login_callback)
+
     def _update_status(self, status: TuiStatus) -> None:
         self.status = status
         self._render_status_footer()
@@ -471,10 +494,10 @@ class AgentOSTui(App[None]):
             self.total_input_chars += usage.get("input_chars", 0)
             self.total_output_chars += usage.get("output_chars", 0)
 
-    def _auth_provider_autoswitch_copy(self, action: str, previous_provider: str) -> str:
+    def _auth_provider_autoswitch_copy(self, action: str, previous_provider: str, provider: str) -> str:
         return (
-            f"Provider switched: {previous_provider} → codex\n"
-            f"Starting Codex {action}… External browser approval may follow."
+            f"Provider switched: {previous_provider} → {provider}\n"
+            f"Starting {provider.capitalize()} {action}… External browser approval may follow."
         )
 
     def _format_auth_result(self, heading: str, payload: dict[str, object]) -> str:
@@ -495,10 +518,11 @@ class AgentOSTui(App[None]):
 
     def _status_summary(self) -> str:
         summary = self.status.footer_text() + "\n" + self._bootstrap_status_text()
-        if self.provider != "codex":
-            return summary + f"\nCodex auth commands inactive for provider {self.provider}. Next: /model codex"
-        payload = llm_command.build_status_payload("codex")
-        return summary + "\n" + self._format_auth_result("Codex auth status", payload)
+        if self.provider in self._LOGIN_CAPABLE_PROVIDERS:
+            payload = llm_command.build_status_payload(self.provider)
+            heading = f"{self.provider.capitalize()} auth status"
+            return summary + "\n" + self._format_auth_result(heading, payload)
+        return summary + f"\nAuth commands inactive for provider {self.provider}. Next: /login"
 
     def _bootstrap_status_text(self) -> str:
         from agentos.conversation.bootstrap import find_bootstrap_message
@@ -527,35 +551,60 @@ class AgentOSTui(App[None]):
         lines.extend(f"  {path}" for path in truncated_files)
         return "\n".join(lines)
 
-    def _handle_auth_action(self, action: str, transcript: Transcript) -> None:
-        if self.provider != "codex":
+    def _handle_auth_action(self, action: str, transcript: Transcript, provider: str | None = None) -> None:
+        if self._auth_action_in_progress:
+            # Claude's OAuth callback server is bound to one fixed port with
+            # no fallback (matching its actually-registered redirect_uri —
+            # see anthropic_claude.py). A second concurrent /login while the
+            # first is still in flight doesn't queue: it immediately fails
+            # with "port already in use", and — since that failure message
+            # can land in the transcript after the first attempt's own
+            # success message — makes a login that actually succeeded look
+            # like it failed. Refuse to start a second attempt instead.
+            transcript.add_message(
+                "system",
+                "A login/logout is already in progress. Wait for it to finish (check your browser) before trying again.",
+            )
+            self._focus_composer()
+            return
+        target_provider = provider if provider is not None else self.provider
+        if self.provider != target_provider:
             previous_provider = self.provider
-            self.provider = "codex"
+            self.provider = target_provider
             write_preferred_provider(self.provider)
             if self.session_id:
                 self._update_status(
                     self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn=self.status.last_turn)
                 )
-            transcript.add_message("system", self._auth_provider_autoswitch_copy(action, previous_provider))
+            transcript.add_message("system", self._auth_provider_autoswitch_copy(action, previous_provider, target_provider))
         else:
-            transcript.add_message("system", f"Starting Codex {action}… External browser approval may follow.")
+            transcript.add_message(
+                "system",
+                f"Starting {target_provider.capitalize()} {action}… External browser approval may follow.",
+            )
         if not self.session_id:
             self.session_id = create_session(provider=self.provider, mode="tui")
         if action == "logout":
-            status_payload = llm_command.build_status_payload("codex")
+            status_payload = llm_command.build_status_payload(target_provider)
             if status_payload.get("status") == "unauthenticated":
-                transcript.add_message("system", "Codex logout not needed.\nStatus: already signed out\nNext: /login")
+                transcript.add_message(
+                    "system",
+                    f"{target_provider.capitalize()} logout not needed.\nStatus: already signed out\nNext: /login",
+                )
                 self._focus_composer()
                 return
             if status_payload.get("status") == "missing_cli":
-                transcript.add_message("system", self._format_auth_result("Codex auth status", status_payload))
+                transcript.add_message(
+                    "system", self._format_auth_result(f"{target_provider.capitalize()} auth status", status_payload)
+                )
                 self._focus_composer()
                 return
         self._loading_message = transcript.add_message("spinner", "", style=self._indicator_style)
         self._update_status(
             self._status_with_totals(provider=self.provider, session_id=self.session_id, last_turn="running")
         )
-        self._active_turn_worker = self.run_auth_action(action, self.session_id, self.provider)
+        self._auth_action_in_progress = True
+        self._active_turn_worker = self.run_auth_action(action, self.session_id, target_provider)
         self._focus_composer()
 
     # ── Indicator style handler (Milestone 2) ─────────────────────────────
@@ -656,31 +705,70 @@ class AgentOSTui(App[None]):
             if url.startswith("http://") or url.startswith("https://"):
                 lead = "\n".join(parts[:-1]).strip()
                 prefix = f"{lead}\n\n" if lead else ""
-                return f"{prefix}[Open Codex login URL]({url})\n\nRaw URL:\n<{url}>"
+                label = provider.capitalize()
+                # Use the URL itself as the markdown link's visible text (not a
+                # short generic label like "Open Codex login URL"). Rich still
+                # renders this as a styled/underlined link, but because the
+                # exact URL is what's on screen, it (a) reads and copies as the
+                # real URL instead of a hidden label, and (b) most terminal
+                # emulators additionally auto-detect the raw http(s) text and
+                # make it natively clickable — Textual itself does not emit
+                # OSC 8 hyperlink escapes, so this terminal-side auto-linking is
+                # the only way clicking can work here.
+                return f"{prefix}Open this {label} login URL in your browser:\n\n[{url}]({url})"
             return text_content
 
-        if action == "login":
-            payload: dict[str, object] | None = None
-            for update in llm_command.iter_login_updates(provider):
-                if update.get("type") == "hint":
-                    self.call_from_thread(self._clear_loading_message)
-                    self.call_from_thread(add_system_markdown_message, format_login_hint(str(update.get("text", ""))))
-                    continue
-                if update.get("type") == "result":
-                    payload = dict(update.get("payload", {}))
-            if payload is None:
-                payload = llm_command.build_login_payload(provider)
-        else:
-            payload = llm_command.build_logout_payload(provider)
-        status_value = str(payload.get("status", "unknown"))
-        last_turn = "done" if status_value in {"authenticated", "logged_out", "unauthenticated"} else "error"
-        rendered = self._format_auth_result(f"Codex {action} result", payload)
-        self.call_from_thread(self._clear_loading_message)
-        self.call_from_thread(add_system_message, rendered)
-        self.call_from_thread(
-            self._update_status,
-            self._status_with_totals(provider=provider, session_id=session_id, last_turn=last_turn),
-        )
+        def manual_code_input() -> str | None:
+            # Unlike `confirm_tool_call` below, this is invoked from a plain
+            # `threading.Thread` the auth layer spawns internally (not this
+            # method's own `@work(thread=True)` worker) — `push_screen_wait`
+            # requires an active Textual *worker* context to await from, which
+            # that thread doesn't have, so it's pushed with a dismiss callback
+            # instead and a plain `threading.Event` blocks this thread until
+            # the user answers.
+            done = threading.Event()
+            answer: dict[str, str | None] = {}
+
+            def _on_dismiss(value: str | None) -> None:
+                answer["value"] = value
+                done.set()
+
+            self.call_from_thread(
+                self.push_screen, ManualLoginCodeScreen(provider.capitalize()), _on_dismiss
+            )
+            done.wait()
+            return answer.get("value")
+
+        try:
+            if action == "login":
+                payload: dict[str, object] | None = None
+                for update in llm_command.iter_login_updates(provider, manual_code_input=manual_code_input):
+                    if update.get("type") == "hint":
+                        self.call_from_thread(self._clear_loading_message)
+                        self.call_from_thread(
+                            add_system_markdown_message, format_login_hint(str(update.get("text", "")))
+                        )
+                        continue
+                    if update.get("type") == "result":
+                        payload = dict(update.get("payload", {}))
+                if payload is None:
+                    payload = llm_command.build_login_payload(provider)
+            else:
+                payload = llm_command.build_logout_payload(provider)
+            status_value = str(payload.get("status", "unknown"))
+            last_turn = "done" if status_value in {"authenticated", "logged_out", "unauthenticated"} else "error"
+            rendered = self._format_auth_result(f"{provider.capitalize()} {action} result", payload)
+            self.call_from_thread(self._clear_loading_message)
+            self.call_from_thread(add_system_message, rendered)
+            self.call_from_thread(
+                self._update_status,
+                self._status_with_totals(provider=provider, session_id=session_id, last_turn=last_turn),
+            )
+        finally:
+            # Always release the single-flight guard, including when this
+            # worker is cancelled or raises — otherwise one failed attempt
+            # would permanently lock out every future /login or /logout.
+            self._auth_action_in_progress = False
 
     @work(thread=True)
     def run_stream(

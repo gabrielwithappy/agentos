@@ -96,11 +96,29 @@ class CodexNativeProvider:
         """Shared implementation for `login()` and `login_updates()`. Yields
         `("hint", text)` tuples as progress becomes known, and exactly one
         `("status", ProviderStatus)` as the final item."""
-        prepared = auth.prepare_browser_login()
-        yield ("hint", f"Open this URL to sign in:\n{prepared.auth_url}")
         try:
-            tokens = auth.complete_browser_login(prepared)
-        except auth.BrowserLaunchFailedError:
+            prepared = auth.prepare_browser_login()
+        except auth.CallbackPortUnavailableError:
+            # The fixed local callback port is already in use — the device
+            # code flow needs no local server/port at all, so it can still
+            # work here; skip straight to it instead of failing outright.
+            prepared = None
+        except auth.AuthError as exc:
+            yield ("status", self._login_failed_status(exc))
+            return
+
+        tokens = None
+        if prepared is not None:
+            yield ("hint", f"Open this URL to sign in:\n{prepared.auth_url}")
+            try:
+                tokens = auth.complete_browser_login(prepared)
+            except auth.BrowserLaunchFailedError:
+                pass
+            except auth.AuthError as exc:
+                yield ("status", self._login_failed_status(exc))
+                return
+
+        if tokens is None:
             try:
                 device_code = auth.request_device_code()
             except auth.AuthError as exc:
@@ -120,9 +138,6 @@ class CodexNativeProvider:
             except auth.AuthError as exc:
                 yield ("status", self._login_failed_status(exc))
                 return
-        except auth.AuthError as exc:
-            yield ("status", self._login_failed_status(exc))
-            return
 
         auth.persist_tokens(tokens, store=self._store)
         yield (
@@ -139,6 +154,8 @@ class CodexNativeProvider:
         )
 
     def _login_failed_status(self, exc: auth.AuthError) -> ProviderStatus:
+        # `AuthError.message` is already sanitized (never contains raw
+        # secrets — see its docstring), so it's safe to surface directly.
         return ProviderStatus(
             provider=self.name,
             mode=self.mode,
@@ -146,7 +163,7 @@ class CodexNativeProvider:
             authenticated=False,
             persistent_credential=False,
             status="failed",
-            message="Codex sign-in did not complete successfully.",
+            message=f"Codex sign-in did not complete successfully: {exc.message}",
             recovery=RECOVERY_LOGIN,
             next_command="agentos llm login --provider codex",
         )

@@ -8,6 +8,7 @@ import urllib.request
 
 import pytest
 
+from agentos.llm.auth import anthropic_claude as auth_module
 from agentos.llm.auth.anthropic_claude import (
     TokenResult,
     build_authorize_url,
@@ -24,6 +25,18 @@ from agentos.llm.auth.store import AuthFileStore
 from agentos.llm.auth.types import AuthRecord
 
 SENTINEL = os.environ.get("AGENTOS_TEST_SECRET", "sk-ant-oat-test-secret-value")
+
+
+@pytest.fixture(autouse=True)
+def _use_ephemeral_callback_port(monkeypatch):
+    """These tests exercise the real local callback `HTTPServer`, but must
+    not depend on the actual fixed port (53692) being free on the host —
+    it's a single shared port with no fallback now (see
+    `test_require_fixed_port_raises_when_port_is_busy` in
+    test_codex_oauth.py), so any other process (or a stuck previous run)
+    holding it would make these tests flaky. `port=0` asks the OS for any
+    free port instead."""
+    monkeypatch.setattr(auth_module, "DEFAULT_CALLBACK_PORT", 0)
 
 
 class FakeTransport:
@@ -52,8 +65,41 @@ def _fire_callback(port: int, *, state: str, code: str | None = "auth-code-123",
     if error is not None:
         params["error"] = error
     query = urllib.parse.urlencode(params)
-    url = f"http://127.0.0.1:{port}/auth/callback?{query}"
+    url = f"http://127.0.0.1:{port}/callback?{query}"
     urllib.request.urlopen(url, timeout=5).read()  # noqa: S310
+
+
+def test_prepare_browser_login_redirect_uri_uses_callback_not_auth_callback():
+    """Regression: this previously built redirect_uri as
+    "http://localhost:{port}/auth/callback" (Codex's convention, reused by
+    copy-paste), but Anthropic's OAuth client only has "/callback"
+    registered (see pi's anthropic.ts CALLBACK_PATH) — so login always
+    failed with "Redirect URI ... is not supported by client", even on the
+    otherwise-correct port."""
+    import agentos.llm.auth.anthropic_claude as claude_auth
+
+    prepared = claude_auth.prepare_browser_login()
+    try:
+        assert prepared._redirect_uri.endswith("/callback")
+        assert not prepared._redirect_uri.endswith("/auth/callback")
+    finally:
+        prepared._server.server_close()
+
+
+def test_prepare_browser_login_uses_pkce_verifier_as_state():
+    """Regression: this previously sent a separate random `state` (Codex's
+    convention), but Anthropic's flow uses the PKCE verifier itself as
+    `state` (see pi's anthropic.ts: `state: verifier`, not a random token).
+    With a separate random state, the claude.ai approval page never
+    redirected anywhere after clicking Allow — it just kept spinning."""
+    import agentos.llm.auth.anthropic_claude as claude_auth
+
+    prepared = claude_auth.prepare_browser_login()
+    try:
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(prepared.auth_url).query)
+        assert query["state"] == [prepared._pkce.code_verifier]
+    finally:
+        prepared._server.server_close()
 
 
 # --- pkce / authorize url ---
@@ -65,7 +111,7 @@ def test_build_authorize_url_includes_pkce_state_and_scopes():
     url = build_authorize_url(
         authorize_url="https://claude.ai/oauth/authorize",
         client_id="client-123",
-        redirect_uri="http://localhost:53692/auth/callback",
+        redirect_uri="http://localhost:53692/callback",
         state=state,
         pkce=pkce,
     )
@@ -76,7 +122,66 @@ def test_build_authorize_url_includes_pkce_state_and_scopes():
     assert "scope=" in url
 
 
+def test_build_authorize_url_includes_code_true_param():
+    """Regression: without `code=true`, Anthropic's authorize endpoint treats
+    the request as an in-page "connect this app" approval that never
+    redirects anywhere — after clicking Allow, the browser just keeps
+    spinning on claude.ai instead of navigating to redirect_uri. `code=true`
+    (per pi's anthropic.ts) is what makes it perform the actual
+    authorization-code redirect a CLI loopback flow needs."""
+    url = build_authorize_url(
+        authorize_url="https://claude.ai/oauth/authorize",
+        client_id="client-123",
+        redirect_uri="http://localhost:53692/callback",
+        state=generate_state(),
+        pkce=generate_pkce(),
+    )
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+    assert query["code"] == ["true"]
+
+
 # --- browser login: success / state mismatch / browser failure ---
+
+
+def test_manual_code_input_completes_login_when_browser_never_redirects(monkeypatch):
+    """Regression: the automatic browser redirect does not always complete
+    (browser can't reach localhost, the approval page just never navigates
+    away) — this previously left the TUI/CLI stuck waiting on the local
+    server alone for up to `timeout_seconds`, matching "승인 선택 시 계속
+    스피너만 돈다". `manual_code_input` (mirroring pi's manual-paste
+    fallback) lets a pasted redirect URL complete sign-in instead."""
+    monkeypatch.setattr(auth_module, "MANUAL_CODE_GRACE_SECONDS", 0.05)
+    transport = FakeTransport()
+
+    prepared = auth_module.prepare_browser_login()
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(prepared.auth_url).query)
+    state = query["state"][0]
+    pasted_url = f"{prepared._redirect_uri}?code=pasted-code-123&state={state}"
+
+    result = auth_module.complete_browser_login(
+        prepared,
+        transport=transport,
+        timeout_seconds=5,
+        manual_code_input=lambda: pasted_url,
+    )
+
+    assert result.access_token == SENTINEL
+
+
+def test_manual_code_input_rejects_wrong_state(monkeypatch):
+    monkeypatch.setattr(auth_module, "MANUAL_CODE_GRACE_SECONDS", 0.05)
+    transport = FakeTransport()
+
+    prepared = auth_module.prepare_browser_login()
+    pasted_url = f"{prepared._redirect_uri}?code=pasted-code-123&state=not-the-real-state"
+
+    with pytest.raises(StateMismatchError):
+        auth_module.complete_browser_login(
+            prepared,
+            transport=transport,
+            timeout_seconds=5,
+            manual_code_input=lambda: pasted_url,
+        )
 
 
 def test_callback_completes_login_and_exchanges_tokens():
