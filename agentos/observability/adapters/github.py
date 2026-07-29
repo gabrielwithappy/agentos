@@ -3,7 +3,9 @@ import json
 import urllib.request
 import urllib.error
 from typing import Dict, Any
+from pathlib import Path
 from agentos.observability.notifier import DashboardAdapter
+from agentos.observability.plan_parser import parse_exec_plan, render_card_body, upsert_meta_field
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +196,23 @@ class GithubDashboardAdapter(DashboardAdapter):
             {"draftIssueId": draft_issue_id, "title": title, "body": body},
         )
 
+    def _render_writing_started_body(self, payload: dict) -> str:
+        lines = [
+            "## 사용자 요청",
+            payload.get("user_request") or "(없음)",
+            "",
+            "## 담당 에이전트 / 세션",
+            f"- agent: {payload.get('agent') or '(없음)'}",
+            f"- session: {payload.get('session') or '(없음)'}",
+            "",
+            "## 상태",
+            "- 계획 문서 작성 중 (Backlog — Gate 2 리뷰 전)",
+            "",
+            "## 참조",
+            f"exec-plan: {payload.get('plan_path') or '(작성 중)'}",
+        ]
+        return "\n".join(lines)
+
     async def send_notification(self, payload: Dict[str, Any]) -> None:
         if not self.token or not self.owner or not self.project_number:
             return
@@ -201,19 +220,64 @@ class GithubDashboardAdapter(DashboardAdapter):
         logger.debug(f"[Observability] Github adapter sending payload: {payload}")
 
         event = payload.get("event", "unknown")
-        status_name = _STATUS_BY_EVENT.get(event, _DEFAULT_STATUS)
 
         try:
-            self._ensure_project_metadata()
+            if event == "PLAN_WRITING_STARTED":
+                self._ensure_project_metadata()
+                title = payload.get("plan_title") or payload.get("plan_path") or payload.get("event", "계획 작성 중")
+                body = self._render_writing_started_body(payload)
+                existing = self._find_item_by_title_with_project_item_id(title)
+                if existing is None:
+                    project_item_id, draft_issue_id = self._create_draft_item_with_content_id(title=title)
+                else:
+                    project_item_id, draft_issue_id = existing
+                self.update_draft_issue_body(draft_issue_id, title, body)
+                option_id = self._status_option_ids.get("Backlog")
+                if option_id is not None:
+                    self._set_status(project_item_id, option_id)
 
-            item_key = str(payload.get("task_id") or event)
-            item_id = self._item_ids.get(item_key)
-            if item_id is None:
-                item_id = self._create_draft_item(title=event)
-                self._item_ids[item_key] = item_id
+            elif event == "PLAN_STATUS_CHANGED":
+                self._ensure_project_metadata()
+                plan_path = payload["plan_path"]
+                text = Path(plan_path).read_text(encoding="utf-8")
+                summary = parse_exec_plan(text)
+                
+                title = summary.title
+                body = render_card_body(summary, plan_path)
+                board_status = payload["board_status"]
+                
+                existing = self._find_item_by_title_with_project_item_id(title)
+                if existing is None:
+                    project_item_id, draft_issue_id = self._create_draft_item_with_content_id(title=title)
+                else:
+                    project_item_id, draft_issue_id = existing
+                self.update_draft_issue_body(draft_issue_id, title, body)
+                
+                option_id = self._status_option_ids.get(board_status)
+                if option_id is not None:
+                    self._set_status(project_item_id, option_id)
+                else:
+                    logger.warning(
+                        f"Status option '{board_status}' not found on board — "
+                        "card created/updated but status not set. Run Milestone 3's board setup first."
+                    )
+                
+                if summary.dashboard_item_id != project_item_id:
+                    updated_text = upsert_meta_field(text, "dashboard_item_id", project_item_id)
+                    Path(plan_path).write_text(updated_text, encoding="utf-8")
 
-            option_id = self._status_option_ids.get(status_name)
-            if option_id is not None:
-                self._set_status(item_id, option_id)
+            else:
+                status_name = _STATUS_BY_EVENT.get(event, _DEFAULT_STATUS)
+                self._ensure_project_metadata()
+
+                item_key = str(payload.get("task_id") or event)
+                item_id = self._item_ids.get(item_key)
+                if item_id is None:
+                    item_id = self._create_draft_item(title=event)
+                    self._item_ids[item_key] = item_id
+
+                option_id = self._status_option_ids.get(status_name)
+                if option_id is not None:
+                    self._set_status(item_id, option_id)
         except (urllib.error.URLError, ValueError, KeyError) as e:
             raise ValueError(f"Github API error: {e}")

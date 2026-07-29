@@ -45,3 +45,25 @@ def test_notifier_error_recovery(caplog):
         assert "API 전송 실패" in caplog.text
         assert "Network error!" in caplog.text
     asyncio.run(run())
+
+def test_notify_and_wait_success():
+    notifier = DashboardNotifier()
+    adapter = MockAdapter()
+    notifier.register_adapter(adapter)
+    
+    outcomes = notifier.notify_and_wait({"event": "TEST"})
+    assert len(outcomes) == 1
+    assert outcomes[0].adapter_name == "MockAdapter"
+    assert outcomes[0].ok is True
+    assert outcomes[0].error is None
+
+def test_notify_and_wait_failure():
+    notifier = DashboardNotifier()
+    adapter = FailingAdapter()
+    notifier.register_adapter(adapter)
+    
+    outcomes = notifier.notify_and_wait({"event": "TEST"})
+    assert len(outcomes) == 1
+    assert outcomes[0].adapter_name == "FailingAdapter"
+    assert outcomes[0].ok is False
+    assert outcomes[0].error == "Network error!"

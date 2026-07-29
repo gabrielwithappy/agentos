@@ -454,13 +454,25 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
    - 수정 완료 후 Gate 0 재검토 → 통과하면 Gate 2 재수행
    - 사람에게 "수정하자"고 요청하지 마라 — 수정은 작성 에이전트의 책임이다
 4. **Approved** → `plan-reviewer=PASS`와 `principle-auditor=PASS|CLEAN`이 모두 확보되고, `usability_review_required: true`이면 `usability-reviewer=PASS`까지 확보되며, corresponding reviewer artifact가 runtime review surface에 기록되면 계획 파일 헤더에 `reviewed: true`, `> **상태:** 구현 계획 (실행 대기)` 반영 후 저장
-5. 아래 명령으로 registry와 board를 갱신한다:
+5. **[계획 작성 시작 즉시] 대시보드 발행 (대시보드 연동 설정 시):**
+   계획 파일(`.agentos/project/exec-plans/active/<날짜>-<이름>.md`)을 생성하거나 제목이 확정된 직후, 아래 명령을 실행한다. 대시보드가 설정되지 않은 경우 이 명령은 안전하게 스킵되어 계획 작성을 막지 않는다.
+   ```bash
+   agentos dashboard sync-plan <plan-path>
+   ```
+   계획 문서 헤더에 `> user_request: <요청 요약 1-2문장>` 형태로 사용자 요청 요약을 기록하면 대시보드 카드 본문에도 반영된다.
+6. 아래 명령으로 registry와 board를 갱신한다:
 
 ```bash
 python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh
 ```
 
-6. 사용자에게 확인 요청
+7. **[계획 리뷰 통과 시] 대시보드 상태 동기화 (대시보드 연동 설정 시):**
+   `reviewed: true` 갱신 직후, 아래 명령을 실행하여 상태(Ready)를 반영한다. 대시보드 미설정 시 안전하게 스킵된다.
+   ```bash
+   agentos dashboard sync-plan <plan-path>
+   ```
+
+8. 사용자에게 확인 요청
 
 ### Simplicity Gate (P4 단순성 전용)
 
