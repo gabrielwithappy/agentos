@@ -67,7 +67,7 @@ def parse_exec_plan(text: str) -> ExecPlanSummary:
         active_session=_find_meta_field(text, "active_session"),
         dashboard_item_id=_find_meta_field(text, "dashboard_item_id"),
         goal=_find_section(text, "목표"),
-        user_result_summary=_find_section(text, "사용자 결과 요약"),
+        user_result_summary=_find_h2_section(text, "사용자 결과 요약"),
         progress_snapshot=_find_h2_section(text, "진행 스냅샷"),
         worktree_info=_find_h2_section(text, "Worktree 정보"),
         last_review_entry=_find_last_review_entry(text),

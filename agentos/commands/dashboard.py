@@ -37,6 +37,10 @@ def sync_plan(
         console.print("[red]Provide a plan file path, or use --all to sync every active exec-plan.[/red]")
         raise typer.Exit(1)
 
+    if plan_path and not all_active and not Path(plan_path).is_file():
+        console.print(f"[red]Plan file not found: {plan_path}[/red]")
+        raise typer.Exit(1)
+
     if not owner or not project_number:
         console.print("[yellow]대시보드가 설정되어 있지 않아 동기화를 건너뜁니다.[/yellow]")
         raise typer.Exit(0)
