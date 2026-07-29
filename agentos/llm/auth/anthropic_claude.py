@@ -21,6 +21,7 @@ from agentos.llm.auth.openai_codex import (
     UrllibHttpTransport,
     _CallbackResult,
     _make_callback_handler,
+    _http_error_detail,
     _require_fixed_port,
     generate_pkce,
 )
@@ -37,6 +38,13 @@ AUTH_PROVIDER_NAME = "claude"
 MANUAL_CODE_GRACE_SECONDS = 5.0
 CREDENTIAL_TYPE = "account-login"
 _REFRESH_LOCK = threading.Lock()
+# Matches anthropic_messages.CLAUDE_CLI_VERSION_STRING (duplicated, not
+# imported, to avoid a circular import — that module imports from this one).
+# Cloudflare in front of platform.claude.com fingerprints and 403s
+# (error 1010) urllib's default `Python-urllib/x.y` User-Agent, so the
+# token endpoint needs to look like a real CLI client same as the streaming
+# endpoint already does.
+_CLAUDE_CLI_USER_AGENT = "claude-cli/1.0.0"
 
 
 def _env_authorize_url() -> str:
@@ -175,7 +183,7 @@ def complete_browser_login(
     open_browser: bool = True,
     manual_code_input: Callable[[], str | None] | None = None,
 ) -> TokenResult:
-    http = transport or UrllibHttpTransport()
+    http = transport or UrllibHttpTransport(user_agent=_CLAUDE_CLI_USER_AGENT)
     server = prepared._server
     server_thread = threading.Thread(target=server.handle_request, daemon=True)
     server_thread.start()
@@ -279,7 +287,9 @@ def _exchange_code_for_tokens(
             },
         )
     except (urllib.error.URLError, OSError, ValueError) as exc:
-        raise AuthError("token_exchange_failed", "Token exchange failed.", retryable=True) from exc
+        raise AuthError(
+            "token_exchange_failed", f"Token exchange failed: {_http_error_detail(exc)}", retryable=True
+        ) from exc
     return _token_result_from_payload(payload)
 
 
@@ -338,7 +348,7 @@ def refresh_access_token(
     """
     resolved_token_url = token_url or _env_token_url()
     resolved_client_id = client_id or _env_client_id()
-    http = transport or UrllibHttpTransport()
+    http = transport or UrllibHttpTransport(user_agent=_CLAUDE_CLI_USER_AGENT)
 
     with _REFRESH_LOCK:
         try:

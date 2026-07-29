@@ -49,12 +49,24 @@ class HttpTransport(Protocol):
 
 
 class UrllibHttpTransport:
+    """`user_agent`, when set, is sent as the `User-Agent` header on every
+    request. Anthropic's edge (Cloudflare) fingerprints and blocks the
+    default `Python-urllib/x.y` agent with HTTP 403 (Cloudflare error 1010)
+    even for an otherwise-correct token exchange — passing a browser/CLI-like
+    agent is what makes the request look legitimate instead of a bot."""
+
+    def __init__(self, *, user_agent: str | None = None) -> None:
+        self._user_agent = user_agent
+
     def post_json(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        if self._user_agent:
+            headers["User-Agent"] = self._user_agent
         request = urllib.request.Request(
             url,
             data=body,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             method="POST",
         )
         with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
@@ -145,6 +157,27 @@ class TokenResult:
     refresh_token: str
     account_label: str | None = None
     expires_in: float | None = None
+
+
+def _http_error_detail(exc: Exception) -> str:
+    """Best-effort sanitized detail from a failed token-endpoint call.
+
+    Without this, every distinct cause (expired code, redirect_uri
+    mismatch, client_id rejected, network outage, ...) surfaced as the same
+    generic "Token exchange failed." with nothing to tell them apart —
+    exactly what made a real "login completed, exchange still fails"
+    report undiagnosable. `HTTPError.read()` carries the identity
+    provider's actual rejection reason, so it's worth the extra care to
+    extract it here rather than let the generic `except` swallow it.
+    """
+    if isinstance(exc, urllib.error.HTTPError):
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            body = ""
+        detail = redact_text(body).strip() or (exc.reason or "")
+        return f"HTTP {exc.code}: {detail[:300]}" if detail else f"HTTP {exc.code}"
+    return redact_text(str(exc))
 
 
 def _require_fixed_port(port: int) -> int:
@@ -384,7 +417,9 @@ def _exchange_code_for_tokens(
             },
         )
     except (urllib.error.URLError, OSError, ValueError) as exc:
-        raise AuthError("token_exchange_failed", "Token exchange failed.", retryable=True) from exc
+        raise AuthError(
+            "token_exchange_failed", f"Token exchange failed: {_http_error_detail(exc)}", retryable=True
+        ) from exc
     return _token_result_from_payload(payload)
 
 

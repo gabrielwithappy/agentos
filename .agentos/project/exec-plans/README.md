@@ -3,10 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-29T11:10:07Z
+> Generated at: 2026-07-29T11:34:23Z
 
 ## Active Plans
 - older active plans omitted=0
+- `구현 계획 (실행 대기)` [AgentOS 전역 CLI화 및 프로젝트 부트스트랩 구현 계획](.agentos/project/exec-plans/active/2026-07-29-global-cli-portable-project-bootstrap.md) | progress: 계획 초안 작성, 리뷰 대기 중.
 - `완료` [Gemini 컨텍스트 주기적 재주입 훅 구현 계획](.agentos/project/exec-plans/active/2026-07-29-gemini-context-reinjection-hook.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
 - `완료` [대시보드 카드 구현 소요 시간 표기 구현 계획](.agentos/project/exec-plans/active/2026-07-29-dashboard-implementation-duration.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
 
