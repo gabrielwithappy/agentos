@@ -143,6 +143,47 @@ def test_build_authorize_url_includes_code_true_param():
 # --- browser login: success / state mismatch / browser failure ---
 
 
+def test_manual_code_input_completes_login_when_browser_never_redirects(monkeypatch):
+    """Regression: the automatic browser redirect does not always complete
+    (browser can't reach localhost, the approval page just never navigates
+    away) — this previously left the TUI/CLI stuck waiting on the local
+    server alone for up to `timeout_seconds`, matching "승인 선택 시 계속
+    스피너만 돈다". `manual_code_input` (mirroring pi's manual-paste
+    fallback) lets a pasted redirect URL complete sign-in instead."""
+    monkeypatch.setattr(auth_module, "MANUAL_CODE_GRACE_SECONDS", 0.05)
+    transport = FakeTransport()
+
+    prepared = auth_module.prepare_browser_login()
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(prepared.auth_url).query)
+    state = query["state"][0]
+    pasted_url = f"{prepared._redirect_uri}?code=pasted-code-123&state={state}"
+
+    result = auth_module.complete_browser_login(
+        prepared,
+        transport=transport,
+        timeout_seconds=5,
+        manual_code_input=lambda: pasted_url,
+    )
+
+    assert result.access_token == SENTINEL
+
+
+def test_manual_code_input_rejects_wrong_state(monkeypatch):
+    monkeypatch.setattr(auth_module, "MANUAL_CODE_GRACE_SECONDS", 0.05)
+    transport = FakeTransport()
+
+    prepared = auth_module.prepare_browser_login()
+    pasted_url = f"{prepared._redirect_uri}?code=pasted-code-123&state=not-the-real-state"
+
+    with pytest.raises(StateMismatchError):
+        auth_module.complete_browser_login(
+            prepared,
+            transport=transport,
+            timeout_seconds=5,
+            manual_code_input=lambda: pasted_url,
+        )
+
+
 def test_callback_completes_login_and_exchanges_tokens():
     transport = FakeTransport()
     result_holder: dict = {}

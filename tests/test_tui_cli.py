@@ -464,7 +464,7 @@ def test_login_autoswitches_to_codex_provider(tmp_path, monkeypatch):
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter([
+            lambda provider, **kwargs: iter([
                 {"type": "result", "payload": {
                     "provider": provider,
                     "mode": "account-login",
@@ -520,7 +520,7 @@ def test_login_success_shows_external_approval_copy_and_result(tmp_path, monkeyp
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter([
+            lambda provider, **kwargs: iter([
                 {"type": "hint", "text": "Open this login URL if the browser did not open:\nhttps://auth.openai.com/oauth/authorize?code=abc"},
                 {"type": "result", "payload": {
                     "provider": provider,
@@ -1539,7 +1539,7 @@ def test_login_autoswitch_persists_preferred_provider(tmp_path, monkeypatch):
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter([
+            lambda provider, **kwargs: iter([
                 {"type": "result", "payload": {
                     "provider": provider,
                     "mode": "account-login",
@@ -1902,7 +1902,7 @@ def test_login_command_shows_browser_url_as_clickable_link(tmp_path, monkeypatch
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter(
+            lambda provider, **kwargs: iter(
                 [
                     {
                         "type": "hint",
@@ -1948,7 +1948,7 @@ def test_login_command_claude_url_hint_uses_claude_label_not_codex(tmp_path, mon
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter(
+            lambda provider, **kwargs: iter(
                 [
                     {
                         "type": "hint",
@@ -1984,6 +1984,74 @@ def test_login_command_claude_url_hint_uses_claude_label_not_codex(tmp_path, mon
     asyncio.run(run())
 
 
+def test_login_manual_code_modal_completes_login_when_browser_never_redirects(tmp_path, monkeypatch):
+    """Regression: the browser's automatic OAuth redirect does not always
+    complete (it can't reach a locally-bound callback server, or the
+    provider's approval page just never navigates away) — this previously
+    left the TUI stuck waiting forever with no way out, matching "승인 선택
+    시 계속 스피너만 돈다". `run_auth_action`'s `manual_code_input` closure
+    (passed to `iter_login_updates`) should push `ManualLoginCodeScreen`,
+    and whatever the user submits there should reach the provider."""
+    from agentos.terminal.tui.widgets import ManualLoginCodeScreen
+
+    captured: dict = {}
+
+    def fake_iter_login_updates(provider, *, manual_code_input=None):
+        # Simulate the real auth layer: the automatic redirect never
+        # arrives, so it falls back to asking for manual input — from a
+        # background thread, exactly like `complete_browser_login` does.
+        yield {"type": "hint", "text": "Open this URL to sign in:\nhttps://claude.ai/oauth/authorize?x=1"}
+
+        result_holder: dict = {}
+
+        def call_manual_input():
+            result_holder["value"] = manual_code_input()
+
+        thread = threading.Thread(target=call_manual_input)
+        thread.start()
+        thread.join(timeout=5)
+        captured["manual_value"] = result_holder.get("value")
+
+        yield {
+            "type": "result",
+            "payload": {
+                "provider": provider,
+                "mode": "account-login",
+                "status": "authenticated" if result_holder.get("value") else "failed",
+                "authenticated": bool(result_holder.get("value")),
+                "credential_present": bool(result_holder.get("value")),
+                "persistent_credential": bool(result_holder.get("value")),
+                "message": "Claude sign-in completed." if result_holder.get("value") else "failed",
+            },
+        }
+
+    monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(llm_command, "iter_login_updates", fake_iter_login_updates)
+
+    async def run() -> None:
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "/login claude"
+            await pilot.press("enter")
+
+            for _ in range(100):
+                if isinstance(pilot.app.screen, ManualLoginCodeScreen):
+                    break
+                await pilot.pause(0.05)
+            assert isinstance(pilot.app.screen, ManualLoginCodeScreen)
+
+            input_widget = pilot.app.screen.query_one("#manual-login-input")
+            input_widget.value = "https://localhost:53692/callback?code=pasted-code&state=xyz"
+            await pilot.press("enter")
+
+            await await_transcript(pilot, "Claude login result")
+            assert captured["manual_value"] == "https://localhost:53692/callback?code=pasted-code&state=xyz"
+            assert "Claude sign-in completed" in _transcript_text(pilot)
+
+    asyncio.run(run())
+
+
 def test_login_bare_opens_provider_picker(tmp_path, monkeypatch):
     async def run() -> None:
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
@@ -2006,7 +2074,7 @@ def test_login_picker_selecting_claude_starts_claude_login(tmp_path, monkeypatch
         monkeypatch.setattr(
             llm_command,
             "iter_login_updates",
-            lambda provider: iter([
+            lambda provider, **kwargs: iter([
                 {"type": "result", "payload": {
                     "provider": provider,
                     "mode": "account-login",

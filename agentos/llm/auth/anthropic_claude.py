@@ -7,6 +7,7 @@ import urllib.error
 import urllib.parse
 from dataclasses import dataclass
 from http.server import HTTPServer
+from collections.abc import Callable
 from typing import Any
 
 from agentos.llm.auth.openai_codex import (
@@ -33,6 +34,7 @@ SCOPES = "org:create_api_key user:profile user:inference user:sessions:claude_co
 DEFAULT_CALLBACK_PORT = 53692
 CALLBACK_PATH = "/callback"
 AUTH_PROVIDER_NAME = "claude"
+MANUAL_CODE_GRACE_SECONDS = 5.0
 CREDENTIAL_TYPE = "account-login"
 _REFRESH_LOCK = threading.Lock()
 
@@ -140,12 +142,38 @@ def prepare_browser_login(
     )
 
 
+def _parse_authorization_input(value: str) -> tuple[str | None, str | None]:
+    """Parses a manually pasted authorization code or full redirect URL,
+    mirroring pi's anthropic.ts `parseAuthorizationInput`. Returns
+    `(code, state)`; `state` is `None` when the user pasted a bare code
+    (the caller falls back to the expected state in that case)."""
+    text = value.strip()
+    if not text:
+        return None, None
+
+    parsed = urllib.parse.urlparse(text)
+    if parsed.scheme and parsed.netloc:
+        query = urllib.parse.parse_qs(parsed.query)
+        return query.get("code", [None])[0], query.get("state", [None])[0]
+
+    if "#" in text:
+        code, _, state = text.partition("#")
+        return code or None, state or None
+
+    if "code=" in text:
+        query = urllib.parse.parse_qs(text)
+        return query.get("code", [None])[0], query.get("state", [None])[0]
+
+    return text, None
+
+
 def complete_browser_login(
     prepared: PreparedBrowserLogin,
     *,
     transport: HttpTransport | None = None,
     timeout_seconds: float = 300.0,
     open_browser: bool = True,
+    manual_code_input: Callable[[], str | None] | None = None,
 ) -> TokenResult:
     http = transport or UrllibHttpTransport()
     server = prepared._server
@@ -157,6 +185,38 @@ def complete_browser_login(
         if not opened:
             server.server_close()
             raise BrowserLaunchFailedError()
+
+    if manual_code_input is not None:
+        # Races a manually pasted code/URL against the local callback server
+        # (mirroring pi's Promise.race of the two) — the automatic redirect
+        # does not always complete (browser can't reach localhost, the
+        # approval page just never navigates away, ...), so this gives the
+        # user a way to finish sign-in without waiting on the server alone.
+        # Both paths report through the same `_CallbackResult`/`event`, so
+        # whichever finishes first wins.
+        def _manual_worker() -> None:
+            # Give the automatic redirect a head start so the common/fast
+            # case (it just works) never even prompts for manual input.
+            if prepared._result.event.wait(timeout=MANUAL_CODE_GRACE_SECONDS):
+                return
+            try:
+                raw = manual_code_input()
+            except Exception:
+                return
+            if prepared._result.event.is_set() or not raw:
+                return
+            code, state = _parse_authorization_input(raw)
+            if not code:
+                return
+            resolved_state = state or prepared._pkce.code_verifier
+            if resolved_state != prepared._pkce.code_verifier:
+                prepared._result.error = "state_mismatch"
+            else:
+                prepared._result.code = code
+                prepared._result.state = resolved_state
+            prepared._result.event.set()
+
+        threading.Thread(target=_manual_worker, daemon=True).start()
 
     completed = prepared._result.event.wait(timeout=timeout_seconds)
     server.server_close()

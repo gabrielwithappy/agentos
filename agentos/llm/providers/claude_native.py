@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from agentos.llm.auth import anthropic_claude as auth
@@ -70,26 +70,37 @@ class ClaudeNativeProvider:
             message="Signed in with Claude account-login.",
         )
 
-    def login(self) -> ProviderStatus:
+    def login(self, *, manual_code_input: Callable[[], str | None] | None = None) -> ProviderStatus:
         status: ProviderStatus | None = None
-        for kind, value in self._login_steps():
+        for kind, value in self._login_steps(manual_code_input=manual_code_input):
             if kind == "status":
                 status = value
         assert status is not None  # _login_steps() always yields exactly one "status"
         return status
 
-    def login_updates(self) -> Iterator[dict[str, Any]]:
+    def login_updates(
+        self, *, manual_code_input: Callable[[], str | None] | None = None
+    ) -> Iterator[dict[str, Any]]:
         """Same login lifecycle as `login()`, but streams a `hint` for the
         browser sign-in URL as soon as it is known — shown regardless of
         whether auto-launch succeeds, since the caller has no way to know
-        that in advance."""
-        for kind, value in self._login_steps():
+        that in advance.
+
+        `manual_code_input`, if given, is raced against the local callback
+        server (mirroring pi's anthropic.ts): the automatic browser redirect
+        does not always complete (e.g. the browser can't reach localhost, or
+        the approval page just never navigates away), so the caller can
+        offer the user a way to paste the final redirect URL or bare
+        authorization code instead of waiting on the server alone."""
+        for kind, value in self._login_steps(manual_code_input=manual_code_input):
             if kind == "hint":
                 yield {"type": "hint", "text": value}
             else:
                 yield {"type": "result", "payload": value.to_dict()}
 
-    def _login_steps(self) -> Iterator[tuple[str, Any]]:
+    def _login_steps(
+        self, *, manual_code_input: Callable[[], str | None] | None = None
+    ) -> Iterator[tuple[str, Any]]:
         """Shared implementation for `login()` and `login_updates()`. Yields
         `("hint", text)` tuples as progress becomes known, and exactly one
         `("status", ProviderStatus)` as the final item.
@@ -106,7 +117,7 @@ class ClaudeNativeProvider:
             return
         yield ("hint", f"Open this URL to sign in:\n{prepared.auth_url}")
         try:
-            tokens = auth.complete_browser_login(prepared)
+            tokens = auth.complete_browser_login(prepared, manual_code_input=manual_code_input)
         except auth.AuthError as exc:
             yield ("status", self._login_failed_status(exc))
             return

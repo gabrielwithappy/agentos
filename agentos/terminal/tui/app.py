@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 
 # Textual's Kitty keyboard protocol reports associated text in a way that
 # conflicts with Korean IME composition in several terminal emulators. Keep
@@ -47,7 +48,7 @@ TOOLS_ANNOUNCEMENT = (
 from agentos.terminal.tui.commands import command_palette_text, find_command
 from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
 from agentos.terminal.tui.state import TuiStatus, get_git_branch
-from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, ConfirmToolScreen, LoginProviderScreen, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
+from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, ConfirmToolScreen, LoginProviderScreen, ManualLoginCodeScreen, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
 
 # Keyboard shortcut reference table shown by /hotkeys
 _HOTKEYS_TABLE = """\
@@ -700,9 +701,30 @@ class AgentOSTui(App[None]):
                 return f"{prefix}Open this {label} login URL in your browser:\n\n[{url}]({url})"
             return text_content
 
+        def manual_code_input() -> str | None:
+            # Unlike `confirm_tool_call` below, this is invoked from a plain
+            # `threading.Thread` the auth layer spawns internally (not this
+            # method's own `@work(thread=True)` worker) — `push_screen_wait`
+            # requires an active Textual *worker* context to await from, which
+            # that thread doesn't have, so it's pushed with a dismiss callback
+            # instead and a plain `threading.Event` blocks this thread until
+            # the user answers.
+            done = threading.Event()
+            answer: dict[str, str | None] = {}
+
+            def _on_dismiss(value: str | None) -> None:
+                answer["value"] = value
+                done.set()
+
+            self.call_from_thread(
+                self.push_screen, ManualLoginCodeScreen(provider.capitalize()), _on_dismiss
+            )
+            done.wait()
+            return answer.get("value")
+
         if action == "login":
             payload: dict[str, object] | None = None
-            for update in llm_command.iter_login_updates(provider):
+            for update in llm_command.iter_login_updates(provider, manual_code_input=manual_code_input):
                 if update.get("type") == "hint":
                     self.call_from_thread(self._clear_loading_message)
                     self.call_from_thread(add_system_markdown_message, format_login_hint(str(update.get("text", ""))))

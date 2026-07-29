@@ -113,7 +113,7 @@ def test_login_command_streams_hints_to_stderr_and_keeps_json_stdout_clean(tmp_p
     monkeypatch.setattr(
         llm_command,
         "iter_login_updates",
-        lambda provider: iter(
+        lambda provider, **kwargs: iter(
             [
                 {"type": "hint", "text": "Open this URL to sign in:\nhttps://auth.openai.com/oauth/authorize?x=1"},
                 {

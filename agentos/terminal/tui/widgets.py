@@ -216,6 +216,63 @@ class LoginProviderScreen(ModalScreen[str]):
             event.stop()
 
 
+class ManualLoginCodeScreen(ModalScreen[str | None]):
+    """Fallback prompt for when the browser's automatic OAuth redirect
+    doesn't complete (it can't always reach a locally-bound callback
+    server, or the provider's approval page just never navigates away) —
+    lets the user paste the final redirect URL or bare authorization code
+    instead of waiting on the local server alone. Dismisses with `None` on
+    Escape/cancel, which the caller treats as "keep waiting on the browser"."""
+
+    DEFAULT_CSS = """
+    ManualLoginCodeScreen {
+        align: center middle;
+    }
+    #manual-login-container {
+        width: 76;
+        max-width: 90%;
+        height: auto;
+        border: solid $text-primary;
+        background: $surface;
+        padding: 1 2;
+    }
+    #manual-login-title {
+        width: 100%;
+        margin-bottom: 1;
+        text-style: bold;
+    }
+    #manual-login-input {
+        margin-bottom: 1;
+        border: round $accent-darken-2;
+    }
+    """
+
+    def __init__(self, provider_label: str) -> None:
+        super().__init__()
+        self._provider_label = provider_label
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="manual-login-container"):
+            yield Label(
+                f"Still waiting for the browser to finish {self._provider_label} sign-in.\n"
+                "Paste the authorization code or the final redirect URL here (Enter to submit, Esc to keep waiting):",
+                id="manual-login-title",
+            )
+            yield Input(placeholder="code or redirect URL", id="manual-login-input")
+
+    def on_mount(self) -> None:
+        self.query_one("#manual-login-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value or None)
+        event.stop()
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+            event.stop()
+
+
 class ConfirmToolScreen(ModalScreen[bool]):
     """Approval prompt for an irreversible tool call.
 
