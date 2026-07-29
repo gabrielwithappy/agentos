@@ -59,6 +59,13 @@ class TokenResult:
 
 def build_authorize_url(*, authorize_url: str, client_id: str, redirect_uri: str, state: str, pkce: PkceCodes) -> str:
     params = {
+        # Anthropic's authorize endpoint otherwise treats this as an in-page
+        # "connect this app" approval that never redirects anywhere — the
+        # browser stays on the approval page after clicking Allow instead of
+        # navigating to redirect_uri, which is exactly the "계속 스피닝" symptom.
+        # `code=true` (per pi's anthropic.ts) is what makes it perform the
+        # actual authorization-code redirect a CLI loopback flow needs.
+        "code": "true",
         "response_type": "code",
         "client_id": client_id,
         "redirect_uri": redirect_uri,

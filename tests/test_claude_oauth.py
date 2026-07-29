@@ -106,6 +106,24 @@ def test_build_authorize_url_includes_pkce_state_and_scopes():
     assert "scope=" in url
 
 
+def test_build_authorize_url_includes_code_true_param():
+    """Regression: without `code=true`, Anthropic's authorize endpoint treats
+    the request as an in-page "connect this app" approval that never
+    redirects anywhere — after clicking Allow, the browser just keeps
+    spinning on claude.ai instead of navigating to redirect_uri. `code=true`
+    (per pi's anthropic.ts) is what makes it perform the actual
+    authorization-code redirect a CLI loopback flow needs."""
+    url = build_authorize_url(
+        authorize_url="https://claude.ai/oauth/authorize",
+        client_id="client-123",
+        redirect_uri="http://localhost:53692/callback",
+        state=generate_state(),
+        pkce=generate_pkce(),
+    )
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+    assert query["code"] == ["true"]
+
+
 # --- browser login: success / state mismatch / browser failure ---
 
 
