@@ -7,6 +7,7 @@ from rich.cells import cell_len
 from rich.style import Style
 
 from agentos.terminal.tui.app import AgentOSTui
+from agentos.terminal.tui.renderers import render_event
 from agentos.terminal.tui.state import TuiStatus
 from agentos.terminal.tui.widgets import ChatMessage, StatusFooter, Transcript
 
@@ -230,6 +231,97 @@ def test_role_visual_contract_exports_narrow_and_wide_svg_evidence(tmp_path, mon
     asyncio.run(run())
 
 
+def test_tool_activity_exports_collapsed_and_expanded_svg_evidence(tmp_path, monkeypatch):
+    """Tool detail visibility is proven in actual Textual renders, not just text helpers."""
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+        evidence_dir = Path.cwd() / ".agents/traces/visual/2026-07-30-tui-tool-log-density"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        call = render_event(
+            {
+                "type": "tool_call",
+                "metadata": {"name": "read", "arguments": {"path": "AGENTOS_SENTINEL_SECRET.txt"}},
+            }
+        )
+        result = render_event(
+            {
+                "type": "tool_result",
+                "metadata": {
+                    "name": "read",
+                    "summary": (
+                        "SENTINEL_SECRET raw provider stderr: RAW_PROVIDER_STDERR\n"
+                        "raw environment: RAW_ENVIRONMENT"
+                    ),
+                },
+            }
+        )
+        assert "SENTINEL_SECRET" not in call + result
+        assert "RAW_PROVIDER_STDERR" not in call + result
+        assert "RAW_ENVIRONMENT" not in call + result
+
+        for size, label in (((80, 24), "80x24"), ((140, 40), "140x40")):
+            app = AgentOSTui(provider="mock", create_session_on_start=False)
+            async with app.run_test(size=size) as pilot:
+                transcript = pilot.app.query_one("#transcript", Transcript)
+                tool = transcript.add_message("tool", f"{call}\n{result}")
+                tool.set_tool_activity(name="read", summary=result, completed=True)
+                await pilot.pause()
+                collapsed = pilot.app.export_screenshot(title=f"AgentOS collapsed tool {label}")
+                (evidence_dir / f"collapsed-{label}.svg").write_text(collapsed, encoding="utf-8")
+                assert "Tool&#160;·&#160;read&#160;·&#160;complete" in collapsed
+                assert "Tool&#160;call" not in collapsed
+                for forbidden in ("SENTINEL_SECRET", "RAW_PROVIDER_STDERR", "RAW_ENVIRONMENT"):
+                    assert forbidden not in collapsed
+                assert transcript.region.x + transcript.region.width <= pilot.app.size.width
+
+                await pilot.press("ctrl+o")
+                expanded = pilot.app.export_screenshot(title=f"AgentOS expanded tool {label}")
+                (evidence_dir / f"expanded-{label}.svg").write_text(expanded, encoding="utf-8")
+                assert "Tool&#160;call" in expanded
+                for forbidden in ("SENTINEL_SECRET", "RAW_PROVIDER_STDERR", "RAW_ENVIRONMENT"):
+                    assert forbidden not in expanded
+                assert transcript.region.x + transcript.region.width <= pilot.app.size.width
+
+                for theme in ("textual-dark", "textual-light"):
+                    pilot.app.theme = theme
+                    await pilot.pause()
+                    themed_expanded = pilot.app.export_screenshot(title=f"AgentOS {theme} expanded tool {label}")
+                    assert "Tool&#160;·&#160;read&#160;·&#160;complete" in themed_expanded
+                    assert "Tool&#160;call" in themed_expanded
+                    assert "│" in themed_expanded or "&#9474;" in themed_expanded
+                    assert transcript.region.x + transcript.region.width <= pilot.app.size.width
+                    composer = pilot.app.query_one("#composer")
+                    assert composer.region.x + composer.region.width <= pilot.app.size.width
+                    await pilot.press("ctrl+o")
+                    themed_collapsed = pilot.app.export_screenshot(title=f"AgentOS {theme} collapsed tool {label}")
+                    assert "Tool&#160;·&#160;read&#160;·&#160;complete" in themed_collapsed
+                    assert "Tool&#160;call" not in themed_collapsed
+                    assert "│" in themed_collapsed or "&#9474;" in themed_collapsed
+                    await pilot.press("ctrl+o")
+
+        no_color_app = AgentOSTui(provider="mock", create_session_on_start=False)
+        monkeypatch.setenv("NO_COLOR", "1")
+        async with no_color_app.run_test(size=(80, 24)) as pilot:
+            transcript = pilot.app.query_one("#transcript", Transcript)
+            tool = transcript.add_message("tool", f"{call}\n{result}")
+            tool.set_tool_activity(name="read", summary=result, completed=True)
+            await pilot.pause()
+            collapsed_no_color = pilot.app.export_screenshot(title="AgentOS no-color collapsed tool")
+            assert "Tool&#160;·&#160;read&#160;·&#160;complete" in collapsed_no_color
+            assert "Tool&#160;call" not in collapsed_no_color
+            assert "│" in collapsed_no_color or "&#9474;" in collapsed_no_color
+            assert transcript.region.x + transcript.region.width <= pilot.app.size.width
+            composer = pilot.app.query_one("#composer")
+            assert composer.region.x + composer.region.width <= pilot.app.size.width
+            await pilot.press("ctrl+o")
+            expanded_no_color = pilot.app.export_screenshot(title="AgentOS no-color expanded tool")
+            assert "Tool&#160;call" in expanded_no_color
+            assert "│" in expanded_no_color or "&#9474;" in expanded_no_color
+
+    asyncio.run(run())
+
+
 def test_user_background_block_preserves_no_color_role_contract(tmp_path, monkeypatch):
     """NO_COLOR still leaves headers and left boundaries as the role signal."""
 
@@ -293,7 +385,7 @@ def test_markdown_styles_come_from_theme_and_meet_contrast(tmp_path, monkeypatch
     asyncio.run(run())
 
 
-def test_themed_markdown_applies_styles_when_rendered():
+def test_themed_markdown_applies_styles_when_rendered(monkeypatch):
     """Pins the wrapper mechanism itself: `Markdown` has no `theme` argument,
     so the styles have to reach the Console via `use_theme()`."""
     import io
@@ -302,6 +394,10 @@ def test_themed_markdown_applies_styles_when_rendered():
 
     from agentos.terminal.tui.widgets import ThemedMarkdown
 
+    # This asserts colour output explicitly, so it must be independent of a
+    # caller's accessibility preference (`NO_COLOR=1`). NO_COLOR rendering is
+    # exercised by dedicated terminal-contract tests above.
+    monkeypatch.delenv("NO_COLOR", raising=False)
     console = Console(file=io.StringIO(), force_terminal=True, color_system="truecolor", width=40)
     console.print(ThemedMarkdown("### Heading", {"markdown.h3": "#00ff00"}, "monokai"))
     output = console.file.getvalue()
@@ -320,6 +416,7 @@ def test_fenced_code_block_theme_follows_light_and_dark(tmp_path, monkeypatch):
     from agentos.terminal.tui.widgets import ThemedMarkdown
 
     async def run() -> None:
+        monkeypatch.delenv("NO_COLOR", raising=False)
         monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
         app = AgentOSTui(provider="mock", create_session_on_start=False)
         async with app.run_test() as pilot:
