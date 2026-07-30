@@ -19,10 +19,14 @@ from agentos.conversation.types import (
 from agentos.llm.prompt import prepend_response_style
 from agentos.llm.session import stream_context as session_stream_context
 from agentos.llm.tools.registry import ToolName, execute_tool, get_tool_schemas, requires_confirmation
+from agentos.llm.tools.types import ToolExecutionResult
 from agentos.llm.types import InvocationMessage, InvocationRequest, LLMEvent
 from agentos.terminal.events import new_turn_id
+from agentos.terminal.logging_setup import get_logger
 
 TERMINAL_EVENT_TYPES = {"done", "error"}
+
+_logger = get_logger("runtime")
 
 DEFAULT_ACCOUNT = "default"
 """AgentOS does not yet support multiple simultaneous accounts per
@@ -305,7 +309,27 @@ class ConversationRuntime:
                     )
                     break
 
-            result = execute_tool(tool_name, tool_arguments, cwd=resolved_cwd, allowed_read_paths=allowed_read_paths, blocked_read_roots=blocked_read_roots)
+            try:
+                result = execute_tool(
+                    tool_name,
+                    tool_arguments,
+                    cwd=resolved_cwd,
+                    allowed_read_paths=allowed_read_paths,
+                    blocked_read_roots=blocked_read_roots,
+                )
+            except Exception:
+                # A tool executor raising (e.g. a provider sending an
+                # integer-typed argument as a string) must never crash the
+                # whole turn/worker — surface it as a normal tool-error
+                # result so the model and user both see it, and log the
+                # traceback so it's diagnosable after the fact.
+                _logger.exception(
+                    "Tool execution raised: name=%s arguments=%r", tool_name, tool_arguments
+                )
+                result = ToolExecutionResult(
+                    content=f"Error: tool '{tool_name}' failed unexpectedly. See agentos.log for details.",
+                    is_error=True,
+                )
             tool_calls_executed += 1
             candidate_state = self._append_message(
                 candidate_state,

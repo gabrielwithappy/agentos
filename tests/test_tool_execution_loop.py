@@ -68,6 +68,23 @@ def test_execute_read_missing_file_returns_error(tmp_path):
     assert "not found" in result.content.lower()
 
 
+def test_execute_read_accepts_string_limit_and_offset(tmp_path):
+    (tmp_path / "lines.txt").write_text("l1\nl2\nl3\nl4\nl5\n", encoding="utf-8")
+    # Provider tool-call args are occasionally serialized as strings for
+    # integer schema fields (e.g. {"limit": "2"}); execute_read must coerce
+    # rather than raise TypeError on `start + limit`.
+    result = execute_read("lines.txt", offset="1", limit="2", cwd=tmp_path)
+    assert result.is_error is False
+    assert result.content == "l2\nl3\n"
+
+
+def test_execute_read_accepts_string_limit_without_offset(tmp_path):
+    (tmp_path / "lines.txt").write_text("l1\nl2\nl3\n", encoding="utf-8")
+    result = execute_read("lines.txt", limit="1", cwd=tmp_path)
+    assert result.is_error is False
+    assert result.content == "l1\n"
+
+
 def test_execute_read_allows_exact_global_skill_file_only(tmp_path):
     cwd, skills = tmp_path / "cwd", tmp_path / "skills"
     cwd.mkdir()

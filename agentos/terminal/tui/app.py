@@ -28,6 +28,8 @@ from agentos.terminal.events import CliEvent, new_turn_id, wrap_provider_event
 from agentos.terminal.hooks import HookError, apply_input_hooks
 from agentos.llm.tools.approval import approval_prompt
 from agentos.llm.tools.registry import ALL_TOOL_NAMES
+from agentos.llm.redaction import sanitize
+from agentos.terminal.logging_setup import configure_logging, get_logger
 from agentos.terminal.paths import initialize_state, write_preferred_provider
 from agentos.terminal.skills import global_skill_read_paths, global_skills_dir
 from agentos.terminal.sessions import (
@@ -45,8 +47,10 @@ TOOLS_ANNOUNCEMENT = (
     "AgentOS가 파일을 찾고·읽고·고치고(write/edit) 명령을 실행할(bash) 수 있습니다. "
     "되돌리기 어려운 도구는 실행 전마다 승인을 요청합니다."
 )
+
+_logger = get_logger("tui.app")
 from agentos.terminal.tui.commands import command_palette_text, find_command
-from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree
+from agentos.terminal.tui.renderers import format_tool_summary, render_event, render_session_summary, render_turn_tree, truncate
 from agentos.terminal.tui.state import TuiStatus, get_git_branch
 from agentos.terminal.tui.widgets import ChatMessage, CommandPaletteScreen, Composer, ConfirmToolScreen, LoginProviderScreen, ManualLoginCodeScreen, SessionPicker, SpinnerMessage, StatusFooter, ThemeScreen, Transcript
 
@@ -67,6 +71,7 @@ Keyboard Shortcuts
   c                 Copy focused message to clipboard
   f                 Fork a new branch from focused message
   Ctrl+B            Open menu
+  Ctrl+O            Open/close tool activity details
   Esc               Cancel turn (while waiting) / close overlay
   Ctrl+C / EOF      Exit
 ──────────────────────────────────────────────────
@@ -121,7 +126,7 @@ def _render_streaming_markdown(text: str) -> str:
 
 
 class AgentOSTui(App[None]):
-    BINDINGS = [("escape", "cancel", "Cancel"), ("ctrl+b", "open_menu", "Menu")]
+    BINDINGS = [("escape", "cancel", "Cancel"), ("ctrl+b", "open_menu", "Menu"), ("ctrl+o", "toggle_tool_details", "Tool details")]
 
     CSS = """
     Screen {
@@ -134,6 +139,7 @@ class AgentOSTui(App[None]):
         self.provider = provider
         self.yolo = yolo
         initialize_state()
+        configure_logging()
         self.session_id = create_session(provider=provider, mode="tui") if create_session_on_start else ""
         # Cumulative usage counters — owned by app instance so TuiStatus.initial() re-creation never resets them
         self.total_input_chars: int = 0
@@ -155,6 +161,7 @@ class AgentOSTui(App[None]):
         self._last_turn_id: str | None = None
         self._indicator_style: str = "ascii"  # ascii | unicode | emoji | kaomoji
         self._pending_parent_turn_id: str | None = None  # set by fork action
+        self._tool_details_expanded = False
 
     def _ensure_runtime(self, session_id: str, provider: str) -> ConversationRuntime:
         """Returns the `ConversationRuntime` for `session_id`, creating or
@@ -487,7 +494,7 @@ class AgentOSTui(App[None]):
         return render_turn_tree(events)
 
     def _record_turn_results(self, tool_calls: list[dict[str, object]], usage: dict[str, int] | None) -> None:
-        self.last_tool_calls = tool_calls
+        self.last_tool_calls = [sanitize(call) for call in tool_calls]
         if usage:
             self.last_usage = usage
             # Accumulate cumulative usage — never reset between turns
@@ -793,11 +800,20 @@ class AgentOSTui(App[None]):
         def add_reasoning_message(text_content: str) -> None:
             self.query_one("#transcript", Transcript).add_message("reasoning", text_content, turn_id=turn_id)
 
-        def add_tool_message(text_content: str) -> ChatMessage:
-            return self.query_one("#transcript", Transcript).add_message("tool", text_content, turn_id=turn_id)
+        def add_tool_message(text_content: str, name: str) -> ChatMessage:
+            message = self.query_one("#transcript", Transcript).add_message("tool", text_content, turn_id=turn_id)
+            message.set_tool_activity(name=name, details_expanded=self._tool_details_expanded)
+            return message
 
-        def update_tool_message(message: ChatMessage, text_content: str) -> None:
+        def update_tool_message(message: ChatMessage, text_content: str, summary: str, failed: bool) -> None:
             self.query_one("#transcript", Transcript).update_message(message, text_content)
+            message.set_tool_activity(
+                name=message.tool_name,
+                summary=summary,
+                completed=True,
+                failed=failed,
+                details_expanded=self._tool_details_expanded,
+            )
 
         def add_system_message(text_content: str) -> None:
             self.query_one("#transcript", Transcript).add_message("system", text_content)
@@ -877,10 +893,14 @@ class AgentOSTui(App[None]):
                     metadata = payload.get("metadata") or {}
                     if event_type == "tool_call":
                         tool_calls.append(
-                            {"name": metadata.get("name", "tool"), "arguments": metadata.get("arguments"), "result": ""}
+                            {
+                                "name": sanitize(metadata.get("name", "tool")),
+                                "arguments": sanitize(metadata.get("arguments")),
+                                "result": "",
+                            }
                         )
                     elif event_type == "tool_result" and tool_calls:
-                        tool_calls[-1]["result"] = metadata.get("summary", "")
+                        tool_calls[-1]["result"] = sanitize(metadata.get("summary", ""))
                     rendered = render_event(payload)
                     if rendered:
                         if loading_active and event_type in ("reasoning", "tool_call"):
@@ -893,15 +913,39 @@ class AgentOSTui(App[None]):
                             # (below) merges into this same message instead of
                             # appending a second block, so a completed round
                             # reads as one entry, not two.
-                            current_tool_message = self.call_from_thread(add_tool_message, rendered)
+                            current_tool_message = self.call_from_thread(
+                                add_tool_message, rendered, str(sanitize(metadata.get("name", "tool")))
+                            )
                         elif current_tool_message is not None:
                             merged_text = f"{current_tool_message.text}\n{rendered}"
-                            self.call_from_thread(update_tool_message, current_tool_message, merged_text)
+                            self.call_from_thread(
+                                update_tool_message,
+                                current_tool_message,
+                                merged_text,
+                                truncate(rendered),
+                                bool(metadata.get("is_error", False)),
+                            )
                             current_tool_message = None
                         else:
                             # Defensive: a tool_result with no preceding tool_call
                             # in this stream still needs to be shown somewhere.
-                            self.call_from_thread(add_tool_message, rendered)
+                            tool_calls.append(
+                                {
+                                    "name": sanitize(metadata.get("name", "tool")),
+                                    "arguments": sanitize(metadata.get("arguments")),
+                                    "result": sanitize(metadata.get("summary", "")),
+                                }
+                            )
+                            result_message = self.call_from_thread(
+                                add_tool_message, rendered, str(sanitize(metadata.get("name", "tool")))
+                            )
+                            self.call_from_thread(
+                                update_tool_message,
+                                result_message,
+                                rendered,
+                                truncate(rendered),
+                                bool(metadata.get("is_error", False)),
+                            )
                     continue
                 if event_type == "legacy_tool_result_unavailable":
                     rendered = render_event(payload)
@@ -980,6 +1024,34 @@ class AgentOSTui(App[None]):
                 assistant_message = self.call_from_thread(add_assistant_message)
             self.call_from_thread(assistant_message.set_presentation_status, "failed")
             self.call_from_thread(update_assistant, response_text)
+            self.call_from_thread(self._set_last_turn_id, turn_id)
+            self.call_from_thread(
+                self._update_status,
+                self._status_with_totals(provider=provider, session_id=session_id, last_turn="error"),
+            )
+        except Exception:
+            # Last-resort guard: any unexpected exception here would otherwise
+            # propagate out of the Textual worker as a raw traceback with no
+            # record once the terminal clears. Log it for post-mortem, and
+            # degrade to a visible in-app error instead of crashing the turn.
+            _logger.exception(
+                "Unhandled exception in run_stream: provider=%s session_id=%s turn_id=%s",
+                provider,
+                session_id,
+                turn_id,
+            )
+            try:
+                turn_stream.close()
+            except Exception:
+                pass
+            if loading_active:
+                self.call_from_thread(self._clear_loading_message)
+            if assistant_message is not None:
+                self.call_from_thread(assistant_message.set_presentation_status, "failed")
+            self.call_from_thread(
+                add_system_message,
+                "[내부 오류가 발생했습니다. 자세한 내용은 ~/.agentos/logs/agentos.log를 확인하세요.]",
+            )
             self.call_from_thread(self._set_last_turn_id, turn_id)
             self.call_from_thread(
                 self._update_status,
@@ -1099,6 +1171,20 @@ class AgentOSTui(App[None]):
             return
         self.query_one("#composer", Composer).focus()
 
+    def action_toggle_tool_details(self) -> None:
+        """Toggle sanitized call/result details for every transcript tool row."""
+        self._tool_details_expanded = not self._tool_details_expanded
+        transcript = self.query_one("#transcript", Transcript)
+        for message in transcript._messages:
+            if message.role == "tool":
+                message.set_tool_details_expanded(self._tool_details_expanded)
+        self.notify(
+            "Tool activity details shown." if self._tool_details_expanded else "Tool activity details collapsed.",
+            severity="information",
+            timeout=2,
+        )
+        transcript._scroll_to_end()
+
     def _resume_session(self, session_id: str) -> None:
         transcript = self.query_one("#transcript", Transcript)
         try:
@@ -1176,6 +1262,7 @@ def run_plain_tui_transcript(provider: str = "mock", yolo: bool = False) -> int:
     # exact-substring assertions against the plain text.
     console = Console(highlight=False)
     initialize_state()
+    configure_logging()
     session_id = create_session(provider=provider, mode="tui")
     status = TuiStatus.initial(provider=provider, session_id=session_id)
     console.print("AgentOS")

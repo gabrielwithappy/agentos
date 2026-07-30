@@ -402,6 +402,45 @@ def test_submit_turn_tool_call_loop_executes_read_and_reinvokes(tmp_path, monkey
     assert messages[2].text == "final answer"
 
 
+def test_submit_turn_tool_execution_exception_is_caught_and_reported_as_tool_error(tmp_path, monkeypatch):
+    # Regression: a provider sending a string for an integer-typed argument
+    # (e.g. {"limit": "60"}) used to raise TypeError out of execute_tool and
+    # crash the whole turn/worker uncaught. submit_turn must catch it, log
+    # it, and continue the turn with a normal tool-error result.
+    state = _empty_state()
+    runtime = ConversationRuntime(state, provider="mock", model="mock-model")
+    (tmp_path / "AGENTS.md").write_text("hello from agents md", encoding="utf-8")
+
+    call_count = {"n": 0}
+
+    def fake_stream_context(request, provider="mock"):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            yield LLMEvent(type="start", provider="mock", mode="mock")
+            yield LLMEvent(
+                type="tool_call",
+                provider="mock",
+                mode="mock",
+                metadata={"name": "read", "arguments": {"path": "AGENTS.md", "limit": "not-a-number"}},
+            )
+            return
+        assert any(m.role == "tool" for m in request.messages)
+        yield LLMEvent(type="start", provider="mock", mode="mock")
+        yield LLMEvent(type="message_delta", provider="mock", mode="mock", text="final answer")
+        yield LLMEvent(type="done", provider="mock", mode="mock")
+
+    monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+
+    events = list(runtime.submit_turn("read AGENTS.md", cwd=tmp_path, tool_names=["read"]))
+
+    assert call_count["n"] == 2
+    branch = runtime.state.active_branch()
+    messages = runtime.state.branch_messages(branch.branch_id)
+    tool_message = next(m for m in messages if m.role == "tool")
+    assert "failed unexpectedly" in tool_message.text
+    assert messages[-1].text == "final answer"
+
+
 def test_submit_turn_executes_tool_call_even_when_same_stream_also_yields_done(tmp_path, monkeypatch):
     # Regression: Codex's native transport emits `response.completed` (->
     # `done`) as the stream terminator unconditionally, even for a response

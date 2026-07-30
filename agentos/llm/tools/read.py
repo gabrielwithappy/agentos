@@ -82,9 +82,12 @@ def execute_read(
         return ToolExecutionResult(content=f"Error: could not decode {path}: {exc}", is_error=True)
 
     if offset is not None or limit is not None:
+        # Providers occasionally serialize integer-typed tool arguments as
+        # strings (e.g. `{"limit": "60"}`); coerce defensively so `start +
+        # limit` below never raises TypeError on a str operand.
         lines = content.splitlines(keepends=True)
-        start = offset or 0
-        end = start + limit if limit is not None else None
+        start = int(offset) if offset is not None else 0
+        end = start + int(limit) if limit is not None else None
         content = "".join(lines[start:end])
 
     return _sanitize(content, resolved)
