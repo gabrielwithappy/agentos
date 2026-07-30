@@ -138,8 +138,10 @@ def _assert_installed_tui(command: str, cwd: Path) -> None:
         assert code == 0, transcript
         assert "AgentOS" in transcript
         assert "Type a message or / for commands" in transcript
-        for label in ("cwd", "provider", "model", "session", "hooks", "mode", "last turn"):
-            assert label in transcript
+        assert (
+            all(label in transcript for label in ("pm:", "sid:", "turn:", "in:", "out:"))
+            or all(label in transcript for label in ("cwd", "provider", "model", "session", "hooks", "mode", "last turn"))
+        )
         assert "/status" in transcript
         assert "/session resume" in transcript
         assert "Session closed." in transcript
@@ -164,7 +166,7 @@ async def main():
         transcript = pilot.app.query_one("#transcript")
         assert any("AgentOS" in message.text for message in transcript._messages)
         status = str(pilot.app.query_one("#status").render())
-        for label in ("cwd", "provider", "model", "session", "hooks", "mode", "last turn"):
+        for label in ("pm:", "sid:", "turn:", "in:", "out:"):
             assert label in status
         composer = pilot.app.query_one("#composer")
         composer.value = "/help"

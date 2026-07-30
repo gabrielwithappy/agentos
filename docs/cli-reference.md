@@ -8,7 +8,7 @@ The CLI stores user state under `AGENTOS_HOME` or `~/.agentos`.
 ```bash
 agentos [--version] [--help]
 agentos run --once "Prompt" [--provider mock|codex|codex-cli|claude] [--json]  # sends one message and exits — stateless, no continuing session
-agentos setup [--home PATH]
+agentos setup [--home PATH] [--path PROJECT_DIRECTORY]
 agentos skill install SKILL_DIRECTORY
 agentos skill status [--json]
 agentos project init [--path PATH] [--json]
@@ -23,6 +23,7 @@ agentos hook list
 agentos hook enable NAME
 agentos hook disable NAME
 agentos hook config show
+agentos hook bridge {codex|claude-code} {pre-bash|pre-write|post-bash|stop}
 agentos llm status|login|logout --provider mock|codex|codex-cli|claude [--json]
 agentos harness --project-root PATH [engine args...]
 python -m agentos.runtime.bench --prompt "Prompt" [--provider mock|codex] [--format json] [--assert-warm-faster]

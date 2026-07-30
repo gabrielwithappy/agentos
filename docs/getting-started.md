@@ -9,18 +9,30 @@ AgentOS 저장소에 오신 것을 환영합니다!
 AgentOS 환경을 셋업하려면 다음 명령어들을 순서대로 실행하세요.
 
 ```bash
-uv run agentos setup
-uv run agentos doctor
-uv run agentos run --once "hello from AgentOS"
-uv run agentos hook list
-bash scripts/verify-public-test-suite.sh
+uv tool install agentos
+agentos --help
+cd /path/to/your-project
+agentos setup
 ```
 
-- `uv run agentos setup`: `AGENTOS_HOME` 또는 `~/.agentos` 아래에 CLI 사용자 상태와 기본 카탈로그 스킬을 설치합니다.
-- `uv run agentos doctor`: state manifest와 Python 런타임을 점검합니다.
-- `uv run agentos run --once "..."`: 자동화 가능한 단발 turn을 실행합니다. JSONL이 필요하면 `--json`을 붙입니다.
-- `uv run agentos hook list`: 활성 built-in hook 정책을 보여 줍니다.
-- `verify-public-test-suite.sh`: 현재 시스템 환경이 공개 배포 및 실행에 적합한지 테스트합니다.
+개발 checkout에서 검증할 때만 `uv tool install --force .` 또는 `uv run agentos setup`을 사용합니다. `agentos`가 PATH에서 발견되지 않으면 `uv tool update-shell`을 실행하고 새 shell에서 `agentos --help`를 다시 실행하세요.
+
+`setup`은 현재 디렉터리(또는 `agentos setup --path <project-dir>`)에 기본 `AGENTS.md`, Codex `.codex/hooks.json`, Claude Code `.claude/settings.json`을 만듭니다. 생성된 hook은 project-local script를 실행하지 않고 package-owned `agentos hook bridge ...`만 호출합니다. Gemini/Antigravity plugin은 아직 설정하지 않습니다.
+
+기존 `AGENTS.md`와 vendor 설정은 절대 덮어쓰거나 병합하지 않습니다. `CREATED`는 새 파일, `SKIP`은 보존한 기존 파일을 뜻합니다. 최종 `PASS agentos-setup` 줄의 `enabled`는 이번 실행에서 연결한 vendor, `skipped_vendors`는 보존해서 연결하지 않은 vendor를 나타냅니다. symlink 오류가 나면 `ls -ld <path>`로 대상을 확인하고 본인이 소유한 일반 파일 또는 디렉터리로 교체한 뒤 다시 실행하세요.
+
+```bash
+agentos doctor
+agentos run --once "hello from AgentOS"
+agentos hook list
+```
+
+- `agentos setup`: `AGENTOS_HOME` 또는 `~/.agentos` 아래에 CLI 사용자 상태와 기본 카탈로그 스킬을 설치하고, 새 프로젝트에는 안전한 package-owned vendor bridge 설정을 초기화합니다.
+- `agentos doctor`: state manifest와 Python 런타임을 점검합니다.
+- `agentos run --once "..."`: 자동화 가능한 단발 turn을 실행합니다. JSONL이 필요하면 `--json`을 붙입니다.
+- `agentos hook list`: 활성 built-in hook 정책을 보여 줍니다.
+
+checkout 개발 검증은 source repository에서 `bash scripts/verify-public-test-suite.sh`를 실행합니다. 이 명령과 `uv run ...`은 checkout 전용이며, 전역 설치 사용자는 위의 bare `agentos` 명령을 사용합니다.
 
 터미널에 `PASS agentos-public-suite`가 출력되면 설치와 기본 검증이 성공한 것입니다.
 (만약 검사가 실패한다면, 출력된 오류 조건과 로그를 확인하고 조치한 뒤 같은 스크립트를 다시 실행하세요.)
