@@ -10,6 +10,11 @@ _SENSITIVE_PATTERNS = (
     re.compile(r"(?i)(bearer\s+)[^\s,;]+"),
     re.compile(r"(?i)(api[_-]?key\s*[:=]\s*)[^\s,;]+"),
     re.compile(r"(?i)(token\s*[:=]\s*)[^\s,;]+"),
+    # Provider process diagnostics and raw environment dumps are never a
+    # user-facing tool-result surface. Preserve a short label for recovery
+    # context while withholding the unbounded diagnostic value.
+    re.compile(r"(?i)(raw provider stderr\s*[:=]\s*)[^\n]+"),
+    re.compile(r"(?i)(raw environment\s*[:=]\s*)[^\n]+"),
 )
 
 
@@ -39,5 +44,5 @@ def sanitize(value: Any) -> Any:
     if isinstance(value, tuple):
         return tuple(sanitize(item) for item in value)
     if isinstance(value, dict):
-        return {str(key): sanitize(item) for key, item in value.items()}
+        return {redact_text(str(key)): sanitize(item) for key, item in value.items()}
     return value

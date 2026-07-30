@@ -913,7 +913,148 @@ def test_hotkeys_command_shows_keyboard_shortcuts(tmp_path, monkeypatch):
             assert "Shift+Enter" in transcript
             assert "Ctrl+K" in transcript
             assert "Ctrl+B" in transcript
+            assert "Ctrl+O" in transcript
             assert "Esc" in transcript
+
+    asyncio.run(run())
+
+
+def test_tool_activity_is_collapsed_by_default_and_ctrl_o_reveals_details(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            transcript = pilot.app.query_one("#transcript")
+            tool = transcript.add_message("tool", "Tool call: read(path=secret.txt)\nTool result: complete output")
+            tool.set_tool_activity(name="read", summary="Tool result: complete output", completed=True)
+            await pilot.pause()
+
+            assert "read · complete" in tool.presentation_text
+            assert "path=secret.txt" not in tool.presentation_text
+            assert "complete output" in tool.presentation_text
+
+            await pilot.press("ctrl+o")
+            assert "Tool call: read(path=secret.txt)" in tool.presentation_text
+            assert "Tool result: complete output" in tool.presentation_text
+
+            await pilot.press("ctrl+o")
+            assert "path=secret.txt" not in tool.presentation_text
+
+    asyncio.run(run())
+
+
+def test_tool_activity_running_remains_visible_and_new_rows_inherit_detail_mode(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            transcript = pilot.app.query_one("#transcript")
+            running = transcript.add_message("tool", "Tool call: grep(pattern=needle)")
+            running.set_tool_activity(name="grep")
+            assert "grep · running" in running.presentation_text
+            assert "pattern=needle" in running.presentation_text
+
+            await pilot.press("ctrl+o")
+            fresh = transcript.add_message("tool", "Tool call: list(path=.)")
+            fresh.set_tool_activity(name="list", details_expanded=pilot.app._tool_details_expanded)
+            fresh.set_tool_activity(
+                name="list",
+                summary="Tool result: one file",
+                completed=True,
+                details_expanded=pilot.app._tool_details_expanded,
+            )
+            assert "path=." in fresh.presentation_text
+
+    asyncio.run(run())
+
+
+def test_tool_activity_header_redacts_provider_tool_name(monkeypatch):
+    monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+    from agentos.llm.redaction import sanitize
+
+    message = ChatMessage("tool", "Tool call: [REDACTED](path=.)")
+    message.set_tool_activity(name=str(sanitize("SENTINEL_SECRET-tool")))
+
+    assert "SENTINEL_SECRET" not in message.presentation_text
+    assert "[REDACTED]-tool" in message.presentation_text
+
+
+def test_tool_call_redacts_secret_argument_key(monkeypatch):
+    monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+    rendered = render_event(
+        {"type": "tool_call", "metadata": {"name": "read", "arguments": {"SENTINEL_SECRET": "safe"}}}
+    )
+    assert "SENTINEL_SECRET" not in rendered
+    assert "[REDACTED]=safe" in rendered
+
+
+def test_tool_activity_stream_redacts_provider_tool_name(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+
+        def fake_stream_context(request, provider="mock"):
+            yield LLMEvent(type="start", provider=provider, mode="mock")
+            if not any(message.role == "tool" for message in request.messages):
+                yield LLMEvent(
+                    type="tool_call",
+                    provider=provider,
+                    mode="mock",
+                    metadata={"name": "SENTINEL_SECRET-tool", "arguments": {}},
+                )
+                return
+            yield LLMEvent(type="message_delta", provider=provider, mode="mock", text="safe final")
+            yield LLMEvent(type="done", provider=provider, mode="mock")
+
+        monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "run secret tool"
+            await pilot.press("enter")
+            await await_transcript(pilot, "safe final")
+            tool = next(message for message in pilot.app.query(ChatMessage) if message.role == "tool")
+            assert "SENTINEL_SECRET" not in tool.presentation_text
+            assert "[REDACTED]-tool" in tool.presentation_text
+
+    asyncio.run(run())
+
+
+def test_result_first_tool_activity_is_recorded_and_tools_summary_is_redacted(tmp_path, monkeypatch):
+    async def run() -> None:
+        monkeypatch.setenv("AGENTOS_HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("AGENTOS_TEST_SECRET", "SENTINEL_SECRET")
+
+        def fake_stream_context(request, provider="mock"):
+            yield LLMEvent(type="start", provider=provider, mode="mock")
+            yield LLMEvent(
+                type="tool_result",
+                provider=provider,
+                mode="mock",
+                metadata={
+                    "name": "SENTINEL_SECRET-tool",
+                    "arguments": {"path": "raw environment: RAW_ENVIRONMENT"},
+                    "summary": "raw provider stderr: RAW_PROVIDER_STDERR",
+                },
+            )
+            yield LLMEvent(type="message_delta", provider=provider, mode="mock", text="safe final")
+            yield LLMEvent(type="done", provider=provider, mode="mock")
+
+        monkeypatch.setattr(runtime_module, "session_stream_context", fake_stream_context)
+        app = AgentOSTui(provider="mock", create_session_on_start=False)
+        async with app.run_test() as pilot:
+            composer = pilot.app.query_one("#composer")
+            composer.value = "result first"
+            await pilot.press("enter")
+            await await_transcript(pilot, "safe final")
+            tool = next(message for message in pilot.app.query(ChatMessage) if message.role == "tool")
+            assert "complete" in tool.presentation_text
+            await pilot.press("ctrl+o")
+            summary = pilot.app._tools_summary()
+            for forbidden in ("SENTINEL_SECRET", "RAW_ENVIRONMENT", "RAW_PROVIDER_STDERR"):
+                assert forbidden not in tool.presentation_text
+                assert forbidden not in summary
+            assert "[REDACTED]-tool" in summary
 
     asyncio.run(run())
 

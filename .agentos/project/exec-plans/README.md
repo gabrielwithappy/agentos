@@ -3,17 +3,19 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-29T23:25:41Z
+> Generated at: 2026-07-30T12:33:15Z
 
 ## Active Plans
+- 현재 실행 중인 계획 없음
 - older active plans omitted=0
-- `완료` [AgentOS 전역 CLI화 및 안전한 프로젝트 부트스트랩 구현 계획](.agentos/project/exec-plans/active/2026-07-29-global-cli-portable-project-bootstrap.md) | reviewed_evidence=invalid | outcome: 사용자는 `uv tool install agentos`로 CLI를 설치하고 `agentos --help`로 PATH를 확인한 뒤, source checkout 없이 `cd my-project && agentos setup`을 실행해 새 프로젝트에서… | progress: package-owned bridge와 portable project bootstrap을 구현하고 focused·isolated-install·public 검증을 완료했다.
-- `완료` [Gemini 컨텍스트 주기적 재주입 훅 구현 계획](.agentos/project/exec-plans/active/2026-07-29-gemini-context-reinjection-hook.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
-- `완료` [대시보드 카드 구현 소요 시간 표기 구현 계획](.agentos/project/exec-plans/active/2026-07-29-dashboard-implementation-duration.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
 
 ## Archived Plans
-- archive summary: completed=52, parked=0
-- older archived plans omitted=32
+- archive summary: completed=56, parked=0
+- older archived plans omitted=36
+- `완료` [AgentOS TUI 도구 로그 밀도 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-30-tui-tool-log-density.md) | outcome: 사용자는 완료된 도구 실행의 이름·성공/실패 요약을 바로 보고, `Ctrl+O`로 해당 턴을 포함한 모든 도구 활동의 호출 인자와 결과를 펼치거나 다시 접을 수 있다. | progress: raw provider stderr/raw environment 음성 검증과 light/dark/`NO_COLOR` 도구 활동 coverage를 보완한 뒤 fresh verification을 완료했다. 계획은 사용자의 명시적 archive 요청 전까…
+- `완료` [AgentOS 전역 CLI화 및 안전한 프로젝트 부트스트랩 구현 계획](.agentos/project/exec-plans/archive/2026-07-29-global-cli-portable-project-bootstrap.md) | reviewed_evidence=invalid | outcome: 사용자는 `uv tool install agentos`로 CLI를 설치하고 `agentos --help`로 PATH를 확인한 뒤, source checkout 없이 `cd my-project && agentos setup`을 실행해 새 프로젝트에서… | progress: package-owned bridge와 portable project bootstrap을 구현하고 focused·isolated-install·public 검증을 완료했다.
+- `완료` [Gemini 컨텍스트 주기적 재주입 훅 구현 계획](.agentos/project/exec-plans/archive/2026-07-29-gemini-context-reinjection-hook.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
+- `완료` [대시보드 카드 구현 소요 시간 표기 구현 계획](.agentos/project/exec-plans/archive/2026-07-29-dashboard-implementation-duration.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
 - `완료` [계획 문서 작성 시작 시점 대시보드 발행 구현 계획](.agentos/project/exec-plans/archive/2026-07-28-writing-plans-dashboard-announce.md) | reviewed_evidence=missing | progress: 계획 초안 작성 완료, Gate 2 리뷰 대기 중
 - `완료` [계획 상태 변경 이벤트 기반 대시보드 동기화 구현 계획](.agentos/project/exec-plans/archive/2026-07-28-plan-status-event-dashboard-sync.md) | progress: Gate 2 리뷰 통과(3라운드), 구현 실행 대기 중
 - `완료` [대시보드 카드에 Plan ID 표시 구현 계획](.agentos/project/exec-plans/archive/2026-07-28-dashboard-plan-id-in-card.md) | reviewed_evidence=invalid | outcome: 대시보드 카드 본문에 `plan_id` 필드가 노출되어, 사용자가 카드를 보고 연관된 계획 문서를 즉각적으로 식별하고 찾을 수 있다. | progress: Gate 2 6차 리뷰(plan-reviewer PASS, principle-auditor CLEAN, usability-reviewer PASS) 통과 후 구현·검증 완료
@@ -30,10 +32,6 @@
 - `완료` [YOLO 도구 실행 모드 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-yolo-tool-execution.md) | reviewed_evidence=missing | outcome: `agentos --yolo` 또는 `agentos run --yolo`로 작업 중 승인 중단 없이 연속 도구 실행을 사용할 수 있고, 옵션이 없으면 현재 동작이 그대로 유지된다.
 - `완료` [TUI 테마 색상·스크롤바·입력창·상태 패널 개선 계획](.agentos/project/exec-plans/archive/2026-07-26-tui-theme-and-status-panel.md) | reviewed_evidence=invalid | progress: Gate 2 리뷰 후 Task 1–5 구현과 focused 회귀, dark/light SVG 증거까지 완료. 아카이빙 완료.
 - `완료` [AgentOS TUI 요청·결과 분리 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-tui-request-result-separation.md) | reviewed_evidence=invalid | progress: 마일스톤 0-6 구현 및 테스트 완료. closeout 본문 갱신으로 fresh Gate 2 재검토와 archive 결정만 남았다.
-- `완료` [AgentOS TUI 메시지 배경색 블록 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-tui-message-box-format.md) | reviewed_evidence=invalid | progress: 구현 및 검증 완료. closeout은 Gate 2 승인 당시의 실행 범위에 대한 사후 기록이다.
-- `완료` [AgentOS 프로젝트 작업 하네스 문서 전환 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-project-work-harness-document-pivot.md) | reviewed_evidence=invalid | progress: Intent Sheet와 문서 전환 계획을 작성했다. 계획 header의 Gate 2 상태와 reviewer artifact가 실행 가능 여부의 기준이며, root project 문서는 아직 변경하지 않았다.
-- `완료` [executor-neutral writing-plans 계약 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-executor-neutral-writing-plans.md) | reviewed_evidence=invalid | progress: executor-neutral 실행 방식 계약 계획 초안 작성 완료, Gate 2 리뷰 대기 중. 실제 harness 계약 변경은 사용자 승인 후에만 실행한다.
-- `완료` [강조색 가독성·핵심 시스템 도구·응답 간결화 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-core-tools-and-response-shaping.md) | reviewed_evidence=missing | progress: Gate 2 리뷰 완료(전원 PASS) + Task 1–9 구현·검증 완료.
 
 ## Reference Docs
 - older reference docs omitted=5

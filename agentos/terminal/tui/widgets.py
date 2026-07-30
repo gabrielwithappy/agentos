@@ -434,6 +434,13 @@ class ChatMessage(Static):
         self.text = text
         self.turn_id = turn_id
         self.presentation_status = presentation_status
+        # Tool event payloads remain in ``text``.  These fields only choose
+        # how an already-sanitized tool activity is presented in the transcript.
+        self.tool_name: str = "tool"
+        self.tool_summary: str = ""
+        self.tool_completed = False
+        self.tool_failed = False
+        self.tool_details_expanded = False
         self.rendered_as_markdown = False
         self.add_class(role)
         self._render_presentation()
@@ -474,6 +481,8 @@ class ChatMessage(Static):
         header = self._presentation_header()
         if header is None:
             return self.text
+        if self.role == "tool" and self.tool_completed and not self.tool_details_expanded:
+            return f"{header}\n│ {self.tool_summary or 'No result returned.'}"
         if not self.text:
             return header
         if self._uses_left_border():
@@ -488,7 +497,8 @@ class ChatMessage(Static):
         if self.role == "reasoning":
             return "Activity · Thinking"
         if self.role == "tool":
-            return "Activity · Tool"
+            state = "failed" if self.tool_failed else ("complete" if self.tool_completed else "running")
+            return f"Activity · Tool · {self.tool_name} · {state}"
         return None
 
     def _uses_left_border(self) -> bool:
@@ -567,6 +577,28 @@ class ChatMessage(Static):
     def set_presentation_status(self, status: str) -> None:
         self.presentation_status = status
         self._render_presentation()
+
+    def set_tool_activity(
+        self,
+        *,
+        name: str,
+        summary: str = "",
+        completed: bool = False,
+        failed: bool = False,
+        details_expanded: bool = False,
+    ) -> None:
+        """Set presentation-only state for a sanitized tool activity."""
+        self.tool_name = name or "tool"
+        self.tool_summary = summary
+        self.tool_completed = completed
+        self.tool_failed = failed
+        self.tool_details_expanded = details_expanded
+        self._render_presentation()
+
+    def set_tool_details_expanded(self, expanded: bool) -> None:
+        if self.role == "tool":
+            self.tool_details_expanded = expanded
+            self._render_presentation()
 
     def update_text(self, text: str, *, markdown: bool = False) -> None:
         self.text = text

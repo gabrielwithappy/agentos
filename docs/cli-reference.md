@@ -110,6 +110,14 @@ background colours, the `You`/`AgentOS` headers above remain the role
 distinction. `Activity` entries (reasoning and tool calls) keep a visible `│`
 left boundary to separate multiple activity rows from each other.
 
+Completed tool activity is collapsed by default: its row identifies the tool,
+whether it completed or failed, and a sanitized result summary. Press `Ctrl+O`
+to reveal or hide the sanitized call arguments and full result for every tool
+activity in the current transcript. The same shortcut appears in `/hotkeys`.
+Running tools remain visibly marked as running until a result arrives. This is
+only a presentation choice: tool execution, approval, provider events, session
+JSONL, `/tools`, and secret redaction behavior do not change.
+
 While a turn is waiting for the first response chunk, the transcript shows a
 `Thinking…` line. Pressing `Esc` at that point removes that indicator and
 shows `Turn cancelled.`; the composer is already focused, ready for the next
@@ -123,15 +131,11 @@ what the provider did before answering:
 
 - `Activity · Thinking` — reasoning steps, displayed in a muted secondary
   region belonging to the current turn.
-- `Activity · Tool` — a tool call and its result share one block: the call
-  line appears first, then the result is appended to the same block once it
-  arrives, instead of opening a second block. This keeps a busy turn (several
-  tool calls) from filling the transcript with twice as many entries as tool
-  calls actually happened. Some tools have a registered custom renderer for
-  the result line instead of plain text; today the mock provider's
-  `mock_tool` result renders as a `| field | value |` table, appended to the
-  same block the same way. Tools without a registered renderer keep the
-  plain-text `Tool result: ...` line.
+- `Activity · Tool · <name> · running|complete|failed` — a tool call and its
+  result share one block. Completed blocks show a sanitized summary by default;
+  `Ctrl+O` reveals the sanitized call and result in that same block. Some tools
+  have a registered custom renderer for the result line; today the mock
+  provider's `mock_tool` result renders as a `| field | value |` table.
 
 Activity preserves provider event order and is not part of the final assistant
 result; the final answer is rendered last.
