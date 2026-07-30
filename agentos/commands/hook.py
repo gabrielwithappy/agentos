@@ -7,6 +7,7 @@ from rich.table import Table
 from agentos.terminal import hooks
 from agentos.llm.redaction import redact_text
 from agentos.terminal.paths import StateError
+from agentos.commands.vendor_hook import bridge
 
 app = typer.Typer(help="Manage declarative AgentOS hooks", add_completion=False)
 config_app = typer.Typer(help="Inspect hook configuration", add_completion=False)
@@ -68,3 +69,4 @@ def config_show() -> None:
 
 
 app.add_typer(config_app, name="config")
+app.command("bridge")(bridge)

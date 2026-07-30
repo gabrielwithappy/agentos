@@ -17,7 +17,47 @@ cd "$TMP/outside"
 export AGENTOS_HOME="$TMP/home"
 
 "$TMP/venv/bin/agentos" --help >/dev/null
-"$TMP/venv/bin/agentos" setup | grep -q "PASS agentos-setup"
+"$TMP/venv/bin/agentos" setup > "$TMP/setup-first.out"
+grep -q "PASS agentos-setup" "$TMP/setup-first.out"
+grep -q "enabled=codex,claude-code" "$TMP/setup-first.out"
+"$TMP/venv/bin/agentos" setup > "$TMP/setup-rerun.out"
+grep -q "SKIP existing file=" "$TMP/setup-rerun.out"
+grep -q "enabled=none" "$TMP/setup-rerun.out"
+grep -q "skipped_vendors=codex,claude-code" "$TMP/setup-rerun.out"
+"$TMP/venv/bin/python" - <<'PY' "$TMP/outside"
+import json
+import sys
+from pathlib import Path
+
+project = Path(sys.argv[1])
+codex = json.loads((project / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+claude = json.loads((project / ".claude" / "settings.json").read_text(encoding="utf-8"))
+text = json.dumps({"codex": codex, "claude": claude})
+assert ".agents/hooks" not in text
+for command in (
+    "agentos hook bridge codex pre-bash",
+    "agentos hook bridge codex pre-write",
+    "agentos hook bridge codex post-bash",
+    "agentos hook bridge codex stop",
+    "agentos hook bridge claude-code pre-bash",
+    "agentos hook bridge claude-code pre-write",
+    "agentos hook bridge claude-code post-bash",
+    "agentos hook bridge claude-code stop",
+):
+    assert command in text, command
+PY
+printf '%s' '{"tool_input":{"command":"echo safe"}}' | "$TMP/venv/bin/agentos" hook bridge codex pre-bash
+printf '%s' '{}' | "$TMP/venv/bin/agentos" hook bridge claude-code stop
+if "$TMP/venv/bin/agentos" hook bridge codex unlisted </dev/null; then
+  echo "expected unlisted bridge mapping to fail" >&2
+  exit 1
+fi
+mkdir -p "$TMP/existing/.codex"
+printf '%s\n' '{"user":"config"}' > "$TMP/existing/.codex/hooks.json"
+AGENTOS_HOME="$TMP/existing-home" "$TMP/venv/bin/agentos" setup --path "$TMP/existing" > "$TMP/setup-existing.out"
+grep -q "enabled=claude-code" "$TMP/setup-existing.out"
+grep -q "skipped_vendors=codex" "$TMP/setup-existing.out"
+test "$(cat "$TMP/existing/.codex/hooks.json")" = '{"user":"config"}'
 mkdir -p "$TMP/skill"
 printf '%s\n' '---' 'name: isolated-skill' 'description: isolated install skill' '---' > "$TMP/skill/SKILL.md"
 "$TMP/venv/bin/agentos" skill install "$TMP/skill" | grep -q "Successfully installed skill"

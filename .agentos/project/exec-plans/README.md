@@ -3,11 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-07-29T11:34:23Z
+> Generated at: 2026-07-29T23:25:41Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 계획 (실행 대기)` [AgentOS 전역 CLI화 및 프로젝트 부트스트랩 구현 계획](.agentos/project/exec-plans/active/2026-07-29-global-cli-portable-project-bootstrap.md) | progress: 계획 초안 작성, 리뷰 대기 중.
+- `완료` [AgentOS 전역 CLI화 및 안전한 프로젝트 부트스트랩 구현 계획](.agentos/project/exec-plans/active/2026-07-29-global-cli-portable-project-bootstrap.md) | reviewed_evidence=invalid | outcome: 사용자는 `uv tool install agentos`로 CLI를 설치하고 `agentos --help`로 PATH를 확인한 뒤, source checkout 없이 `cd my-project && agentos setup`을 실행해 새 프로젝트에서… | progress: package-owned bridge와 portable project bootstrap을 구현하고 focused·isolated-install·public 검증을 완료했다.
 - `완료` [Gemini 컨텍스트 주기적 재주입 훅 구현 계획](.agentos/project/exec-plans/active/2026-07-29-gemini-context-reinjection-hook.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
 - `완료` [대시보드 카드 구현 소요 시간 표기 구현 계획](.agentos/project/exec-plans/active/2026-07-29-dashboard-implementation-duration.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
 
