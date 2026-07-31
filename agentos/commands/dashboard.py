@@ -31,8 +31,9 @@ def sync_plan(
     all_active: bool = typer.Option(False, "--all", help="Sync every .md file under the active exec-plans directory"),
     owner: str = typer.Option(None, "--owner", envvar="OBSERVABILITY_GITHUB_OWNER"),
     project_number: str = typer.Option(None, "--project-number", envvar="OBSERVABILITY_GITHUB_PROJECT_NUMBER"),
+    config: str = typer.Option(None, "--config", "-c", help="Path to config file or custom adapter configuration"),
 ) -> None:
-    """Push exec-plan document(s) onto GitHub Projects v2 board card(s)."""
+    """Push exec-plan document(s) onto GitHub Projects v2 board card(s) or configured external dashboards."""
     if not plan_path and not all_active:
         console.print("[red]Provide a plan file path, or use --all to sync every active exec-plan.[/red]")
         raise typer.Exit(1)
@@ -41,19 +42,25 @@ def sync_plan(
         console.print(f"[red]Plan file not found: {plan_path}[/red]")
         raise typer.Exit(1)
 
-    if not owner or not project_number:
+    if not config and (not owner or not project_number):
         console.print("[yellow]대시보드가 설정되어 있지 않아 동기화를 건너뜁니다.[/yellow]")
         raise typer.Exit(0)
 
-    token = get_gh_token()
-    if not token:
-        console.print("[yellow]대시보드가 설정되어 있지 않아 동기화를 건너뜁니다.[/yellow]")
-        raise typer.Exit(0)
-
-    adapter = GithubDashboardAdapter(token=token, owner=owner, project_number=project_number)
-    # Temporary registration just for this CLI run
+    # Dynamic adapter loading via notifier registry
     notifier.clear_adapters()
-    notifier.register_adapter(adapter)
+    notifier.load_adapters_from_config()
+
+    # CLI flag override for explicit owner/project_number
+    if owner and project_number:
+        token = get_gh_token()
+        if token:
+            adapter = GithubDashboardAdapter(token=token, owner=owner, project_number=project_number)
+            if not any(isinstance(a, GithubDashboardAdapter) for a in notifier._adapters):
+                notifier.register_adapter(adapter)
+
+    if not notifier._adapters:
+        console.print("[yellow]대시보드가 설정되어 있지 않아 동기화를 건너뜁니다.[/yellow]")
+        raise typer.Exit(0)
 
     if all_active:
         paths = sorted(ACTIVE_PLANS_DIR.glob("*.md"))

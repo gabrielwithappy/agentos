@@ -129,6 +129,19 @@ def test_github_adapter_graphql_partial_failure_raises_caught_error():
             asyncio.run(adapter.send_notification(payload))
 
 
+def test_github_adapter_insufficient_scopes_error_guidance():
+    adapter = GithubDashboardAdapter(token="fake-token", owner="gabrielwithappy", project_number="6")
+    payload = {"event": "CLI_INTERRUPT"}
+
+    error_response = {"data": None, "errors": [{"type": "INSUFFICIENT_SCOPES", "message": "requires read:project"}]}
+
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.return_value.__enter__.return_value = _mock_response(error_response)
+
+        with pytest.raises(ValueError, match="gh auth refresh -s project,read:project"):
+            asyncio.run(adapter.send_notification(payload))
+
+
 def test_github_adapter_skips_when_config_incomplete():
     adapter = GithubDashboardAdapter(token="", owner="gabrielwithappy", project_number="6")
 
@@ -249,3 +262,30 @@ def test_update_draft_issue_body_sends_correct_mutation():
             "title": "My Plan Title",
             "body": "body text",
         }
+
+
+@pytest.mark.parametrize("ignored_event", ["FILE_WRITTEN", "CLI_EOF", "CLI_EXIT", "CLI_ERROR"])
+def test_github_adapter_ignores_file_written_event(ignored_event):
+    adapter = GithubDashboardAdapter(token="fake-token", owner="gabrielwithappy", project_number="6")
+    payload = {"event": ignored_event, "path": "/some/path/file.py", "bytes": 100}
+
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        asyncio.run(adapter.send_notification(payload))
+        assert mock_urlopen.call_count == 0
+
+
+def test_github_adapter_custom_status_by_event_mapping():
+    custom_mapping = {"CUSTOM_EVENT": "In Progress"}
+    adapter = GithubDashboardAdapter(
+        token="fake-token", owner="owner", project_number="1", status_by_event=custom_mapping
+    )
+    assert adapter.status_by_event["CUSTOM_EVENT"] == "In Progress"
+
+
+def test_load_adapters_from_config():
+    from agentos.observability.notifier import notifier
+    with patch("agentos.observability.setup.setup_observability") as mock_setup:
+        notifier.load_adapters_from_config()
+        assert mock_setup.called
+
+

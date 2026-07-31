@@ -9,7 +9,7 @@ AgentOS는 백그라운드 태스크와 CLI 런타임 이벤트(상태 변경, �
 GitHub Projects **v2**(GraphQL 기반) 연동을 위해서는 아래 4개의 환경 변수를 설정해야 합니다. GitHub이 Classic Projects REST API를 신규 계정/리포에서 은퇴시켰기 때문에, Classic Projects는 지원하지 않습니다.
 
 1. `OBSERVABILITY_ENABLED`: 알림 기능을 활성화하려면 `1`로 설정합니다.
-2. `GITHUB_TOKEN`: `project` scope가 있는 GitHub Personal Access Token (Classic 또는 Fine-grained). `gh auth refresh -s project`로 스코프를 추가할 수 있습니다.
+2. `GITHUB_TOKEN`: `project` 및 `read:project` scope가 포함된 GitHub Personal Access Token 또는 GitHub CLI 인증. GitHub CLI를 새로 로그인하거나 권한을 추가할 때 처음부터 `gh auth login -s project,read:project` 또는 `gh auth refresh -s project,read:project`를 실행하여 프로젝트 관리 권한을 부여하세요.
 3. `OBSERVABILITY_GITHUB_OWNER`: Projects v2 보드 소유자의 GitHub 로그인 (예: `gabrielwithappy`)
 4. `OBSERVABILITY_GITHUB_PROJECT_NUMBER`: 대상 Projects v2 보드의 프로젝트 번호 (예: `6` — 보드 URL `https://github.com/users/<owner>/projects/<number>`의 숫자, 또는 `gh project list --owner <owner>`로 확인)
 
@@ -32,6 +32,9 @@ agentos dashboard sync-plan <exec-plan-file> --owner <owner> --project-number <�
 
 # active/ 디렉토리 전체를 한 번에 동기화
 agentos dashboard sync-plan --all --owner <owner> --project-number <번호>
+
+# 커스텀 설정 파일 또는 등록된 어댑터 기반 동기화
+agentos dashboard sync-plan --all --config <config-file-path>
 ```
 
 ### Status 컬럼 6종 — 용도 분리
@@ -56,9 +59,15 @@ exec-plan 동기화는 런타임 이벤트와 **다른 5단계**로 Status를 �
 ### 1. 대화형 마법사 (추천)
 단순히 `OBSERVABILITY_ENABLED=1` 환경변수만 설정하고 `agentos` 명령어를 실행하면, **대화형 마법사(Interactive Wizard)**가 나타나 필요한 정보를 물어보고 자동으로 현재 디렉토리의 `.env` 파일에 설정해 줍니다. 
 
-또한 터미널에 `gh auth login`이 되어있다면, `GITHUB_TOKEN`은 백그라운드에서 자동으로 가져오므로 일일이 발급받아 입력할 필요가 없습니다!
+또한 터미널에 `gh auth login -s project,read:project` (또는 기존 인증 상태에서 `gh auth refresh -s project,read:project`)로 프로젝트 관리 권한이 미리 부여되어 있다면, `GITHUB_TOKEN`은 백그라운드에서 자동으로 가져오므로 일일이 발급받아 입력할 필요가 없습니다!
 
 ```bash
+# 처음 로그인 시 프로젝트 관리 권한 포함
+gh auth login -s project,read:project
+
+# 또는 기존 로그인에 프로젝트 권한 추가
+gh auth refresh -s project,read:project
+
 export OBSERVABILITY_ENABLED=1
 agentos run
 ```
@@ -68,7 +77,7 @@ agentos run
 직접 `.env` 파일에 기록하거나 환경 변수로 다음과 같이 지정할 수도 있습니다.
 ```bash
 export OBSERVABILITY_ENABLED=1
-export GITHUB_TOKEN="YOUR_GITHUB_TOKEN_HERE" # (gh auth가 설정된 경우 생략 가능)
+export GITHUB_TOKEN="YOUR_GITHUB_TOKEN_HERE" # (gh auth -s project,read:project 설정 시 생략 가능)
 export OBSERVABILITY_GITHUB_OWNER="gabrielwithappy"
 export OBSERVABILITY_GITHUB_PROJECT_NUMBER="6"
 ```
