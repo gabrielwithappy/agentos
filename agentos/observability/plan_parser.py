@@ -161,7 +161,9 @@ def render_card_body(summary: ExecPlanSummary, plan_path: str) -> str:
         # Worktree Decision Gate가 필요한 계획에만 있는 선택적 섹션이므로,
         # 없는 계획의 카드까지 "(없음)" placeholder로 채워 늘리지 않는다.
         lines.append(f"\n## Worktree 정보\n{summary.worktree_info}")
-    clean_path = str(plan_path).lstrip("./")
+    clean_path = str(plan_path)
+    if clean_path.startswith("./"):
+        clean_path = clean_path[2:]
     github_url = f"https://github.com/gabrielwithappy/agentOS/blob/main/{clean_path}"
     lines.extend(
         [
