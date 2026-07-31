@@ -131,7 +131,25 @@ def status_to_board_status(status_text: str, reviewed: str) -> str:
     return "In Progress"
 
 
-def render_card_body(summary: ExecPlanSummary, plan_path: str) -> str:
+def _get_current_git_branch() -> str:
+    try:
+        import subprocess
+        res = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        branch = res.stdout.strip()
+        if branch:
+            return branch
+    except Exception:
+        pass
+    return "main"
+
+
+def render_card_body(summary: ExecPlanSummary, plan_path: str, branch: str | None = None) -> str:
     lines = []
     if summary.user_request:
         lines.extend([
@@ -164,7 +182,8 @@ def render_card_body(summary: ExecPlanSummary, plan_path: str) -> str:
     clean_path = str(plan_path)
     if clean_path.startswith("./"):
         clean_path = clean_path[2:]
-    github_url = f"https://github.com/gabrielwithappy/agentOS/blob/main/{clean_path}"
+    target_branch = branch or _get_current_git_branch()
+    github_url = f"https://github.com/gabrielwithappy/agentOS/blob/{target_branch}/{clean_path}"
     lines.extend(
         [
             "\n## 최근 리뷰 이력",
