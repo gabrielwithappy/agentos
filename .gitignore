@@ -2,9 +2,9 @@
 __pycache__/
 *.pyc
 .env
+.agentos/secret.key
 .agents/traces/
-.agentos/project/exec-plans/active/
-.agentos/project/exec-plans/archive/
+*.bak
 HISTORY.md
 profiles/
 runtime/
