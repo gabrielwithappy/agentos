@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
@@ -26,6 +27,15 @@ class DashboardNotifier:
 
     def clear_adapters(self) -> None:
         self._adapters.clear()
+
+    def load_adapters_from_config(self) -> None:
+        """
+        Loads adapters dynamically based on environment and setup configuration.
+        Clears existing adapters and re-registers adapters according to current config.
+        """
+        from agentos.observability.setup import setup_observability
+        self.clear_adapters()
+        setup_observability()
 
     def notify(self, payload: Dict[str, Any]) -> None:
         """

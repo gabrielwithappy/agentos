@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 _GRAPHQL_URL = "https://api.github.com/graphql"
 
+_IGNORED_EVENTS = {"FILE_WRITTEN", "CLI_EOF", "CLI_EXIT", "CLI_ERROR"}
 _STATUS_BY_EVENT = {
     "CLI_INTERRUPT": "Todo",
     "TASK_BLOCKED": "Todo",
@@ -29,10 +30,17 @@ class GithubDashboardAdapter(DashboardAdapter):
     query/mutation against api.github.com/graphql.
     """
 
-    def __init__(self, token: str, owner: str, project_number: str):
+    def __init__(
+        self,
+        token: str,
+        owner: str,
+        project_number: str,
+        status_by_event: Dict[str, str] | None = None,
+    ):
         self.token = token
         self.owner = owner
         self.project_number = project_number
+        self.status_by_event = status_by_event if status_by_event is not None else dict(_STATUS_BY_EVENT)
         self._project_id: str | None = None
         self._status_field_id: str | None = None
         self._status_option_ids: Dict[str, str] = {}
@@ -51,7 +59,14 @@ class GithubDashboardAdapter(DashboardAdapter):
         with urllib.request.urlopen(req, timeout=5) as response:
             body = json.loads(response.read())
         if body.get("errors"):
-            raise ValueError(f"Github GraphQL error: {body['errors']}")
+            errors = body["errors"]
+            err_str = str(errors)
+            if "INSUFFICIENT_SCOPES" in err_str or "read:project" in err_str or "projectV2" in err_str:
+                raise ValueError(
+                    "Github GraphQL error: INSUFFICIENT_SCOPES — GitHub 인증 토큰에 'project' 또는 'read:project' 권한이 없습니다. "
+                    "터미널에서 'gh auth refresh -s project,read:project' (또는 'gh auth login -s project,read:project')를 실행해 권한을 부여하세요."
+                )
+            raise ValueError(f"Github GraphQL error: {errors}")
         return body["data"]
 
     def _ensure_project_metadata(self) -> None:
@@ -217,9 +232,12 @@ class GithubDashboardAdapter(DashboardAdapter):
         if not self.token or not self.owner or not self.project_number:
             return
 
-        logger.debug(f"[Observability] Github adapter sending payload: {payload}")
-
         event = payload.get("event", "unknown")
+        if event in _IGNORED_EVENTS:
+            logger.debug(f"[Observability] Ignoring telemetry event: {event}")
+            return
+
+        logger.debug(f"[Observability] Github adapter sending payload: {payload}")
 
         try:
             if event == "PLAN_WRITING_STARTED":
@@ -267,7 +285,7 @@ class GithubDashboardAdapter(DashboardAdapter):
                     Path(plan_path).write_text(updated_text, encoding="utf-8")
 
             else:
-                status_name = _STATUS_BY_EVENT.get(event, _DEFAULT_STATUS)
+                status_name = self.status_by_event.get(event, _DEFAULT_STATUS)
                 self._ensure_project_metadata()
 
                 item_key = str(payload.get("task_id") or event)
