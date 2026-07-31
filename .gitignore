@@ -3,8 +3,7 @@ __pycache__/
 *.pyc
 .env
 .agents/traces/
-.agentos/project/exec-plans/active/
-.agentos/project/exec-plans/archive/
+*.bak
 HISTORY.md
 profiles/
 runtime/
