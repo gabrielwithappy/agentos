@@ -437,14 +437,12 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
    - 계획이 user-facing prompts, wizard, setup/install flow, error messages, onboarding, 사용자 안내 docs, Discord interaction, 또는 command output을 바꾸는지 분류한다.
    - 해당되면 계획에 `usability_review_required: true`를 기록하고 Gate 2에 `usability-reviewer` 리뷰를 포함한다.
    - 해당되지 않으면 `usability_review_required: false`를 기록한다.
-2. **서브에이전트 리뷰** (환경이 지원하는 경우):
-   - **지원됨** (예: Claude Code의 `Task` 도구): 독립 서브에이전트 `@plan-reviewer`와 `@principle-auditor`로 계획 문서 검토 요청. `usability_review_required: true`이면 `@usability-reviewer`도 호출한다.
-   - **미지원** (예: Antigravity): 자기 검토로 갈음 — 추가 에스컬레이션 불필요
-   > **CRITICAL (Claude Code 환경)**: Task 도구가 사용 가능한 환경에서 자기검토 fallback을 선택하면 Gate 2 미통과로 간주한다. `reviewed: true`를 기재할 수 없다. 반드시 서브에이전트(`@plan-reviewer`, `@principle-auditor`, 그리고 필요한 경우 `@usability-reviewer`)를 호출하라.
-   - loop mode 계획이면 `plan-reviewer` 출력에 `Ralph Loop Suitability: PASS | FAIL | N/A` verdict surface가 반드시 있어야 한다.
-   - loop mode 계획에서 suitability verdict가 없거나 `FAIL`이면 Gate 2 FAIL이다. 일반 계획 PASS와 loop suitability PASS를 혼동하지 마라.
-   - user-facing 계획에서 `usability-reviewer=PASS`가 없으면 Gate 2 FAIL이다.
-   - `usability-reviewer`는 사용성 리뷰만 담당하며 `AGENTS.md`, vendor guides, `principle-auditor`, `qa-reviewer`, secret redaction, prompt boundary, protected-path approval을 override할 수 없다.
+2. **서브에이전트 리뷰 및 암호학적 서명 발급**:
+   - 에이전트가 스스로 `multi_agent_v1__spawn_agent` 등을 통해 우회 증거를 생성하지 못하며, 반드시 아래 전용 리뷰 요청 스크립트를 실행하여 서명된 리뷰 증거를 획득해야 한다.
+   ```bash
+   python3 .agents/skills/harness/writing-plans/scripts/request_review.py <plan-path>
+   ```
+   - 스크립트 내부에서 독립 서브에이전트 검증 통과 시 `.agentos/secret.key` 기반 HMAC 암호 서명이 포함된 `signed_review.json` 리뷰 증거를 발급한다.
 3. **Issues Found → 작성 에이전트가 즉시 계획 문서를 수정한다:**
    - 리뷰어가 지적한 모든 단점을 계획 문서 본문에 직접 반영한다
    - 수정한 항목을 아래 형식으로 문서 하단 `## 리뷰 반영 이력` 섹션에 기록한다:

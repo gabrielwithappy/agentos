@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .env
+.agentos/secret.key
 .agents/traces/
 *.bak
 HISTORY.md

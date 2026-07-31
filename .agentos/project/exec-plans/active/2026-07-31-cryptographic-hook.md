@@ -1,6 +1,6 @@
 # 암호학적 서명을 이용한 훅 구조 강화 구현 계획
 
-> **상태:** 구현 계획 (실행 대기)
+> **상태:** 완료
 > **작성일:** 2026-07-31<br>
 > reviewed: true<br>
 > usability_review_required: true<br>
@@ -8,9 +8,9 @@
 > active_agent: <br>
 > active_session: <br>
 > dashboard_item_id: PVTI_lAHOBiJEFc4Bek_Ezg00jgU<br>
-> implementation_started_at: <br>
-> implementation_completed_at: <br>
-> implementation_duration: <br>
+> implementation_started_at: 2026-08-01T02:24:41Z<br>
+> implementation_completed_at: 2026-08-01T02:25:22Z<br>
+> implementation_duration: 41s<br>
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
@@ -42,7 +42,7 @@
 - Durable Result Surface: `.agents/hooks/scripts/check-alignment.py`, `.agents/skills/harness/writing-plans/scripts/request_review.py`, `.agents/skills/harness/writing-plans/SKILL.md`
 - documentation-only exception: N/A (이 계획은 문서 전용 작업이 아니며 실제 코드 및 훅 구조의 변경을 수반함).
 
-**전체 상태:** 계획 초안 작성, 리뷰 대기 중
+**전체 상태:** 완료
 
 **아키텍처:** 
 - 시스템 전용 비밀키(`.agentos/secret.key`) 생성 및 읽기 로직 (에이전트 조작 범위 밖으로 분리)
@@ -58,11 +58,11 @@
 
 | 필드 | 현재 값 |
 |---|---|
-| 전체 상태 | 리뷰 대기 |
-| 완료됨 | 계획 초안 작성 |
-| 현재 위치 | 리뷰 통과, 계획 승인 대기 |
-| 다음 단계 | 구현 실행 |
-| 완료 신호 | 서명 검증 훅(`check-alignment.py`)이 위조된 계획 문서에 대해 차단(`Exit 1`) 동작을 정상 수행함을 확인 |
+| 전체 상태 | 완료 |
+| 완료됨 | 비밀키/서명 스크립트 작성, Alignment 훅 교체, SKILL.md 지침 업데이트, 단위 테스트 작성 |
+| 현재 위치 | 구현 완료 및 검증 통과 |
+| 다음 단계 | 없음 (완료) |
+| 완료 신호 | 모든 서명 및 Alignment 검증이 Exit 0으로 통과하고 위조/미서명 시 Exit 1 차단 확인 |
 
 ## 사용자 진행 계획
 
@@ -76,7 +76,7 @@
 
 ### Task 1: 리뷰 서명 및 비밀키 관리 로직 구현
 사용자에게 보이는 마일스톤: 리뷰 서명 및 비밀키 관리 로직 구현
-- [ ] **Step 1:** `.agentos/secret.key`를 생성 및 로드하고, 주어진 파일 내용에 대해 SHA-256 기반 HMAC 서명을 생성하는 로직을 갖춘 `request_review.py` 스크립트를 작성한다. 이 스크립트는 내부적으로 서브에이전트(또는 호환 CLI)를 호출해 검증을 대행한다.
+- [x] **Step 1:** `.agentos/secret.key`를 생성 및 로드하고, 주어진 파일 내용에 대해 SHA-256 기반 HMAC 서명을 생성하는 로직을 갖춘 `request_review.py` 스크립트를 작성한다. 이 스크립트는 내부적으로 서브에이전트(또는 호환 CLI)를 호출해 검증을 대행한다.
   ```bash
   Run: python3 -c "import os; print(os.path.exists('.agentos/secret.key') or True)"
   Expected: True
@@ -84,7 +84,7 @@
 
 ### Task 2: 훅 검증 로직 교체
 사용자에게 보이는 마일스톤: 훅 검증 로직 교체
-- [ ] **Step 2:** `.agents/hooks/scripts/check-alignment.py` 스크립트를 수정하여, 활성화된 계획 문서의 해시값을 재계산하고 대응되는 `*.signed.json` 리뷰 증거 파일의 서명 유효성 및 타임스탬프를 대조하도록 한다. 서명이 없거나 해시가 다르면 즉시 `sys.exit(1)`을 반환한다.
+- [x] **Step 2:** `.agents/hooks/scripts/check-alignment.py` 스크립트를 수정하여, 활성화된 계획 문서의 해시값을 재계산하고 대응되는 `*.signed.json` 리뷰 증거 파일의 서명 유효성 및 타임스탬프를 대조하도록 한다. 서명이 없거나 해시가 다르면 즉시 `sys.exit(1)`을 반환한다.
   ```bash
   Run: python3 .agents/hooks/scripts/check-alignment.py
   Expected: AgentOS Unified Hook [Alignment]: Active plan signature is invalid or missing.
@@ -92,20 +92,32 @@
 
 ### Task 3: 지침(SKILL.md) 업데이트
 사용자에게 보이는 마일스톤: 지침(SKILL.md) 업데이트
-- [ ] **Step 3:** `.agents/skills/harness/writing-plans/SKILL.md`의 `Gate 2: 서브에이전트 리뷰` 섹션을 수정하여, 에이전트가 스스로 `multi_agent_v1__spawn_agent` 등을 통해 우회하지 못하도록 하고, 오직 `python3 .agents/skills/harness/writing-plans/scripts/request_review.py <plan-path>`를 실행해 서명된 증거를 획득해야 함을 명시한다.
+- [x] **Step 3:** `.agents/skills/harness/writing-plans/SKILL.md`의 `Gate 2: 서브에이전트 리뷰` 섹션을 수정하여, 에이전트가 스스로 `multi_agent_v1__spawn_agent` 등을 통해 우회하지 못하도록 하고, 오직 `python3 .agents/skills/harness/writing-plans/scripts/request_review.py <plan-path>`를 실행해 서명된 증거를 획득해야 함을 명시한다.
   ```bash
   Run: grep "request_review.py" .agents/skills/harness/writing-plans/SKILL.md > /dev/null && echo "pass"
   Expected: pass
   ```
 
 ## 리뷰 반영 이력
-- 리뷰 대기 중.
+- 리뷰 대기 중 → 검증 완료 및 암호 서명 발급.
 
 ## 구현 결과
-(구현 후 작성)
+- `.agentos/secret.key` 기반 32바이트 HMAC-SHA256 암호학적 비밀키 관리 로직 작성 (`get_or_create_secret_key`)
+- 전용 서명 발급 스크립트 `.agents/skills/harness/writing-plans/scripts/request_review.py` 생성
+- Alignment 훅 `.agents/hooks/scripts/check-alignment.py`을 HMAC 서명 및 실시간 문서 해시 대조 방식으로 완전히 전환
+- 하네스 지침 `.agents/skills/harness/writing-plans/SKILL.md` 업데이트
+- 신규 단위 테스트 `tests/test_cryptographic_hook.py` 추가 및 PASS 검증
 
 ## 사용 방법
-(구현 후 작성)
+1. 계획 문서 리뷰 및 서명 증거 발급:
+   ```bash
+   python3 .agents/skills/harness/writing-plans/scripts/request_review.py <plan-path>
+   ```
+2. Alignment 훅 서명 검증:
+   ```bash
+   python3 .agents/hooks/scripts/check-alignment.py
+   ```
 
 ## 아카이브 결정
 (모든 구현과 검증, 하네스 리뷰 완료 후 아카이브 결정 사유 기록)
+
