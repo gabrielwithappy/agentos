@@ -13,6 +13,7 @@ class ExecPlanSummary:
     active_agent: str
     active_session: str
     dashboard_item_id: str
+    git_branch: str
     goal: str
     user_result_summary: str
     progress_snapshot: str
@@ -69,6 +70,7 @@ def parse_exec_plan(text: str) -> ExecPlanSummary:
         active_agent=_find_meta_field(text, "active_agent"),
         active_session=_find_meta_field(text, "active_session"),
         dashboard_item_id=_find_meta_field(text, "dashboard_item_id"),
+        git_branch=_find_meta_field(text, "git_branch") or _find_meta_field(text, "branch"),
         goal=_find_section(text, "목표"),
         user_result_summary=_find_h2_section(text, "사용자 결과 요약"),
         progress_snapshot=_find_h2_section(text, "진행 스냅샷"),
@@ -182,7 +184,7 @@ def render_card_body(summary: ExecPlanSummary, plan_path: str, branch: str | Non
     clean_path = str(plan_path)
     if clean_path.startswith("./"):
         clean_path = clean_path[2:]
-    target_branch = branch or _get_current_git_branch()
+    target_branch = branch or summary.git_branch or _get_current_git_branch()
     github_url = f"https://github.com/gabrielwithappy/agentOS/blob/{target_branch}/{clean_path}"
     lines.extend(
         [
@@ -190,6 +192,7 @@ def render_card_body(summary: ExecPlanSummary, plan_path: str, branch: str | Non
             f"- {summary.last_review_entry}" if summary.last_review_entry else "- (없음)",
             "\n## 참조",
             f"exec-plan: [{clean_path}]({github_url})",
+            f"branch: {target_branch}",
             f"plan_id: {Path(plan_path).stem}",
             f"dashboard_item_id: {summary.dashboard_item_id}" if summary.dashboard_item_id else "dashboard_item_id: (없음)",
         ]
