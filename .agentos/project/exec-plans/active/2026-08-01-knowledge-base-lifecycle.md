@@ -1,8 +1,8 @@
 # 장기지식 저장·검토·publish·검색 흐름 구현 계획
 
-> **상태:** 구현 계획 (리뷰 대기)<br>
+> **상태:** 구현 계획 (실행 대기)<br>
 > **작성일:** 2026-08-01<br>
-> reviewed: false<br>
+> reviewed: true<br>
 > user_request: AgentOS의 장기지식 계획을 실제 사용자용 저장·검토·publish·검색 흐름으로 구현하고, 기존 조사 결과를 이후 계획에서 재사용할 수 있게 한다.<br>
 > active_agent: <br>
 > active_session: <br>
@@ -10,6 +10,7 @@
 > implementation_started_at: <br>
 > implementation_completed_at: <br>
 > implementation_duration: <br>
+> **usability_review_required:** true<br>
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
@@ -51,13 +52,27 @@
 | 1. 지식 저장소 구조와 문서 계약 | `docs/knowledge/index.md`, `inbox/`, `references/`, `topics/`, `decisions/`가 보이고 문서 메타데이터 규칙을 확인할 수 있음 | `docs/knowledge/`, `agentos/knowledge/` | `python3 -m pytest tests/test_knowledge_store.py -q` / Expected: PASS |
 | 2. 검토·publish 흐름 | inbox 문서의 메타데이터를 검사하고 승인된 category로 publish할 수 있음 | `agentos/commands/knowledge.py`, `agentos/knowledge/` | `python3 -m pytest tests/test_knowledge_cli.py -q` / Expected: PASS |
 | 3. 키워드 검색·인용 출력 | 검색 결과가 문서 경로·제목·태그·근거 위치를 포함해 출력됨 | `agentos/knowledge/search.py`, CLI | `agentos knowledge search "..."` / Expected: 결과와 인용 경로 출력 |
-| 4. 사용자 문서·프로젝트 인덱스 연결 | 사용자가 지식 흐름을 한 곳에서 찾고 다음 행동을 알 수 있음 | `.agentos/project/00-project-index.md`, `docs/knowledge/index.md`, `docs/knowledge/README.md`, `docs/observability-setup.md` 또는 적합한 가이드 | `rg -n "agentos knowledge|docs/knowledge|publish" ...` / Expected: 사용자 명령과 경로 매치 |
+| 4. 사용자 문서·프로젝트 인덱스 연결 | 사용자가 지식 흐름을 한 곳에서 찾고 다음 행동을 알 수 있음 | `.agentos/project/00-project-index.md`, `docs/knowledge/index.md`, `docs/knowledge/README.md`, `docs/observability-setup.md` 또는 적합한 가이드 | `grep -n "agentos knowledge\|docs/knowledge\|publish" .agentos/project/00-project-index.md docs/knowledge/index.md docs/knowledge/README.md` / Expected: 사용자 명령과 경로 매치 |
 
 ## 장기 적용 표면
 
 - traceability surface: 이 active plan, `.agents/traces/research/2026-08-01-llm-connection-patterns-pi-hermes-aionui-qm.md`, `.agentos/project/exec-plans/README.md`, `.agentos/project/exec-plans/evolution-status.md`
 - durable result surface: `docs/knowledge/`, `agentos/knowledge/`, `agentos/commands/knowledge.py`, 프로젝트 인덱스와 사용자 가이드
 - documentation-only exception: 없음. 사용자용 문서와 파일 기반 knowledge runtime을 함께 추가한다.
+
+## Worktree Decision Gate
+
+- canonical skill: `git-worktree-parallel`
+- 격리 사유: main checkout(`/Users/gabriel/Prj/development/agentOS`)에는 다른 세션이 작업 중인 미커밋 변경(`feature/gateway-core-plan` 브랜치의 in-progress 파일들)이 있어, 이 계획의 작성·구현·커밋 흐름을 main checkout과 분리해야 한다.
+- worktree path: `.agentos/worktrees/knowledge-base-plan`
+- branch: `feature/knowledge-base-plan` (base: `main`, 실제 생성 시점의 `main` HEAD `3b2f6d5`)
+- ownership 규칙: one worktree = one branch = one owner. 이 worktree는 knowledge-base-lifecycle 계획 전용이며 다른 실험을 섞지 않는다.
+- 병렬 실행 없음: 이 계획은 단일 세션이 worktree 하나만 사용하며, worker 수 확장이나 동시 병렬 에이전트 실행을 요구하지 않는다.
+- 검증 명령:
+  Run: `git worktree list`
+  Expected: `.agentos/worktrees/knowledge-base-plan`가 `feature/knowledge-base-plan` 브랜치로 표시됨
+  Run: `git -C .agentos/worktrees/knowledge-base-plan branch --show-current`
+  Expected: `feature/knowledge-base-plan`
 
 ## 범위와 비목표
 
@@ -173,21 +188,21 @@
 
   기존 `aha knowledge` 예시를 현재 AgentOS CLI 계약으로 갱신하거나, 실제 `aha` runtime이 제공되는 것이 확인되면 재사용 경계를 명시한다. 승인 전 inbox가 지시 권한이 아니라는 규칙을 유지한다.
 
-  Run: `rg -n "agentos knowledge|inbox|publish|deprecated|citation" .agents/agents/harness/knowledge-curator.md docs/knowledge/README.md`
+  Run: `grep -n "agentos knowledge\|inbox\|publish\|deprecated\|citation" .agents/agents/harness/knowledge-curator.md docs/knowledge/README.md`
   Expected: 실제 명령·경로·상태·승인 경계가 일치
 
 - [ ] **Step 2: project index에 사용자용 knowledge surface 등록**
 
   `00-project-index.md`의 supporting document 등록표와 읽기 경로에 `docs/knowledge/README.md`/`index.md`를 연결하고, 해당 surface가 root project documents를 override하지 않는다고 명시한다.
 
-  Run: `rg -n "docs/knowledge|장기지식|knowledge" .agentos/project/00-project-index.md`
+  Run: `grep -n "docs/knowledge\|장기지식\|knowledge" .agentos/project/00-project-index.md`
   Expected: 최소 1개의 사용자 진입점·목적·freshness rule이 출력
 
 - [ ] **Step 3: 계획·가이드에서 knowledge 검색을 선택적으로 안내**
 
   계획 작성자가 필요할 때 `agentos knowledge search/context`를 사용하도록 안내하되, 자동 검색 강제나 Gate 2 우회로 해석되지 않게 문구를 고정한다.
 
-  Run: `python3 -m pytest tests/test_knowledge_cli.py -q && rg -n "Gate 2|knowledge context|knowledge search" docs .agentos/project`
+  Run: `python3 -m pytest tests/test_knowledge_cli.py -q && grep -rn "Gate 2\|knowledge context\|knowledge search" docs .agentos/project`
   Expected: focused tests PASS 및 승인 경계 문구 확인
 
 ## 의존성 분석
@@ -205,6 +220,10 @@
 - `python3 -m agentos.cli knowledge --help`
 - `python3 -m pytest tests/test_knowledge_store.py tests/test_knowledge_cli.py -q`
 - `bash .agents/skills/harness/sync-manifest/scripts/sync-manifest.sh --check`
+
+## 리뷰 반영 이력
+
+- [Gate 2 1차] plan-reviewer 지적: Task 3와 검증 계획의 `Run:` 명령이 baseline harness tool 목록(`git`, `bash`, `python3`, `grep`, `find`)에 없는 `rg`(ripgrep)를 사용하면서 `의존성 분석`은 "외부 의존성: 없음"으로 남아 있어 undeclared dependency였음 → 모든 `rg -n` 명령을 baseline `grep -n`/`grep -rn`으로 교체(사용자 진행 계획 마일스톤 4, Task 3 Step 1/2/3, 검증 계획)하여 `의존성 분석`의 "없음" 주장과 실제 `Run:` 명령이 일치하도록 수정.
 
 ## 구현 결과
 
