@@ -11,12 +11,30 @@ SECRET_KEY_PATH = ".agentos/secret.key"
 REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
 HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
 GATE2_RE = re.compile(r"^> gate2_[^:\n]+:.*$", re.MULTILINE)
+# Fields the "Completed Active Plan Closeout" contract (writing-plans/SKILL.md)
+# requires agents to fill in AFTER Gate 2 signing. Excluded from the hash so a
+# properly closed-out plan doesn't retroactively invalidate its own review.
+# Kept in sync with the copy in
+# .agents/skills/harness/writing-plans/scripts/review_artifacts.py.
+LIVING_META_RE = re.compile(
+    r"^> (?:implementation_started_at|implementation_completed_at|implementation_duration|"
+    r"dashboard_item_id|active_agent|active_session): .*$",
+    re.MULTILINE,
+)
+TASK_CHECKBOX_RE = re.compile(r"^(\s*-\s*)\[[ xX]\]", re.MULTILINE)
+LIVING_SECTION_RE = re.compile(
+    r"^##\s*(?:진행 스냅샷|구현 결과|사용 방법|완료 증거|아카이브 결정)\s*\n.*?(?=\n##\s|\Z)",
+    re.DOTALL | re.MULTILINE,
+)
 
 
 def normalize_plan_text(text: str) -> str:
     normalized = REVIEWED_RE.sub("", text)
     normalized = GATE2_RE.sub("", normalized)
     normalized = HEADER_STATUS_RE.sub("", normalized)
+    normalized = LIVING_META_RE.sub("", normalized)
+    normalized = TASK_CHECKBOX_RE.sub(r"\1[ ]", normalized)
+    normalized = LIVING_SECTION_RE.sub("", normalized)
     lines = [line.rstrip() for line in normalized.splitlines()]
     while lines and not lines[-1]:
         lines.pop()
