@@ -6,7 +6,7 @@
 > user_request: AgentOS의 장기지식 계획을 실제 사용자용 저장·검토·publish·검색 흐름으로 구현하고, 기존 조사 결과를 이후 계획에서 재사용할 수 있게 한다.<br>
 > active_agent: <br>
 > active_session: <br>
-> dashboard_item_id: (agentos dashboard sync-plan 실행 시 자동 기록됨)<br>
+> dashboard_item_id: PVTI_lAHOBiJEFc4Bek_Ezg04yN4<br>
 > implementation_started_at: <br>
 > implementation_completed_at: <br>
 > implementation_duration: <br>
