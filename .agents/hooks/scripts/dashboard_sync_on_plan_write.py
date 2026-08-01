@@ -11,6 +11,7 @@ resolution every other hook in this repo already uses) rather than
 re-derived from the PostToolUse payload's `cwd` field, which may be
 empty or relative depending on invocation context."""
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -25,24 +26,50 @@ def _load_payload() -> dict:
         return {}
 
 
+_FILE_PATH_KEYS = ("file_path", "path", "target_file", "TargetFile", "AbsolutePath", "TargetFile")
+
+_APPLY_PATCH_FILE_RE = re.compile(
+    r"^\*\*\* (?:Update|Add|Delete) File: (.+)$", re.MULTILINE
+)
+
+
 def _touched_paths(payload: dict) -> list[str]:
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
         return []
     paths = []
-    if "file_path" in tool_input:
-        paths.append(str(tool_input["file_path"]))
+    for key in _FILE_PATH_KEYS:
+        if key in tool_input:
+            paths.append(str(tool_input[key]))
     edits = tool_input.get("edits")
     if isinstance(edits, list):
         for edit in edits:
-            if isinstance(edit, dict) and "file_path" in edit:
-                paths.append(str(edit["file_path"]))
+            if isinstance(edit, dict):
+                for key in _FILE_PATH_KEYS:
+                    if key in edit:
+                        paths.append(str(edit[key]))
+    # For replacement chunks
+    chunks = tool_input.get("ReplacementChunks")
+    if chunks and "TargetFile" in tool_input:
+        paths.append(str(tool_input["TargetFile"]))
+    command = tool_input.get("command")
+    if isinstance(command, str):
+        paths.extend(_APPLY_PATCH_FILE_RE.findall(command))
     return paths
 
 
 def main() -> int:
     payload = _load_payload()
-    if payload.get("tool_name") not in ("Edit", "Write", "MultiEdit"):
+    valid_tools = {
+        "Edit",
+        "Write",
+        "MultiEdit",
+        "write_to_file",
+        "replace_file_content",
+        "multi_replace_file_content",
+        "apply_patch",
+    }
+    if payload.get("tool_name") not in valid_tools:
         return 0
 
     touched = _touched_paths(payload)

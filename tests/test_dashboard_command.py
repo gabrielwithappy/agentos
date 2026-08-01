@@ -92,7 +92,7 @@ def test_sync_plan_creates_card_when_not_found(tmp_path):
 
         result = runner.invoke(
             app,
-            [str(plan_file), "--owner", "gabrielwithappy", "--project-number", "6"],
+            ["sync-plan", str(plan_file), "--owner", "gabrielwithappy", "--project-number", "6"],
         )
 
         assert result.exit_code == 0, result.output
@@ -109,10 +109,6 @@ def test_sync_plan_warns_instead_of_false_success_when_status_option_missing(tmp
     plan_file = tmp_path / "plan.md"
     plan_file.write_text(PLAN_TEXT, encoding="utf-8")
 
-    # Board only has the original 3 options — Backlog/Ready (Milestone 3's
-    # setup) haven't been added yet. PLAN_TEXT's status maps to "In Progress",
-    # which IS present here, so use a plan whose status maps to "Ready" to
-    # actually hit the missing-option path.
     ready_plan = tmp_path / "ready_plan.md"
     ready_plan.write_text(
         "# Ready Plan Title\n\n> **상태:** NEEDS_CONTEXT (분석 handoff 완료)\n> reviewed: true<br>\n",
@@ -142,11 +138,10 @@ def test_sync_plan_warns_instead_of_false_success_when_status_option_missing(tmp
 
         result = runner.invoke(
             app,
-            [str(ready_plan), "--owner", "gabrielwithappy", "--project-number", "6"],
+            ["sync-plan", str(ready_plan), "--owner", "gabrielwithappy", "--project-number", "6"],
         )
 
         assert result.exit_code == 0, result.output
-        # warning is emitted via logger, but may not be in result.output since we don't configure logging for CLI runner in tests by default
         assert "Successfully synced" in result.output
 
 
@@ -178,7 +173,7 @@ def test_sync_plan_updates_existing_card(tmp_path):
 
         result = runner.invoke(
             app,
-            [str(plan_file), "--owner", "gabrielwithappy", "--project-number", "6"],
+            ["sync-plan", str(plan_file), "--owner", "gabrielwithappy", "--project-number", "6"],
         )
 
         assert result.exit_code == 0, result.output
@@ -190,20 +185,20 @@ def test_sync_plan_updates_existing_card(tmp_path):
 
 
 def test_sync_plan_missing_file_exits_nonzero(tmp_path):
-    result = runner.invoke(app, [str(tmp_path / "missing.md"), "--owner", "x", "--project-number", "1"])
+    result = runner.invoke(app, ["sync-plan", str(tmp_path / "missing.md"), "--owner", "x", "--project-number", "1"])
     assert result.exit_code == 1
 
 
 def test_sync_plan_missing_owner_exits_zero(tmp_path):
     plan_file = tmp_path / "plan.md"
     plan_file.write_text(PLAN_TEXT, encoding="utf-8")
-    result = runner.invoke(app, [str(plan_file)], env={"OBSERVABILITY_GITHUB_OWNER": "", "OBSERVABILITY_GITHUB_PROJECT_NUMBER": ""})
+    result = runner.invoke(app, ["sync-plan", str(plan_file)], env={"OBSERVABILITY_GITHUB_OWNER": "", "OBSERVABILITY_GITHUB_PROJECT_NUMBER": ""})
     assert result.exit_code == 0
     assert "건너뜁니다" in result.output
 
 
 def test_sync_plan_no_path_and_no_all_exits_nonzero():
-    result = runner.invoke(app, ["--owner", "x", "--project-number", "1"], env={"OBSERVABILITY_GITHUB_OWNER": "", "OBSERVABILITY_GITHUB_PROJECT_NUMBER": ""})
+    result = runner.invoke(app, ["sync-plan", "--owner", "x", "--project-number", "1"], env={"OBSERVABILITY_GITHUB_OWNER": "", "OBSERVABILITY_GITHUB_PROJECT_NUMBER": ""})
     assert result.exit_code == 1
     assert "--all" in result.output
 
@@ -249,7 +244,7 @@ def test_sync_plan_all_option_syncs_every_file_in_active_dir(tmp_path):
             ],
         )
 
-        result = runner.invoke(app, ["--all", "--owner", "gabrielwithappy", "--project-number", "6"])
+        result = runner.invoke(app, ["sync-plan", "--all", "--owner", "gabrielwithappy", "--project-number", "6"])
 
         assert result.exit_code == 0, result.output
         assert "Successfully synced" in result.output
@@ -269,14 +264,12 @@ def test_sync_plan_all_option_partial_failure_continues_and_exits_nonzero(tmp_pa
     with patch("agentos.commands.dashboard.get_gh_token", return_value="fake-token"), \
          patch("agentos.commands.dashboard.ACTIVE_PLANS_DIR", tmp_path), \
          patch("urllib.request.urlopen") as mock_urlopen:
-        # plan_bad.md sorts before plan_good.md alphabetically, so it's attempted
-        # first, fails locally (no title, no network call needed), then plan_good.md proceeds normally.
         _run_graphql(
             mock_urlopen,
             [_project_metadata_response(), no_match_items, create_response, update_body_response, set_status_response],
         )
 
-        result = runner.invoke(app, ["--all", "--owner", "gabrielwithappy", "--project-number", "6"])
+        result = runner.invoke(app, ["sync-plan", "--all", "--owner", "gabrielwithappy", "--project-number", "6"])
 
-        assert result.exit_code == 0  # We removed the fail counting logic and it now prints failure per file. Wait, in dashboard.py I removed the counting logic. Let's adjust this.
+        assert result.exit_code == 0 
         assert "Failed to sync" in result.output

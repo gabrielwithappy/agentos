@@ -147,6 +147,34 @@ class GithubDashboardAdapter(DashboardAdapter):
             },
         )
 
+    def fetch_remote_status(self, item_id: str) -> str | None:
+        """Read back the board card's current Status option name (read-only).
+
+        Used by `agentos dashboard pull-plan` to detect Status changes a human
+        made directly on the GitHub Projects v2 board (drag-and-drop), so they
+        can flow back into the local exec-plan file without AgentOS silently
+        overwriting the plan's authoritative `> **상태:**`/`reviewed` fields.
+        """
+        data = self._graphql(
+            """
+            query($itemId: ID!) {
+              node(id: $itemId) {
+                ... on ProjectV2Item {
+                  fieldValueByName(name: "Status") {
+                    ... on ProjectV2ItemFieldSingleSelectValue { name }
+                  }
+                }
+              }
+            }
+            """,
+            {"itemId": item_id},
+        )
+        node = data.get("node")
+        if not node:
+            return None
+        field_value = node.get("fieldValueByName")
+        return field_value.get("name") if field_value else None
+
     def find_item_by_title(self, title: str) -> str | None:
         """Look up an existing draft issue's content id by board item title.
 

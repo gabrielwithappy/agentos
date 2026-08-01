@@ -48,6 +48,7 @@ REFERENCE_ARCHIVE_PREFIX = ".agentos/project/exec-plans/archive/reference/"
 EXEC_BOARD_ACTIVE_RECENT_LIMIT = 20
 EXEC_BOARD_ARCHIVED_RECENT_LIMIT = 20
 EXEC_BOARD_REFERENCE_RECENT_LIMIT = 10
+DASHBOARD_SYNC_TIMEOUT_SECONDS = 60
 
 
 @dataclass
@@ -287,27 +288,90 @@ def build_readme(data: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
-def _try_dashboard_sync(root: Path) -> None:
-    """Best-effort dashboard sync after a lifecycle refresh. Never raises —
-    missing `OBSERVABILITY_ENABLED`, missing `agentos` on PATH, missing
-    GitHub token, or any sync failure must not block the caller (skill
-    script or hook), matching `notify_lifecycle_event()`'s fail-open
-    contract in `agentos/terminal/hooks.py`."""
+def _load_env_if_needed(root: Path) -> None:
     import os
-    import subprocess
 
-    if os.environ.get("OBSERVABILITY_ENABLED") != "1":
+    if os.environ.get("OBSERVABILITY_ENABLED") == "1":
         return
+    env_path = root / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k, v.strip('"\''))
+
+
+def _resolve_agentos_cmd(root: Path) -> list[str] | None:
+    import shutil
+
+    venv_bin = root / ".venv" / "bin" / "agentos"
+    if venv_bin.is_file():
+        return [str(venv_bin)]
+
+    agentos_bin = shutil.which("agentos")
+    if agentos_bin:
+        return [agentos_bin]
+
+    uv_bin = shutil.which("uv")
+    if uv_bin:
+        return [uv_bin, "run", "agentos"]
+
+    return None
+
+
+def _log_dashboard_sync_failure(returncode: int | None, output: str) -> None:
+    """Best-effort: persist a failed auto-sync attempt to agentos.log."""
     try:
-        subprocess.run(
-            ["agentos", "dashboard", "sync-plan", "--all"],
-            cwd=root,
-            capture_output=True,
-            timeout=10,
-            check=False,
+        import logging
+        import sys
+
+        repo_root = Path(__file__).resolve().parents[5]
+        if str(repo_root) not in sys.path:
+            sys.path.insert(0, str(repo_root))
+        from agentos.terminal.logging_setup import configure_logging
+
+        configure_logging()
+        logging.getLogger("agentos.dashboard_sync_hook").warning(
+            "[Observability Warning] 자동 dashboard sync-plan 실패(exit=%s): %s",
+            returncode,
+            output.strip()[:500],
         )
     except Exception:
         pass
+
+
+def _try_dashboard_sync(root: Path) -> None:
+    import os
+    import subprocess
+
+    _load_env_if_needed(root)
+    if os.environ.get("OBSERVABILITY_ENABLED") != "1":
+        return
+
+    base_cmd = _resolve_agentos_cmd(root)
+    if base_cmd is None:
+        return
+
+    try:
+        result = subprocess.run(
+            base_cmd + ["dashboard", "sync-plan", "--all"],
+            cwd=root,
+            capture_output=True,
+            timeout=DASHBOARD_SYNC_TIMEOUT_SECONDS,
+            check=False,
+            text=True,
+        )
+        combined_output = (result.stdout or "") + (result.stderr or "")
+        if (
+            result.returncode != 0
+            or "동기화 실패" in combined_output
+            or "Failed to sync" in combined_output
+        ):
+            _log_dashboard_sync_failure(result.returncode, combined_output)
+    except Exception as exc:
+        _log_dashboard_sync_failure(None, str(exc))
 
 
 def refresh(root: Path) -> None:

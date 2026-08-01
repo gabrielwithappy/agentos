@@ -33,6 +33,8 @@
 
 답변에 더 많은 evidence가 필요하면 현재 3-category taxonomy에 맞는 등록 supporting doc을 요청한다. RTM/API example/검증 근거/visual support note는 `reference/implementation/`, 운영 복구와 runtime 절차는 `reference/operations/`, review note와 handoff pack은 `reference/decisions/`로 보낸다.
 
+장기지식이나 이전 조사 결과가 필요하면 `docs/knowledge/README.md`에서 흐름을 확인하고 `agentos knowledge search "<keyword>"` 또는 `agentos knowledge context "<keyword>"`를 선택적으로 사용한다. 이 결과는 재사용 가능한 evidence이며 root project documents, active plan, Gate 2 reviewer authority, protected-path rules를 override하지 않는다.
+
 ## 프로젝트 문서 읽는 법
 
 agent에게 plan이나 implement를 요청하기 전에 이 5분 읽기 경로를 따른다:
@@ -84,6 +86,7 @@ agent에게 plan이나 implement를 요청하기 전에 이 5분 읽기 경로�
 | Supporting doc or category | parent root doc | status | reason for creation | freshness rule |
 |---|---|---|---|---|
 | `reference/implementation/` | `02-product-scope-and-requirements.md`, `03-system-contract.md`, and `04-safety-risk-verification.md` | 현재 | Requirement discovery package, module decomposition, contracts, schemas, traceability, verification evidence, and cross-cutting implementation design. | Refresh when requirement mapping, implementation shape, interface behavior, or verification evidence changes. |
+| `docs/knowledge/README.md` and `docs/knowledge/index.md` | `02-product-scope-and-requirements.md`, `03-system-contract.md`, `04-safety-risk-verification.md`, and `06-decisions-change-log.md` | 현재 | 장기지식의 inbox 검토, publish, search, context/citation 진입점을 제공하고 이후 계획에서 재사용 가능한 조사 근거를 찾게 함. | Refresh when `agentos knowledge` command behavior, metadata contract, category lifecycle, or authority boundary changes. |
 | `reference/decisions/` | `03-system-contract.md`, `05-agent-operating-contract.md`, and `06-decisions-change-log.md` | 현재 | ADR-style decision records, architecture rationale, reviews/audits, experiment notes, and handoff-sized context. | Refresh when a decision is accepted, review evidence changes, or long-lived architecture context is revised. |
 | `reference/operations/` | `03-system-contract.md` and `04-safety-risk-verification.md` | 현재 | Deployment, runtime, recovery, credential, and operator runbooks. | Refresh when operating procedure or recovery path changes. |
 | `reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md` | `02-product-scope-and-requirements.md`, `03-system-contract.md`, and `04-safety-risk-verification.md` | 현재 | LLM account-login strategy의 참조 구현 근거와 현재 AgentOS credential gap을 고정. | Refresh when provider authentication policy, VS Code extension source ownership, credential boundary, or LLM transport verification evidence changes. |
@@ -93,6 +96,7 @@ agent에게 plan이나 implement를 요청하기 전에 이 5분 읽기 경로�
 | `reference/decisions/0004-agentos-llm-credential-strategy.md` | `01-project-charter.md`, `02-product-scope-and-requirements.md`, `03-system-contract.md`, `04-safety-risk-verification.md`, and `06-decisions-change-log.md` | 현재 | Approved LLM credential strategy, billing owner, subscription entitlement, and security handoff approval record. | Refresh when provider, credential type, subscription entitlement, billing owner, official documentation, token storage, or LLM transport policy changes. |
 | `reference/decisions/0005-agentos-independent-interactive-cli.md` | `01-project-charter.md`, `02-product-scope-and-requirements.md`, `03-system-contract.md`, `04-safety-risk-verification.md`, `05-agent-operating-contract.md`, and `06-decisions-change-log.md` | 현재 | Independent interactive CLI, hook/input lifecycle, and user-data boundary decision. | Refresh when command, hook, session, interactive UX, or data policy changes. |
 | `reference/decisions/0006-agentos-vendor-neutral-project-work-harness.md` | `01-project-charter.md`, `02-product-scope-and-requirements.md`, `03-system-contract.md`, `04-safety-risk-verification.md`, `05-agent-operating-contract.md`, and `06-decisions-change-log.md` | 현재 | AgentOS를 vendor-neutral project 파트너로 정의하는 control/execution/bridge 결정 기록 | Refresh when control/execution boundary changes. |
+| `reference/decisions/0007-agentos-gateway-core.md` | `02-product-scope-and-requirements.md`, `03-system-contract.md`, `04-safety-risk-verification.md`, `05-agent-operating-contract.md`, and `06-decisions-change-log.md` | 현재 | 기존 vendor CLI를 보존하면서 로컬 managed run registry, 단일 worker, 상태/event/retry/prune 경계를 승인한 Gateway Core 결정 기록. 0006 persistent task database 제외 중 Gateway Run registry 범위만 0007이 대체. | Refresh when Gateway run storage, worker ownership, retry/prune, or provider execution boundary changes. |
 | `reference/implementation/2026-07-28-observability-architecture.md` | `03-system-contract.md` | 현재 | 외부 대시보드 동기화(GitHub Projects v2)를 위한 옵저버빌리티 파이프라인(Notifier, Adapter, Events) 구조와 흐름 보존. | Refresh when dashboard targets, event schemas, or sync lifecycle changes. |
 
 ## 지원 문서 필수 필드

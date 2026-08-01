@@ -11,12 +11,44 @@ SECRET_KEY_PATH = ".agentos/secret.key"
 REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
 HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
 GATE2_RE = re.compile(r"^> gate2_[^:\n]+:.*$", re.MULTILINE)
+# Fields/sections that other harness contracts require agents to fill in
+# AFTER Gate 2 signing: implementation_*_at/duration, active_agent,
+# active_session (executing-plans/SKILL.md Step 7-8 occupancy lock),
+# dashboard_item_id (TEMPLATE.md, auto-written by `agentos dashboard
+# sync-plan`), Task checkbox state, and the "Completed Active Plan Closeout"
+# prose sections (writing-plans/SKILL.md). Excluded from the hash so a
+# properly closed-out plan doesn't retroactively invalidate its own review.
+#
+# Threat model: this exclusion is intentionally unbounded in content (a
+# timestamp/id line or a closeout section can hold arbitrary text) but
+# bounded in *what it can influence* — no code in this harness parses these
+# fields/sections as directives; they are display/bookkeeping only. The
+# content that actually specifies what was reviewed and approved (목표,
+# 아키텍처, Task steps, 사용자 결과, 의존성 게이트, etc.) is NOT matched by
+# any of these patterns and remains fully hashed, so tampering with scope
+# after signing still invalidates the signature.
+#
+# Kept in sync with the copy in
+# .agents/skills/harness/writing-plans/scripts/review_artifacts.py.
+LIVING_META_RE = re.compile(
+    r"^> (?:implementation_started_at|implementation_completed_at|implementation_duration|"
+    r"dashboard_item_id|active_agent|active_session): .*$",
+    re.MULTILINE,
+)
+TASK_CHECKBOX_RE = re.compile(r"^(\s*-\s*)\[[ xX]\]", re.MULTILINE)
+LIVING_SECTION_RE = re.compile(
+    r"^##\s*(?:진행 스냅샷|구현 결과|사용 방법|완료 증거|아카이브 결정)\s*\n.*?(?=\n##\s|\Z)",
+    re.DOTALL | re.MULTILINE,
+)
 
 
 def normalize_plan_text(text: str) -> str:
     normalized = REVIEWED_RE.sub("", text)
     normalized = GATE2_RE.sub("", normalized)
     normalized = HEADER_STATUS_RE.sub("", normalized)
+    normalized = LIVING_META_RE.sub("", normalized)
+    normalized = TASK_CHECKBOX_RE.sub(r"\1[ ]", normalized)
+    normalized = LIVING_SECTION_RE.sub("", normalized)
     lines = [line.rstrip() for line in normalized.splitlines()]
     while lines and not lines[-1]:
         lines.pop()

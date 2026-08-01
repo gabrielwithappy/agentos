@@ -13,6 +13,10 @@ agentos skill install SKILL_DIRECTORY
 agentos skill status [--json]
 agentos project init [--path PATH] [--json]
 agentos project status [--path PATH] [--json]
+agentos gateway doctor [--provider PROVIDER] [--json]
+agentos gateway submit --provider PROVIDER "Prompt" [--cwd PATH] [--record-policy metadata|full] [--json]
+agentos gateway worker --once [--json]
+agentos gateway list|status|events|cancel|retry|prune
 agentos doctor [--json]
 agentos session list
 agentos session show SESSION_ID
@@ -28,6 +32,14 @@ agentos llm status|login|logout --provider mock|codex|codex-cli|claude [--json]
 agentos harness --project-root PATH [engine args...]
 python -m agentos.runtime.bench --prompt "Prompt" [--provider mock|codex] [--format json] [--assert-warm-faster]
 ```
+
+## Gateway Core
+
+Gateway Core is a managed local execution path for queued runs. It keeps state
+under `AGENTOS_HOME/gateway/`, reuses the existing provider registry, and does
+not replace direct vendor CLI usage.
+
+See `docs/gateway-core.md` for `agentos gateway submit`, `agentos gateway worker --once`, retry, prune, and recovery details.
 
 Running bare `agentos` starts an interactive session only when stdin and stdout
 are TTYs. In pipes or redirects it exits with code `2` and points to

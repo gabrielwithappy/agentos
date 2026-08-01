@@ -19,6 +19,7 @@
 | 2026-07-24 | AgentOS가 native Codex auth/transport(browser callback 우선/device-code fallback login, refresh/logout/status, WebSocket 우선/SSE fallback streaming)를 직접 소유하도록 승인. native provider가 canonical `codex` path가 되고, external CLI compatibility path는 native 실패 시에만 선택되는 recovery-only debug/rollback path로 재분류됨 | `.agentos/project/exec-plans/active/2026-07-23-agentos-pi-style-llm-runtime-native-auth-transport.md` |
 | 2026-07-26 | AgentOS를 vendor-neutral project work harness로 전환: control plane(Work Contract, Context Compiler, lifecycle/evidence, Verification Runner, vendor adapter, Control TUI)과 vendor execution plane(Codex/Claude/OpenCode 실제 대화·tool loop·세션)을 분리하고, native Codex runtime/TUI는 기존 운영 상태를 유지하는 non-canonical 고급 경로로 재분류. 0004/0005는 대체되지 않음 | [0006-agentos-vendor-neutral-project-work-harness.md](reference/decisions/0006-agentos-vendor-neutral-project-work-harness.md) |
 | 2026-07-26 | REQ-HARNESS-002: global skills의 CWD-independent lookup을 유지하고, `project init/status`의 opt-in snapshot과 non-executing settings reference를 추가. project-local hooks/bootstrap trust는 추가하지 않음 | `.agentos/project/exec-plans/active/2026-07-26-req-harness-002-project-install.md` |
+| 2026-08-01 | Gateway Core 승인: 기존 vendor CLI와 `agentos run --once`를 보존하면서 `AGENTOS_HOME/gateway/` 로컬 run registry, 단일 worker, 상태/event/retry/prune 경로를 추가. 0006의 persistent task DB 제외는 Gateway run registry에 한해 제한적으로 supersede | [0007-agentos-gateway-core.md](reference/decisions/0007-agentos-gateway-core.md) |
 
 ## 변경 관리
 
@@ -27,6 +28,7 @@
 | AHA CLI 잔재 제거 및 파이썬 CLI로의 완전 이관 (REQ-003 추가) | 코드 및 카탈로그 문서 대폭 수정 포함 | 즉시 완료 | 없음 | 승인 및 구현 완료 |
 | LLM credential strategy 승인 | root project docs, implementation evidence note, and ADR approval fields updated | 후속 real provider implementation plan 작성 가능 | billing owner: project owner; API-key billing path excluded | approved |
 | REPL 중단 결정 취소 및 독립 CLI 방향 승인 | root docs, ADR, 후속 CLI implementation plan | 즉시 계획 작성 가능 | existing Python/Typer CLI를 기반으로 하며, provider credential safety boundary는 유지 | approved |
+| Gateway Core managed execution 추가 | root docs, ADR 0007, CLI/docs/tests/verifier | 구현 진행 중 | SQLite는 stdlib local registry로 제한; 외부 broker/network listener/credential store 없음 | approved |
 
 ## 지원 문서
 

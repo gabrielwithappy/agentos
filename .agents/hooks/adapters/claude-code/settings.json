@@ -40,6 +40,15 @@
             "command": "/bin/bash -lc 'root=\"${CLAUDE_PROJECT_DIR:-}\"; if [[ -z \"$root\" ]]; then root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; fi; python3 \"$root/.agents/hooks/scripts/post_tool_use_review.py\"'"
           }
         ]
+      },
+      {
+        "matcher": "Replace|Edit|Write.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"${CLAUDE_PROJECT_DIR:-}\"; if [[ -z \"$root\" ]]; then root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; fi; python3 \"$root/.agents/hooks/scripts/dashboard_sync_on_plan_write.py\" \"$root\"'"
+          }
+        ]
       }
     ],
     "Stop": [
