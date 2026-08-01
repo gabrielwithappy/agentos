@@ -11,6 +11,12 @@ runtime/
 !agentos/runtime/
 !agentos/runtime/*.py
 knowledge/
+!agentos/knowledge/
+!agentos/knowledge/**
+agentos/knowledge/__pycache__/
+agentos/knowledge/**/*.pyc
+!docs/knowledge/
+!docs/knowledge/**
 *.tar
 CLAUDE.md
 GEMINI.md

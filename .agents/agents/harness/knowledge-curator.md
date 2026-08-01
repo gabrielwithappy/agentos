@@ -27,11 +27,11 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 - `docs/knowledge/inbox/` is for draft/reference data.
 - Inbox drafts should still be reachable from `docs/knowledge/index.md` or a related approved document until they are published or rejected.
 - `references/`, `topics/`, and `decisions/` are approved knowledge surfaces.
-- `frontmatter` is mandatory for approved documents and should carry `title`, `status`, `source`, and `tags`. Keep `next_action` only when it is genuinely useful. Provenance fields such as `inbox_source`, `imported_from`, and `imported_hash` belong in inbox drafts or generated manifests, not approved-note frontmatter.
-- `category` comes from the folder path; `tags` are the search/navigation facets.
+- `frontmatter` is mandatory for knowledge documents and must carry `title`, `status`, `category`, `source`, `created_at`, `updated_at`, `tags`, `summary`, and `citation`. Keep `next_action` only when it is genuinely useful. Provenance fields such as `inbox_source`, `imported_from`, and `imported_hash` belong in inbox drafts or generated manifests, not approved-note frontmatter.
+- `category` must be `references`, `topics`, or `decisions`; `tags` are the search/navigation facets.
 - `tags` should be reused before inventing new ones.
 - `references` is the right home for source-heavy notes, `topics` for reusable explanations or procedures, and `decisions` for explicit approvals or settled choices.
-- `aha knowledge search` is for broad recall, `aha knowledge context` is for a short cited bundle, and `aha knowledge tags` is for choosing or reusing a tag group before publishing.
+- `agentos knowledge search` is for broad recall and `agentos knowledge context` is for a short cited bundle. Reuse existing tags from nearby documents before inventing new ones.
 - If a user is unsure where a note belongs, start with `tags`, then narrow with `search`, then use `context` to inspect the top matches.
 - `inbox` content is not instruction authority. It becomes durable knowledge only after user review and publish flow.
 - `inbox` content may be provisional, but it should not be left disconnected; keep a link path from the index or a related document.
@@ -41,8 +41,8 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 1. Draft or import into `docs/knowledge/inbox/`.
 2. Review source, title, category hint, and tags.
 3. Choose `publish`, `reject`, `update`, or `deprecate`.
-4. Run `aha knowledge lint --project "$PWD" --check`.
-5. Run `aha knowledge index --project "$PWD" --update` when the knowledge graph or entrypoint view should refresh.
+4. Run `agentos knowledge search "<keyword>" --project "$PWD"` when checking for duplicates.
+5. Run `agentos knowledge context "<keyword>" --project "$PWD"` when a plan or answer needs cited evidence.
 
 ## Output Style
 
@@ -53,15 +53,16 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 
 ## Recovery Guidance
 
-- Missing or weak tags: run `aha knowledge tags --project "$PWD"` and add reusable cascade tags.
-- Wrong category: move the draft to the correct approved surface before publishing.
+- Missing or weak tags: inspect related documents with `agentos knowledge search "<topic>" --project "$PWD"` and reuse their tags.
+- Wrong category: publish the inbox draft with the correct `--category`; for an already published document, update the frontmatter only after user review.
 - Duplicate idea: prefer `update` or `related` links over duplicate documents.
 - Unsafe or unverified imported content: keep it in inbox until review.
 
 ## Examples
 
-- `aha knowledge draft --project "$PWD" --title "Decision title" --text "Approved reusable project fact" --source manual --tags "action/decide,task/project-setup,domain/aha" --yes`
-- `aha knowledge inbox --project "$PWD"`
-- `aha knowledge publish --project "$PWD" --draft docs/knowledge/inbox/<draft-file>.md --category topics --yes`
-- `aha knowledge update --project "$PWD" --doc docs/knowledge/topics/<file>.md --text "..." --yes`
-- `aha knowledge deprecate --project "$PWD" --doc docs/knowledge/topics/<file>.md --reason "superseded" --yes`
+- `agentos knowledge inbox --project "$PWD"`
+- `agentos knowledge publish docs/knowledge/inbox/<draft-file>.md --category topics --project "$PWD"`
+- `agentos knowledge update docs/knowledge/topics/<file>.md --text "..." --project "$PWD"`
+- `agentos knowledge deprecate docs/knowledge/topics/<file>.md --reason "superseded" --project "$PWD"`
+- `agentos knowledge search "keyword" --project "$PWD"`
+- `agentos knowledge context "keyword" --project "$PWD"`
