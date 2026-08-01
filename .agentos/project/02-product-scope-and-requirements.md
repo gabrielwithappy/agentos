@@ -48,6 +48,16 @@ Work Contract 정의: 별도 파일/스키마/저장소를 새로 만드는 것�
 | REQ-HARNESS-002-b | `agentos project init` 반영 명령 | must | 사용자가 이 명령으로 현재 프로젝트에 전역 스킬/설정을 명시적으로 반영(복사 또는 참조)할 수 있고, 명령을 실행하지 않으면 project-local 반영이 발생하지 않음이 검증됨 | `reference/decisions/0005-agentos-independent-interactive-cli.md` | `tests/test_project_command.py`; `scripts/verify-cli-isolated-install.sh` | 현재 |
 | REQ-HARNESS-002-c | 전역 스킬 설치/동기화 경로 정합 | must | `agentos skill install`이 개별 스킬 단위 수동 복사 외에, 전역 스킬 디렉터리와 설치 소스 간 stale 상태를 사용자가 확인할 수 있는 수단(예: 버전/해시 비교)이 존재함이 검증됨 | `agentos/commands/skill.py` | `agentos skill status`; `tests/test_project_command.py` | 현재 |
 
+### REQ-HARNESS-003: Gateway Core managed execution
+
+- REQ-HARNESS-003 (must, 현재): 기존 vendor CLI 직접 사용을 보존하면서 AgentOS가 로컬 run queue, 상태, sanitized event ledger, 단일 worker, retry/cancel/prune 명령을 제공한다. Gateway는 `AGENTOS_HOME/gateway/` 아래 사용자 소유 데이터만 저장하고 credential, raw provider stderr, raw environment를 저장하지 않는다. 근거: `reference/decisions/0007-agentos-gateway-core.md`.
+
+| ID | requirement | Priority | acceptance | 추적성 | Evidence link / 검증 근거 | status |
+|---|---|---|---|---|---|---|
+| REQ-HARNESS-003-a | Gateway run registry와 단일 worker | must | `agentos gateway submit/worker/status/events`가 restart-safe SQLite run registry와 단일 worker lock으로 동작하고, provider event가 sanitized ledger로 조회됨 | `agentos/gateway/`, `agentos/commands/gateway.py` | `pytest tests/test_gateway_store.py tests/test_gateway_service.py tests/test_gateway_worker.py -q`; `bash scripts/verify-gateway-core.sh` | 현재 |
+| REQ-HARNESS-003-b | retry/cancel/prune 복구 흐름 | must | queued cancel, failed/interrupted retry, terminal-only preview-first prune이 검증되고 metadata policy prompt purge가 재시도 안내로 이어짐 | `docs/gateway-core.md` | `pytest tests/test_gateway_store.py tests/test_gateway_service.py -q` | 현재 |
+| REQ-HARNESS-003-c | 기존 CLI/provider 경계 보존 | must | Gateway가 기존 provider registry와 `RuntimeRequest`/`InvocationEvent`를 재사용하고 direct vendor CLI와 `agentos run --once`를 대체하지 않음 | `03-system-contract.md`, `reference/decisions/0007-agentos-gateway-core.md` | `bash scripts/verify-cli-isolated-install.sh`; `bash scripts/verify-gateway-core.sh` | 현재 |
+
 ## 요구사항과 acceptance
 
 | ID | requirement | Priority | acceptance | 추적성 | Evidence link / 검증 근거 | status |

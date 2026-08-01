@@ -19,6 +19,7 @@
 | Surface | Owner | Safe to edit? | Coordination rule |
 |---|---|---|---|
 | `agentos/cli.py`, `agentos/commands/`, future CLI runtime modules | implementation owner | reviewed plan after Gate 2 | preserve provider and secret contracts; add focused contract tests in the same plan |
+| `agentos/gateway/`, `agentos/commands/gateway.py` | implementation owner | reviewed Gateway Core plan after Gate 2 | Gateway worker must use the local single-worker lock, preserve direct vendor CLI boundaries, and record sanitized run/event evidence only under `AGENTOS_HOME/gateway/` |
 | `agentos/terminal/tui/` | implementation owner | reviewed TUI plan after Gate 2 | terminal-only Textual shell; TUI does not change session retention, delete/prune confirmation remains unchanged, and screens may show only existing AgentOS-built hooks with sanitized events |
 | `agentos/llm/` | implementation owner | reviewed provider-scoped plan | `0004` credential boundary and synthetic secret regression are mandatory |
 | `docs/`, README, project root docs | documentation/implementation owner | yes when command UX changes | update command examples, recovery guidance, requirements and verification traceability together |
