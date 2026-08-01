@@ -1,15 +1,15 @@
 # 장기지식 저장·검토·publish·검색 흐름 구현 계획
 
-> **상태:** 구현 계획 (실행 대기)<br>
+> **상태:** 완료<br>
 > **작성일:** 2026-08-01<br>
 > reviewed: true<br>
 > user_request: AgentOS의 장기지식 계획을 실제 사용자용 저장·검토·publish·검색 흐름으로 구현하고, 기존 조사 결과를 이후 계획에서 재사용할 수 있게 한다.<br>
-> active_agent: <br>
-> active_session: <br>
+> active_agent: codex<br>
+> active_session: /Users/gabriel/Prj/development/agentOS/.agentos/worktrees/knowledge-base-plan (branch: feature/knowledge-base-plan)<br>
 > dashboard_item_id: PVTI_lAHOBiJEFc4Bek_Ezg04yN4<br>
-> implementation_started_at: <br>
-> implementation_completed_at: <br>
-> implementation_duration: <br>
+> implementation_started_at: 2026-08-01T13:18:31Z<br>
+> implementation_completed_at: 2026-08-01T13:23:39Z<br>
+> implementation_duration: 5m 8s<br>
 > **usability_review_required:** true<br>
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
@@ -30,11 +30,11 @@
 
 | 필드 | 현재 값 |
 |---|---|
-| 전체 상태 | 계획 초안 / 리뷰 대기 |
-| 완료됨 | 기존 `knowledge-curator` 운영 규칙과 `.agents/traces/research/` 조사 저장 경로 확인, 사용자 요구사항 수렴 |
-| 현재 위치 | active plan 작성 후 Gate 2 리뷰 대기 |
-| 다음 단계 | 계획 리뷰 증거 확보 후 구현 실행 |
-| 완료 신호 | 저장·검토·publish·검색·인용 CLI의 focused pytest가 모두 PASS |
+| 전체 상태 | 완료 |
+| 완료됨 | 지식 문서 계약, 파일 store lifecycle, `agentos knowledge` CLI, 검색/context 인용, 사용자 문서, project index/requirement trace, curator 지침 업데이트 |
+| 현재 위치 | feature worktree에서 구현 검증 완료 후 main 병합 준비 |
+| 다음 단계 | 커밋 생성, main 병합, feature worktree/브랜치 정리 |
+| 완료 신호 | 저장·검토·publish·검색·인용 CLI의 focused pytest와 manifest check가 PASS |
 
 ## 사용자 결과 요약
 
@@ -124,21 +124,21 @@
 
 **사용자에게 보이는 마일스톤:** 사용자가 초안을 넣을 위치와 승인된 지식의 category를 알 수 있고, 잘못된 metadata는 publish 전에 거부된다.
 
-- [ ] **Step 1: metadata schema와 category/status 계약 정의**
+- [x] **Step 1: metadata schema와 category/status 계약 정의**
 
   `title`, `status`, `category`, `source`, `created_at`, `updated_at`, `tags`, `summary`, `citation` 필드를 정의한다. `status`는 최소 `draft`, `published`, `deprecated`를 지원하고, publish 대상 category는 `references`, `topics`, `decisions`로 제한한다.
 
   Run: `python3 -m pytest tests/test_knowledge_store.py -q -k schema`
   Expected: 필수 metadata·허용 category·잘못된 값 거부 테스트가 모두 PASS
 
-- [ ] **Step 2: 파일 기반 store lifecycle 구현**
+- [x] **Step 2: 파일 기반 store lifecycle 구현**
 
   inbox 문서 탐색, publish 대상 경로 검증, 파일 이동/metadata 갱신, update, deprecate, index 입력 수집을 구현한다. 경로 traversal과 category 외부 저장을 거부한다.
 
   Run: `python3 -m pytest tests/test_knowledge_store.py -q -k lifecycle`
   Expected: draft → published → deprecated와 실패 복구 경로가 모두 PASS
 
-- [ ] **Step 3: 사용자용 knowledge 디렉터리와 README 작성**
+- [x] **Step 3: 사용자용 knowledge 디렉터리와 README 작성**
 
   `docs/knowledge/README.md`에 초안 작성 형식, category 선택, 검토·publish·폐기 명령, 인용 형식을 설명하고 `index.md`에는 현재 문서 목록과 빈 category를 표시한다.
 
@@ -153,21 +153,21 @@
 
 **사용자에게 보이는 마일스톤:** 사용자가 저장·검토·publish·검색·인용을 명령어로 수행할 수 있다.
 
-- [ ] **Step 1: 인덱스 생성과 키워드 검색 구현**
+- [x] **Step 1: 인덱스 생성과 키워드 검색 구현**
 
   Markdown 본문·title·summary·tags를 대상으로 대소문자 무관 키워드 검색을 구현하고, 검색 결과에 category·status·문서 경로·일치 섹션을 포함한다. 임베딩이나 외부 API는 사용하지 않는다.
 
   Run: `python3 -m pytest tests/test_knowledge_cli.py -q -k search`
   Expected: 단일/복수 키워드와 category/status 필터 테스트가 모두 PASS
 
-- [ ] **Step 2: publish/update/deprecate/list/search/context 명령 연결**
+- [x] **Step 2: publish/update/deprecate/list/search/context 명령 연결**
 
   `agentos knowledge inbox`, `publish`, `update`, `deprecate`, `list`, `search`, `context` 명령을 추가한다. `context`는 짧은 인용 bundle을 반환하며 원문 경로와 섹션/라인 근거를 포함한다.
 
   Run: `python3 -m pytest tests/test_knowledge_cli.py -q`
   Expected: CLI lifecycle·오류 메시지·인용 출력 테스트 전부 PASS
 
-- [ ] **Step 3: CLI help와 no-op/오류 경계 검증**
+- [x] **Step 3: CLI help와 no-op/오류 경계 검증**
 
   지식 디렉터리가 비어 있거나 metadata가 잘못된 경우 안전한 메시지를 출력하고, CLI help에 사용자 관점의 다음 행동을 표시한다.
 
@@ -184,21 +184,21 @@
 
 **사용자에게 보이는 마일스톤:** 사용자가 프로젝트 문서 인덱스에서 장기지식 시스템의 목적·진입점·안전한 사용 순서를 찾을 수 있다.
 
-- [ ] **Step 1: curator 지침을 실제 CLI 계약과 일치시킴**
+- [x] **Step 1: curator 지침을 실제 CLI 계약과 일치시킴**
 
   기존 `aha knowledge` 예시를 현재 AgentOS CLI 계약으로 갱신하거나, 실제 `aha` runtime이 제공되는 것이 확인되면 재사용 경계를 명시한다. 승인 전 inbox가 지시 권한이 아니라는 규칙을 유지한다.
 
   Run: `grep -n "agentos knowledge\|inbox\|publish\|deprecated\|citation" .agents/agents/harness/knowledge-curator.md docs/knowledge/README.md`
   Expected: 실제 명령·경로·상태·승인 경계가 일치
 
-- [ ] **Step 2: project index에 사용자용 knowledge surface 등록**
+- [x] **Step 2: project index에 사용자용 knowledge surface 등록**
 
   `00-project-index.md`의 supporting document 등록표와 읽기 경로에 `docs/knowledge/README.md`/`index.md`를 연결하고, 해당 surface가 root project documents를 override하지 않는다고 명시한다.
 
   Run: `grep -n "docs/knowledge\|장기지식\|knowledge" .agentos/project/00-project-index.md`
   Expected: 최소 1개의 사용자 진입점·목적·freshness rule이 출력
 
-- [ ] **Step 3: 계획·가이드에서 knowledge 검색을 선택적으로 안내**
+- [x] **Step 3: 계획·가이드에서 knowledge 검색을 선택적으로 안내**
 
   계획 작성자가 필요할 때 `agentos knowledge search/context`를 사용하도록 안내하되, 자동 검색 강제나 Gate 2 우회로 해석되지 않게 문구를 고정한다.
 
@@ -227,12 +227,38 @@
 
 ## 구현 결과
 
-(구현 후 작성)
+Markdown frontmatter 기반 지식 문서 계약과 `docs/knowledge/inbox`, `references`, `topics`, `decisions` 구조를 추가했다. `agentos knowledge` CLI는 inbox 확인, publish, update, deprecate, list, search, context 인용 bundle을 제공하며 경로 traversal과 category 외부 publish를 거부한다.
+
+`docs/knowledge/README.md`와 `index.md`, `.agentos/project/00-project-index.md`, `.agentos/project/02-product-scope-and-requirements.md`, `.agents/agents/harness/knowledge-curator.md`를 현재 CLI 계약에 맞춰 연결했다. Knowledge 문서는 재사용 evidence이며 root project documents, active plan, Gate 2 reviewer authority, protected-path rules를 override하지 않는다는 경계를 문서화했다.
 
 ## 사용 방법
 
-(구현 후 작성)
+```bash
+agentos knowledge inbox
+agentos knowledge publish docs/knowledge/inbox/<draft>.md --category topics
+agentos knowledge update docs/knowledge/topics/<doc>.md --summary "Updated summary"
+agentos knowledge deprecate docs/knowledge/topics/<doc>.md --reason "superseded"
+agentos knowledge list
+agentos knowledge search "keyword"
+agentos knowledge context "keyword"
+```
+
+초안은 `docs/knowledge/inbox/`에 두고, 승인 후 `references`, `topics`, `decisions` 중 하나로 publish한다. 이후 계획이나 답변에서 근거가 필요할 때 `agentos knowledge context "<keyword>"`로 경로와 line evidence를 포함한 짧은 인용 묶음을 확인한다.
+
+## 완료 증거
+
+- `python3 -m pytest tests/test_knowledge_store.py -q -k schema` / 10 passed, 3 deselected
+- `python3 -m pytest tests/test_knowledge_store.py -q -k lifecycle` / 2 passed, 11 deselected
+- `test -f docs/knowledge/README.md && test -f docs/knowledge/index.md && find docs/knowledge -type d | grep -E 'inbox|references|topics|decisions'` / 4 category paths 출력
+- `python3 -m pytest tests/test_knowledge_cli.py -q -k search` / 2 passed, 3 deselected
+- `python3 -m pytest tests/test_knowledge_cli.py -q` / 5 passed
+- `python3 -m agentos.cli knowledge --help` / inbox, publish, update, deprecate, list, search, context 표시
+- `grep -n "agentos knowledge\|inbox\|publish\|deprecated\|citation" .agents/agents/harness/knowledge-curator.md docs/knowledge/README.md` / 실제 명령·상태·인용 경계 확인
+- `grep -n "docs/knowledge\|장기지식\|knowledge" .agentos/project/00-project-index.md` / 사용자 진입점과 freshness rule 확인
+- `python3 -m pytest tests/test_knowledge_cli.py -q && grep -rn "Gate 2\|knowledge context\|knowledge search" docs .agentos/project` / focused tests PASS 및 승인 경계 문구 확인
+- `python3 -m pytest tests/test_knowledge_store.py tests/test_knowledge_cli.py -q` / 18 passed
+- `bash .agents/skills/harness/sync-manifest/scripts/sync-manifest.sh --check` / PASS
 
 ## 아카이브 결정
 
-(구현·검증·Gate 2 closeout 이후 작성)
+이 계획은 아직 active에 남아 있으며, 사용자가 명시적으로 archive를 요청하면 `plan_lifecycle.py archive <plan-path> --status 완료`로 이동한다.
