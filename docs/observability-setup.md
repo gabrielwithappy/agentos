@@ -56,7 +56,41 @@ exec-plan 동기화는 런타임 이벤트와 **다른 5단계**로 Status를 �
 
 **주의**: 기존 Status 옵션 목록을 `updateProjectV2Field`로 통째로 교체하면(옵션 추가 시 GitHub API가 이렇게 동작합니다) 이미 카드에 설정된 Status 값이 초기화됩니다. 옵션을 추가한 직후에는 `sync-plan --all`을 한 번 더 실행해 모든 카드의 Status를 다시 채워 넣으세요.
 
-### 1. 대화형 마법사 (추천)
+## 계획 문서 저장 시 자동 동기화
+
+`.claude`/`.codex`/`.gemini` 중 어느 벤더에서 `active/` 하위 계획 파일을 Edit/Write해도 PostToolUse 훅이 자동으로 `sync-plan --all`을 시도합니다.
+- **전제조건**: `OBSERVABILITY_ENABLED=1`(`.env` 또는 셸 환경변수 둘 다 인식).
+- **보드가 안 바뀔 때 확인할 것**: 
+  1. `~/.agentos/logs/agentos.log`에서 `[Observability Warning] 자동 dashboard sync-plan 실패` 검색
+  2. 위 기존 `## agentos dashboard sync-plan` 섹션의 수동 명령 `agentos dashboard sync-plan --all`로 즉시 재시도 (자동 동기화가 막혀도 수동 경로는 항상 열려 있습니다).
+- 자동 동기화는 fail-open으로 동작하므로, 동기화에 실패해도 파일 편집 자체를 막지 않습니다.
+## agentos dashboard pull-plan — 보드 Status 되읽기
+
+목적: 사람이 보드에서 드래그한 카드 Status를 로컬 계획 문서로 되읽어옵니다(관찰용).
+이 기능은 카드의 Status만 확인하며, 계획 문서의 공식 `> **상태:**`나 `reviewed:` 필드를 **절대 자동으로 변경하지 않습니다**.
+댓글/라벨 읽기, 웹훅 기반 실시간 반영, 자동 Gate 2 승인은 이 범위에 없습니다.
+
+사용 예:
+```bash
+agentos dashboard pull-plan <exec-plan-file>
+agentos dashboard pull-plan --all
+```
+
+명령을 실행하면 파일 헤더에 아래 두 가지 메타 필드가 추가/갱신됩니다:
+- `remote_board_status`: 마지막으로 확인한 원격 Status 값
+- `remote_board_synced_at`: 마지막 pull 시각 (UTC)
+
+### 실패 시 동작 (Error Recovery)
+`pull-plan` 실행 시 발생할 수 있는 4가지 문제 상황과 다음 행동(해결책)입니다. 실패하더라도 프로세스가 중단되거나 문서가 손상되지 않습니다:
+
+| 콘솔 메시지 | 원인 및 다음 행동 |
+|---|---|
+| `dashboard_item_id가 없습니다` | 보드에 연동된 카드가 없습니다. 먼저 `sync-plan`을 실행해 카드를 생성하세요. |
+| `원격 상태 조회 실패` | 네트워크 오류이거나 인증 토큰 만료. 인터넷 연결 및 `GITHUB_TOKEN`을 확인하세요. |
+| `보드에서 Status 값을 찾지 못했습니다` | 카드가 삭제되었거나, Status 필드가 비어 있습니다. 보드에서 카드를 확인하세요. |
+| `대시보드가 설정되어 있지 않아...` | `.env`나 셸 환경변수, 또는 `--config`가 누락되었습니다. 설정을 확인하세요. |
+
+### 1. 대시보드 설정 마법사 (추천)
 단순히 `OBSERVABILITY_ENABLED=1` 환경변수만 설정하고 `agentos` 명령어를 실행하면, **대화형 마법사(Interactive Wizard)**가 나타나 필요한 정보를 물어보고 자동으로 현재 디렉토리의 `.env` 파일에 설정해 줍니다. 
 
 또한 터미널에 `gh auth login -s project,read:project` (또는 기존 인증 상태에서 `gh auth refresh -s project,read:project`)로 프로젝트 관리 권한이 미리 부여되어 있다면, `GITHUB_TOKEN`은 백그라운드에서 자동으로 가져오므로 일일이 발급받아 입력할 필요가 없습니다!

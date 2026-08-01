@@ -44,6 +44,16 @@
             "statusMessage": "Reviewing Bash output"
           }
         ]
+      },
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash -lc 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; python3 \"$root/.agents/hooks/scripts/dashboard_sync_on_plan_write.py\" \"$root\"'",
+            "statusMessage": "Syncing dashboard after plan edit"
+          }
+        ]
       }
     ],
     "Stop": [

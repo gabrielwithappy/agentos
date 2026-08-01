@@ -70,10 +70,11 @@ def test_bootstrap_rejects_symlink_targets_without_writing(tmp_path):
     os.symlink(destination, project / ".codex")
     result = _setup(project, tmp_path / "home")
     assert result.exit_code == 1
-    assert "unsupported symlink" in result.output
-    assert "path=" in result.output
-    assert "ls -ld" in result.output
-    assert "No existing files were changed" in result.output
+    out_no_nl = result.output.replace("\n", " ")
+    assert "unsupported symlink" in out_no_nl
+    assert "path=" in out_no_nl
+    assert "ls -ld" in out_no_nl
+    assert "No existing files were changed" in out_no_nl
     assert not (project / "AGENTS.md").exists()
 
 
@@ -85,7 +86,7 @@ def test_bootstrap_preflights_config_symlink_before_any_write(tmp_path):
     os.symlink(outside, project / ".codex" / "hooks.json")
     result = _setup(project, tmp_path / "home")
     assert result.exit_code == 1
-    assert "No existing files were changed" in result.output
+    assert "No existing files were changed" in result.output.replace("\n", " ")
     assert not (project / "AGENTS.md").exists()
     assert not (project / ".claude").exists()
 
