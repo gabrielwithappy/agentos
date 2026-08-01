@@ -48,6 +48,7 @@ REFERENCE_ARCHIVE_PREFIX = ".agentos/project/exec-plans/archive/reference/"
 EXEC_BOARD_ACTIVE_RECENT_LIMIT = 20
 EXEC_BOARD_ARCHIVED_RECENT_LIMIT = 20
 EXEC_BOARD_REFERENCE_RECENT_LIMIT = 10
+DASHBOARD_SYNC_TIMEOUT_SECONDS = 60
 
 
 @dataclass
@@ -305,13 +306,13 @@ def _load_env_if_needed(root: Path) -> None:
 def _resolve_agentos_cmd(root: Path) -> list[str] | None:
     import shutil
 
-    agentos_bin = shutil.which("agentos")
-    if agentos_bin:
-        return [agentos_bin]
-
     venv_bin = root / ".venv" / "bin" / "agentos"
     if venv_bin.is_file():
         return [str(venv_bin)]
+
+    agentos_bin = shutil.which("agentos")
+    if agentos_bin:
+        return [agentos_bin]
 
     uv_bin = shutil.which("uv")
     if uv_bin:
@@ -358,7 +359,7 @@ def _try_dashboard_sync(root: Path) -> None:
             base_cmd + ["dashboard", "sync-plan", "--all"],
             cwd=root,
             capture_output=True,
-            timeout=10,
+            timeout=DASHBOARD_SYNC_TIMEOUT_SECONDS,
             check=False,
             text=True,
         )

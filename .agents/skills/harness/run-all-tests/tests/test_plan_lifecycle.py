@@ -1,12 +1,20 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Optional
+import importlib.util
 
 import pytest
 
 
 SCRIPT = Path(__file__).resolve().parents[2] / "writing-plans" / "scripts" / "plan_lifecycle.py"
+
+_SPEC = importlib.util.spec_from_file_location("plan_lifecycle", SCRIPT)
+assert _SPEC is not None and _SPEC.loader is not None
+plan_lifecycle = importlib.util.module_from_spec(_SPEC)
+sys.modules["plan_lifecycle"] = plan_lifecycle
+_SPEC.loader.exec_module(plan_lifecycle)
 
 
 def write_plan(
@@ -51,6 +59,37 @@ def run_cli(tmp_path: Path, *args: str, check: bool = True) -> subprocess.Comple
         capture_output=True,
         text=True,
     )
+
+
+def test_resolve_agentos_cmd_prefers_project_venv_over_global_path(tmp_path, monkeypatch):
+    venv_bin = tmp_path / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    project_agentos = venv_bin / "agentos"
+    project_agentos.write_text("#!/bin/sh\n", encoding="utf-8")
+    project_agentos.chmod(0o755)
+
+    monkeypatch.setattr(plan_lifecycle.shutil, "which", lambda name: "/usr/local/bin/agentos" if name == "agentos" else None)
+
+    assert plan_lifecycle._resolve_agentos_cmd(tmp_path) == [str(project_agentos)]
+
+
+def test_dashboard_sync_uses_extended_timeout(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setenv("OBSERVABILITY_ENABLED", "1")
+    monkeypatch.setattr(plan_lifecycle, "_resolve_agentos_cmd", lambda root: ["agentos"])
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    plan_lifecycle._try_dashboard_sync(tmp_path)
+
+    assert calls
+    assert calls[0][0] == ["agentos", "dashboard", "sync-plan", "--all"]
+    assert calls[0][1]["timeout"] == plan_lifecycle.DASHBOARD_SYNC_TIMEOUT_SECONDS
+    assert calls[0][1]["timeout"] >= 60
 
 
 def test_refresh_generates_plan_json_and_board(tmp_path):
