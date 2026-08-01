@@ -398,6 +398,7 @@
     "tests/test_conversation_runtime.py",
     "tests/test_cryptographic_hook.py",
     "tests/test_dashboard_command.py",
+    "tests/test_dashboard_sync_hook.py",
     "tests/test_events.py",
     "tests/test_interactive_cli.py",
     "tests/test_llm_core.py",
