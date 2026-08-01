@@ -24,7 +24,7 @@
         ]
       },
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "matcher": "apply_patch|write_to_file|replace_file_content|multi_replace_file_content",
         "hooks": [
           {
             "type": "command",
@@ -46,7 +46,7 @@
         ]
       },
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "matcher": "apply_patch|write_to_file|replace_file_content|multi_replace_file_content",
         "hooks": [
           {
             "type": "command",
