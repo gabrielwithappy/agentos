@@ -9,7 +9,7 @@ try:
 except ImportError:
     pass
 
-from agentos.commands import setup, run, harness, doctor, skill, agent, llm, session, hook, project, dashboard
+from agentos.commands import setup, run, harness, doctor, skill, agent, llm, session, hook, project, dashboard, gateway
 from agentos.terminal.paths import read_preferred_provider
 from agentos.terminal.tui import run_tui
 
@@ -62,6 +62,7 @@ app.add_typer(session.app, name="session", help="Manage sessions")
 app.add_typer(hook.app, name="hook", help="Manage hooks")
 app.add_typer(project.app, name="project", help="Reflect global AgentOS resources into a project")
 app.add_typer(dashboard.app, name="dashboard", help="Sync exec-plan documents to an external dashboard")
+app.add_typer(gateway.app, name="gateway", help="Manage local Gateway Core runs")
 
 @app.command()
 def version():

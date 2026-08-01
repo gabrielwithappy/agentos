@@ -62,6 +62,8 @@ Session은 `AGENTOS_HOME/sessions`에 사용자 데이터로 저장됩니다. �
 ## 다음에 할 일
 
 자세한 command grammar와 recovery matrix는 `docs/cli-reference.md`를 확인하세요.
+
+관리 실행 큐가 필요하면 `docs/gateway-core.md`를 확인하세요. 기본 흐름은 `agentos project init --path .`, `agentos gateway submit --provider mock "prompt"`, `agentos gateway worker --once`, `agentos gateway status RUN_ID`입니다.
 # AgentOS 시작하기
 
 ```bash

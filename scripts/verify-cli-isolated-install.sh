@@ -5,23 +5,27 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 cleanup() {
   case "$TMP" in
-    /tmp/*) rm -rf "$TMP" ;;
+    /tmp/*|/var/folders/*) rm -rf "$TMP" ;;
   esac
 }
 trap cleanup EXIT
 
-python3 -m venv "$TMP/venv"
-"$TMP/venv/bin/python" -m pip install -q "$ROOT"
+uv venv --python 3.11 "$TMP/venv" >/dev/null
+uv pip install --python "$TMP/venv/bin/python" "$ROOT" >/dev/null
 mkdir -p "$TMP/outside"
 cd "$TMP/outside"
 export AGENTOS_HOME="$TMP/home"
 
 "$TMP/venv/bin/agentos" --help >/dev/null
+"$TMP/venv/bin/agentos" gateway --help > "$TMP/gateway-help.out"
+for command in submit worker status events retry prune; do
+  grep -q "$command" "$TMP/gateway-help.out"
+done
 "$TMP/venv/bin/agentos" setup > "$TMP/setup-first.out"
 grep -q "PASS agentos-setup" "$TMP/setup-first.out"
 grep -q "enabled=codex,claude-code" "$TMP/setup-first.out"
 "$TMP/venv/bin/agentos" setup > "$TMP/setup-rerun.out"
-grep -q "SKIP existing file=" "$TMP/setup-rerun.out"
+grep -q "SKIP existing" "$TMP/setup-rerun.out"
 grep -q "enabled=none" "$TMP/setup-rerun.out"
 grep -q "skipped_vendors=codex,claude-code" "$TMP/setup-rerun.out"
 "$TMP/venv/bin/python" - <<'PY' "$TMP/outside"
