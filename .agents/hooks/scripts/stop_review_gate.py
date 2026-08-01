@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -129,7 +130,7 @@ def main() -> int:
         print(json.dumps({"continue": True}))
         return 0
 
-    cwd = payload.get("cwd") or "."
+    cwd = payload.get("cwd") or os.getcwd()
     last_message = payload.get("last_assistant_message") or ""
 
     if _loop_locked(cwd):

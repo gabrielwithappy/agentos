@@ -18,9 +18,22 @@ USABILITY_REQUIRED_RE = re.compile(
 )
 GATE2_RE = re.compile(r"^> gate2_[^:\n]+:.*$", re.MULTILINE)
 HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
-# Fields the "Completed Active Plan Closeout" contract (writing-plans/SKILL.md)
-# requires agents to fill in AFTER Gate 2 signing. Excluded from the hash so a
+# Fields/sections that other harness contracts require agents to fill in
+# AFTER Gate 2 signing: implementation_*_at/duration, active_agent,
+# active_session (executing-plans/SKILL.md Step 7-8 occupancy lock),
+# dashboard_item_id (TEMPLATE.md, auto-written by `agentos dashboard
+# sync-plan`), Task checkbox state, and the "Completed Active Plan Closeout"
+# prose sections (writing-plans/SKILL.md). Excluded from the hash so a
 # properly closed-out plan doesn't retroactively invalidate its own review.
+#
+# Threat model: this exclusion is intentionally unbounded in content (a
+# timestamp/id line or a closeout section can hold arbitrary text) but
+# bounded in *what it can influence* — no code in this harness parses these
+# fields/sections as directives; they are display/bookkeeping only. The
+# content that actually specifies what was reviewed and approved (목표,
+# 아키텍처, Task steps, 사용자 결과, 의존성 게이트, etc.) is NOT matched by
+# any of these patterns and remains fully hashed, so tampering with scope
+# after signing still invalidates the signature.
 LIVING_META_RE = re.compile(
     r"^> (?:implementation_started_at|implementation_completed_at|implementation_duration|"
     r"dashboard_item_id|active_agent|active_session): .*$",
@@ -142,6 +155,7 @@ def _artifact_problem(
 
 
 def check_plan(root: Path, plan_path: str) -> ReviewCheck:
+    root = root.resolve()
     plan_file = (root / plan_path).resolve()
     rel_path = plan_file.relative_to(root).as_posix()
     text = load_text(plan_file)

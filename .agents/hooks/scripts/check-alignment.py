@@ -11,9 +11,23 @@ SECRET_KEY_PATH = ".agentos/secret.key"
 REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
 HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
 GATE2_RE = re.compile(r"^> gate2_[^:\n]+:.*$", re.MULTILINE)
-# Fields the "Completed Active Plan Closeout" contract (writing-plans/SKILL.md)
-# requires agents to fill in AFTER Gate 2 signing. Excluded from the hash so a
+# Fields/sections that other harness contracts require agents to fill in
+# AFTER Gate 2 signing: implementation_*_at/duration, active_agent,
+# active_session (executing-plans/SKILL.md Step 7-8 occupancy lock),
+# dashboard_item_id (TEMPLATE.md, auto-written by `agentos dashboard
+# sync-plan`), Task checkbox state, and the "Completed Active Plan Closeout"
+# prose sections (writing-plans/SKILL.md). Excluded from the hash so a
 # properly closed-out plan doesn't retroactively invalidate its own review.
+#
+# Threat model: this exclusion is intentionally unbounded in content (a
+# timestamp/id line or a closeout section can hold arbitrary text) but
+# bounded in *what it can influence* — no code in this harness parses these
+# fields/sections as directives; they are display/bookkeeping only. The
+# content that actually specifies what was reviewed and approved (목표,
+# 아키텍처, Task steps, 사용자 결과, 의존성 게이트, etc.) is NOT matched by
+# any of these patterns and remains fully hashed, so tampering with scope
+# after signing still invalidates the signature.
+#
 # Kept in sync with the copy in
 # .agents/skills/harness/writing-plans/scripts/review_artifacts.py.
 LIVING_META_RE = re.compile(
