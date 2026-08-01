@@ -3,7 +3,7 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-01T01:35:23Z
+> Generated at: 2026-08-01T01:57:51Z
 
 ## Active Plans
 - older active plans omitted=0

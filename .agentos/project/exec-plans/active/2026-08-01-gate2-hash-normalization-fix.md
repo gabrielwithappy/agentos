@@ -10,7 +10,7 @@
 > user_request: Stop 훅에서 `stop_review_gate.py`가 `TypeError`로 죽는 문제를 발견해 수정을 요청받음. 원인 분석 중 별도로, Gate 2 서명 이후 정당한 계획 문서 편집(구현 타임스탬프, 체크박스, 구현 결과 섹션 등)이 서명 해시를 항상 무효화시키는 구조적 버그를 추가로 발견해 함께 수정. 사용자가 이 변경이 `.agents/` 보호 경로(harness governance)에 해당함을 지적해, 소급 계획 문서 작성 후 Gate 2 리뷰를 거치기로 함. 1차 Gate 2 리뷰에서 3개 리뷰어 전원 FAIL 판정 — 실제 잔존 버그(cwd 미포함 시 크래시)와 프로세스 누락(protected path governance step 없음, 회귀 테스트 없음, 인용 오류)을 지적받아 코드/문서 모두 수정 후 재리뷰.<br>
 > active_agent: Claude Code<br>
 > active_session: f145077e-dbba-4d91-8e7c-412b076b55b9<br>
-> dashboard_item_id: <br>
+> dashboard_item_id: PVTI_lAHOBiJEFc4Bek_Ezg039wc<br>
 > implementation_started_at: 2026-08-01T01:00:00Z<br>
 > implementation_completed_at: 2026-08-01T01:23:00Z<br>
 > implementation_duration: 약 23분(1차 구현 + Gate 2 FAIL 3건 반영 재구현 포함)<br>

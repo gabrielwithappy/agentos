@@ -7,7 +7,7 @@
 > user_request: 현재 GitHub 대시보드 연동은 AgentOS → GitHub 단방향 push만 지원한다. 대시보드 기능 확장을 위해, 사람이 GitHub Projects 보드에서 바꾼 카드 Status를 다시 AgentOS로 읽어오는 양방향 흐름을 계획 문서로 작성해 달라는 요청.<br>
 > active_agent: Claude Code<br>
 > active_session: f145077e-dbba-4d91-8e7c-412b076b55b9<br>
-> dashboard_item_id: <br>
+> dashboard_item_id: PVTI_lAHOBiJEFc4Bek_Ezg039us<br>
 > implementation_started_at: <br>
 > implementation_completed_at: <br>
 > implementation_duration: <br>
