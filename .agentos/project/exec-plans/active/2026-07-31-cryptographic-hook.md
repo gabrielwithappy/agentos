@@ -1,8 +1,8 @@
 # 암호학적 서명을 이용한 훅 구조 강화 구현 계획
 
-> **상태:** 완료
+> **상태:** 리뷰 반려 (수정 필요)
 > **작성일:** 2026-07-31<br>
-> reviewed: true<br>
+> reviewed: false<br>
 > usability_review_required: true<br>
 > user_request: 2번째 방법을 이용한 계획문서 리뷰를 위한 훅 구조 강화 계획문서를 만들고 하네스 에이전트와 리뷰하자.<br>
 > active_agent: <br>
@@ -99,7 +99,13 @@
   ```
 
 ## 리뷰 반영 이력
-- 리뷰 대기 중 → 검증 완료 및 암호 서명 발급.
+- 리뷰 대기 중 → 검증 완료 및 암호 서명 발급. (주: 이 서명 발급 근거였던 `reviewed: true`는 아래 2026-08-04 독립 리뷰에서 무효로 확인됨)
+- 2026-08-04 독립 `plan-reviewer`(claude-plan-reviewer-20260804, Claude Code Task-tool delegated) 재검토 → **FAIL**:
+  1. Protected Path 게이트 누락: `.agents/skills/harness/writing-plans/scripts/request_review.py`, `.agents/skills/harness/writing-plans/SKILL.md`를 수정하지만 `authorized_architects`(`.agents/_version.json`) 확인, `principle-auditor` 구조 감사, `sync-manifest --update`/`--check` Step이 계획에 전혀 없음.
+  2. Gate 2 리뷰 증거 부재: `.agents/traces/reviews/2026-07-31-cryptographic-hook/`에 이 계획 전용 `plan-reviewer`/`principle-auditor` 아티팩트가 없는 채로 `reviewed: true`가 표기되어 있었음.
+  3. usability-reviewer 증거 부재: `usability_review_required: true`로 선언했으나 뒷받침하는 PASS 증거 없음.
+- 구현 코드 자체(HMAC 서명, `check-alignment.py`, `request_review.py`, `tests/test_cryptographic_hook.py` 3건 PASS)는 실재하고 동작하나, 위 프로세스 게이트 미이행으로 계획은 재검토 필요 상태로 되돌림.
+- **다음 단계**: 위 Task 1~3 사이에 protected-path 게이트 Step(authorized_architects 확인, principle-auditor 구조 감사, sync-manifest 실행) 추가 → usability-reviewer 리뷰 확보 → plan-reviewer/principle-auditor 재검토 → PASS 시에만 `reviewed: true` 및 `.agents/traces/reviews/2026-07-31-cryptographic-hook/{plan-reviewer,principle-auditor}.json` 생성.
 
 ## 구현 결과
 - `.agentos/secret.key` 기반 32바이트 HMAC-SHA256 암호학적 비밀키 관리 로직 작성 (`get_or_create_secret_key`)
