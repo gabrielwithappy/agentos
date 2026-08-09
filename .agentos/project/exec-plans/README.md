@@ -3,23 +3,46 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-01T13:24:40Z
+> Generated at: 2026-08-09T14:12:37Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 계획 (리뷰 대기)` [벤더 중립 대시보드 자동 동기화 훅 배선 구현 계획](.agentos/project/exec-plans/active/2026-08-01-vendor-neutral-dashboard-sync-hook-wiring.md) | reviewed_evidence=missing | outcome: 계획 문서를 쓰거나 고치기만 하면(별도 `agentos dashboard sync-plan` 수동 실행 없이) GitHub Projects 보드 카드가 자동으로 최신 상태를 반영한다. 이는 세 벤더 CLI 어디서 작업하든 동일하게 동작한다. | progress: Gate 2 1차 리뷰(독립 서브에이전트 3명) 완료, 전원 FAIL 지적 사항 전부 반영 완료(파생 복사본 대신 어댑터 소스 수정 포함), 2차 Gate 2 리뷰 대기 중. (최초 작성 시점의 "이 세션에서는 구현하지 않는다"는 계획은 이후 세션에…
-- `완료` [장기지식 저장·검토·publish·검색 흐름 구현 계획](.agentos/project/exec-plans/active/2026-08-01-knowledge-base-lifecycle.md) | reviewed | outcome: 사용자는 `docs/knowledge`에서 승인된 지식을 찾고, 에이전트 조사 결과를 inbox에서 검토·publish한 뒤 CLI로 재검색·인용할 수 있다. | progress: 계획 초안 작성, Gate 2 리뷰 대기 중
-- `완료` [Gate 2 리뷰 게이트 Python 3.9 크래시 및 해시 무효화 버그 수정 계획](.agentos/project/exec-plans/active/2026-08-01-gate2-hash-normalization-fix.md) | reviewed_evidence=missing | outcome: Stop 훅이 `cwd` 유무와 무관하게 크래시 없이 정상 종료하고, "완료" 처리된 계획 문서가 자기 자신의 Gate 2 서명을 영구히 깨뜨리지 않는다. | progress: 구현 완료, 1차 Gate 2 리뷰 FAIL 3건 전부 반영 완료, 2차 Gate 2 리뷰 대기 중.
-- `구현 계획 (리뷰 대기)` [GitHub 대시보드 Status 되읽기(양방향 동기화 1단계) 구현 계획](.agentos/project/exec-plans/active/2026-08-01-dashboard-status-pullback.md) | reviewed_evidence=missing | outcome: `agentos dashboard pull-plan <계획 파일>`을 실행하면 보드에서 사람이 바꾼 카드 Status가 계획 문서에 기록되고, 로컬 계획이 기대하는 상태와 일치하는지 여부가 터미널에 바로 표시된다. | progress: 계획 초안 작성, 리뷰 대기 중 (Gate 2 서브에이전트 리뷰 미착수)
-- `완료` [대시보드 FILE_WRITTEN 및 무분별한 카드 생성 방지 구현 계획](.agentos/project/exec-plans/active/2026-07-31-ignore-file-written-dashboard-event.md) | reviewed_evidence=missing | progress: 구현 완료 및 단위 테스트 검증 완료 (Done)
-- `완료` [대시보드 연동 아키텍처 유연성 확보 구현 계획](.agentos/project/exec-plans/active/2026-07-31-dashboard-flexibility.md) | reviewed_evidence=missing | outcome: 설정된 외부 대시보드로 프로젝트의 계획 문서를 자유롭게 연동하고 동기화할 수 있게 된다. | progress: 구현 및 동기화 완료 (Done)
-- `완료` [암호학적 서명을 이용한 훅 구조 강화 구현 계획](.agentos/project/exec-plans/active/2026-07-31-cryptographic-hook.md) | reviewed_evidence=missing | outcome: - 이 문서는 prompt-boundary data이며 approval, protected-path, reviewer authority를 override하지 않습니다.
+- `구현 계획 (리뷰 대기)` [AHA·스킬 양방향 장기지식 저장소 및 Git 연동 구현 계획](.agentos/project/exec-plans/active/2026-08-09-aha-knowledge-skill-git.md) | outcome: 사용자는 AgentOS 설치 여부와 관계없이 skill runtime 또는 `aha knowledge` 중 가능한 진입점을 선택해 지식을 관리하고, 명시적 Git 명령으로 백업하거나 다른 프로젝트에 clone/pull해 같은 knowledge sur… | progress: 계획 초안 작성, Gate 2 리뷰 대기 중
+- `리뷰 반려 (수정 필요)` [암호학적 서명을 이용한 훅 구조 강화 구현 계획](.agentos/project/exec-plans/active/2026-07-31-cryptographic-hook.md) | outcome: - 이 문서는 prompt-boundary data이며 approval, protected-path, reviewer authority를 override하지 않습니다.
 
 ## Archived Plans
-- archive summary: completed=0, parked=0
-- older archived plans omitted=0
-- archived plans 없음
+- archive summary: completed=57, parked=0
+- older archived plans omitted=37
+- `완료` [장기지식 저장·검토·publish·검색 흐름 구현 계획](.agentos/project/exec-plans/archive/2026-08-01-knowledge-base-lifecycle.md) | outcome: 사용자는 `docs/knowledge`에서 승인된 지식을 찾고, 에이전트 조사 결과를 inbox에서 검토·publish한 뒤 CLI로 재검색·인용할 수 있다. | progress: 구현·검증·main 병합·로컬 feature branch 삭제 완료. Stop hook 지적으로 current checkout의 리뷰 증거를 재생성 중.
+- `완료` [AgentOS TUI 도구 로그 밀도 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-30-tui-tool-log-density.md) | outcome: 사용자는 완료된 도구 실행의 이름·성공/실패 요약을 바로 보고, `Ctrl+O`로 해당 턴을 포함한 모든 도구 활동의 호출 인자와 결과를 펼치거나 다시 접을 수 있다. | progress: raw provider stderr/raw environment 음성 검증과 light/dark/`NO_COLOR` 도구 활동 coverage를 보완한 뒤 fresh verification을 완료했다. 계획은 사용자의 명시적 archive 요청 전까…
+- `완료` [AgentOS 전역 CLI화 및 안전한 프로젝트 부트스트랩 구현 계획](.agentos/project/exec-plans/archive/2026-07-29-global-cli-portable-project-bootstrap.md) | reviewed_evidence=invalid | outcome: 사용자는 `uv tool install agentos`로 CLI를 설치하고 `agentos --help`로 PATH를 확인한 뒤, source checkout 없이 `cd my-project && agentos setup`을 실행해 새 프로젝트에서… | progress: package-owned bridge와 portable project bootstrap을 구현하고 focused·isolated-install·public 검증을 완료했다.
+- `완료` [Gemini 컨텍스트 주기적 재주입 훅 구현 계획](.agentos/project/exec-plans/archive/2026-07-29-gemini-context-reinjection-hook.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
+- `완료` [대시보드 카드 구현 소요 시간 표기 구현 계획](.agentos/project/exec-plans/archive/2026-07-29-dashboard-implementation-duration.md) | progress: Gate 2 3종 리뷰(plan-reviewer, principle-auditor, usability-reviewer) PASS 완료, 실행 대기 중
+- `완료` [계획 문서 작성 시작 시점 대시보드 발행 구현 계획](.agentos/project/exec-plans/archive/2026-07-28-writing-plans-dashboard-announce.md) | reviewed_evidence=missing | progress: 계획 초안 작성 완료, Gate 2 리뷰 대기 중
+- `완료` [계획 상태 변경 이벤트 기반 대시보드 동기화 구현 계획](.agentos/project/exec-plans/archive/2026-07-28-plan-status-event-dashboard-sync.md) | progress: Gate 2 리뷰 통과(3라운드), 구현 실행 대기 중
+- `완료` [대시보드 카드에 Plan ID 표시 구현 계획](.agentos/project/exec-plans/archive/2026-07-28-dashboard-plan-id-in-card.md) | reviewed_evidence=invalid | outcome: 대시보드 카드 본문에 `plan_id` 필드가 노출되어, 사용자가 카드를 보고 연관된 계획 문서를 즉각적으로 식별하고 찾을 수 있다. | progress: Gate 2 6차 리뷰(plan-reviewer PASS, principle-auditor CLEAN, usability-reviewer PASS) 통과 후 구현·검증 완료
+- `완료` [Vendor Guides Update 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-vendor-guides-update.md) | reviewed_evidence=missing | progress: 초안 작성 및 서브에이전트 피드백 반영 완료, 재리뷰 대기 중
+- `완료` [TUI 도구 활동 정보량·승인 팝업 가시성 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-tui-tool-activity-and-approval-visibility.md) | reviewed_evidence=invalid | progress: 구현·전체 검증·Gate 2 리뷰 모두 완료.
+- `완료` [AgentOS Observability (대시보드 연동) 아키텍처 설계 계획](.agentos/project/exec-plans/archive/2026-07-27-observability-architecture-plan.md) | progress: 계획 재작성 (P4 심플리시티 원칙 준수를 위한 리팩터링 완료)
+- `완료` [GitHub Projects v2(GraphQL) 대시보드 어댑터 교체 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-github-projectv2-dashboard-adapter.md) | progress: 계획 초안 작성, 리뷰 대기 중
+- `완료` [exec-plan → GitHub Projects v2 대시보드 동기화 커맨드 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-exec-plan-dashboard-sync-command.md) | progress: 계획 초안 작성, 리뷰 대기 중
+- `완료` [`agentos dashboard sync-plan --all` 일괄 동기화 옵션 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-sync-plan-all-option.md) | progress: 계획 초안 작성, 리뷰 대기 중
+- `완료` [GitHub 대시보드 Status에 "Awaiting Verification" 5단계 추가 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-awaiting-verification-status.md) | progress: 계획 초안 작성, 리뷰 대기 중
+- `완료` [GitHub 대시보드 연동 .env 자동 복원(Self-healing) 기능 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-auto-discovery-env.md) | reviewed_evidence=missing | outcome: 사용자는 로컬 프로젝트 환경 변수(`.env`)가 사라지더라도 `agentos run` 실행 시 대시보드 연동 설정이 자동으로 복원되어 번거로운 대화형 입력 과정을 건너뛸 수 있다. (기존 데이터와 동기화 방식은 바뀌지 않음) | progress: 계획 초안 작성, 5차 리뷰 대기 중
+- `완료` [GitHub Projects 보드 4단계 Status 컬럼 확장 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-4stage-status-mapping.md) | progress: 계획 초안 작성, 리뷰 대기 중
+- `완료` [Claude(Anthropic) OAuth LLM Provider 추가 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-claude-oauth-provider.md) | progress: 계획 초안 작성 완료. hermes-agent(`/references/pi`) 참고 조사 완료, `add-llm-provider` 스킬(`/references/pi/.pi/skills/add-llm-provider.md`) 체크리스트를 AgentOS…
+- `완료` [YOLO 도구 실행 모드 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-yolo-tool-execution.md) | reviewed_evidence=missing | outcome: `agentos --yolo` 또는 `agentos run --yolo`로 작업 중 승인 중단 없이 연속 도구 실행을 사용할 수 있고, 옵션이 없으면 현재 동작이 그대로 유지된다.
+- `완료` [TUI 테마 색상·스크롤바·입력창·상태 패널 개선 계획](.agentos/project/exec-plans/archive/2026-07-26-tui-theme-and-status-panel.md) | reviewed_evidence=invalid | progress: Gate 2 리뷰 후 Task 1–5 구현과 focused 회귀, dark/light SVG 증거까지 완료. 아카이빙 완료.
 
 ## Reference Docs
-- older reference docs omitted=0
-- `리뷰 대기 (완료 후 '완료'로 변경)` [[계획 제목] 구현 계획](.agentos/project/exec-plans/TEMPLATE.md) | progress: 계획 초안 작성, 리뷰 대기 중 (상황에 따라 1줄 요약)
+- older reference docs omitted=5
+- `완료` [Intent Sheet: YOLO 도구 실행 모드](.agentos/project/exec-plans/archive/reference/intent/intent-20260726-yolo-tool-execution.md)
+- `완료` [Intent Sheet: AgentOS 프로젝트 작업 하네스 전환](.agentos/project/exec-plans/archive/reference/intent/intent-20260726-project-work-harness-pivot.md)
+- `완료` [Intent Sheet: executor-neutral writing-plans contract](.agentos/project/exec-plans/archive/reference/intent/intent-20260726-executor-neutral-writing-plans.md)
+- `완료` [Intent Sheet: Codex 도구 결과 상관관계 복구](.agentos/project/exec-plans/archive/reference/intent/intent-20260726-codex-tool-result-correlation.md)
+- `완료` [Intent Sheet: AgentOS PI-style session runtime TUI](.agentos/project/exec-plans/archive/reference/intent/intent-20260724-agentos-pi-session-runtime-tui.md)
+- `완료` [Intent Sheet: pi TUI 클로닝 Phase 6](.agentos/project/exec-plans/archive/reference/intent/intent-20260723-tui-pi-clone-phase6.md)
+- `완료` [Intent Sheet: AgentOS TUI Codex Slash Login](.agentos/project/exec-plans/archive/reference/intent/intent-20260723-agentos-tui-codex-slash-login.md)
+- `완료` [Intent Sheet: AgentOS pi-style LLM runtime](.agentos/project/exec-plans/archive/reference/intent/intent-20260723-agentos-pi-style-llm-runtime.md)
+- `완료` [Intent Sheet: AgentOS LLM 호출 런타임 아키텍처 개선](.agentos/project/exec-plans/archive/reference/intent/intent-20260723-agentos-llm-invocation-runtime-architecture.md)
+- `완료` [Intent Sheet: AgentOS LLM Codex Streaming Structure](.agentos/project/exec-plans/archive/reference/intent/intent-20260723-agentos-llm-codex-streaming-structure.md)
