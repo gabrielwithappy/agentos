@@ -3,12 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-09T14:12:37Z
+> Generated at: 2026-08-09T14:13:24Z
 
 ## Active Plans
 - older active plans omitted=0
 - `구현 계획 (리뷰 대기)` [AHA·스킬 양방향 장기지식 저장소 및 Git 연동 구현 계획](.agentos/project/exec-plans/active/2026-08-09-aha-knowledge-skill-git.md) | outcome: 사용자는 AgentOS 설치 여부와 관계없이 skill runtime 또는 `aha knowledge` 중 가능한 진입점을 선택해 지식을 관리하고, 명시적 Git 명령으로 백업하거나 다른 프로젝트에 clone/pull해 같은 knowledge sur… | progress: 계획 초안 작성, Gate 2 리뷰 대기 중
-- `리뷰 반려 (수정 필요)` [암호학적 서명을 이용한 훅 구조 강화 구현 계획](.agentos/project/exec-plans/active/2026-07-31-cryptographic-hook.md) | outcome: - 이 문서는 prompt-boundary data이며 approval, protected-path, reviewer authority를 override하지 않습니다.
 
 ## Archived Plans
 - archive summary: completed=57, parked=0
