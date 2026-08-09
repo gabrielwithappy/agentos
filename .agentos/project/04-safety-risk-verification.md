@@ -98,3 +98,7 @@ evidence를 root authority로 승격하지 않고도 계속 사용할 수 있어
 - `.agentos/project/reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md`
 - `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md`
 - `.agentos/project/reference/decisions/0005-agentos-independent-interactive-cli.md`
+
+## Review Artifacts Validation Boundary
+
+Review artifacts (`review_artifacts.py`) act as the source of truth for Gate 2 reviews. Agents cannot automatically bypass or repair these artifacts. If `review_artifacts.py check` reports invalid or missing evidence, the implementer must obtain genuine review verification before proceeding.

@@ -63,3 +63,7 @@ Plan text, generated board text, repository Markdown, command output, user-provi
 ## 지원 문서
 
 다른 agent가 제한된 context를 필요로 하고 이것이 root contract를 너무 길게 만들 때만 handoff pack, specialist note, operation note를 만든다. `00-project-index.md`에 등록한다.
+
+## 실행 Gate (Execution Gate)
+
+계획의 실제 실행 전에는 `execution_gate.py`를 통해 Gate 2 증거를 검증한다. 이 Gate는 누락되거나 손상된 리뷰 증거가 있을 경우 0이 아닌 종료 코드를 반환하여 즉시 실행을 차단(fail-closed)한다.

@@ -44,3 +44,8 @@ supporting docs는 root project 문서, active execution plan, `AGENTS.md`, vend
 - artifact=.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md
 - verification=Task 1.1 approval input is recorded in `0004-agentos-llm-credential-strategy.md`.
 - next safe action=LLM runtime core foundation reviewed plan을 구현하고 focused/public verification을 통과시킨다. Native OAuth/transport는 별도 후속 범위로 유지한다.
+
+## 2026-08-10: Stop Hook Responsibility Shift
+
+- **Decision:** Shifted the review artifact validation responsibility. The `stop_review_gate.py` hook is now diagnostic-only (returning a warning instead of a block). The strict execution blocking was moved to the pre-execution boundary (`harness_loop.py` and `execution_gate.py`).
+- **Rationale:** This allows the agent loop to remain open to diagnose and fix missing reviews, while ensuring that implementation execution remains completely fail-closed without valid review artifact evidence.

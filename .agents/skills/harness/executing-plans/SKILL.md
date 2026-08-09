@@ -51,9 +51,12 @@ Load plan, review critically, execute all tasks, report when complete.
 ### Step 1: Load and Review Plan
 1. Read plan file
 2. **Gate check**:
-   - 계획 파일 헤더에 `reviewed: true`가 반드시 있어야 한다.
-   - 없으면 이 스킬이 직접 추가하지 않는다. `writing-plans` Gate 2(`plan-reviewer` + `principle-auditor`)를 먼저 완료하도록 되돌린다.
-   - 대화형 세션에서는 `reviewed: true`가 없으면 실행 금지다.
+   - Run the execution gate standalone checker:
+     ```bash
+     python3 .agents/skills/harness/writing-plans/scripts/execution_gate.py --plan <active-plan-path>
+     ```
+   - If the script exits with non-zero (exit 2), STOP execution immediately and print the recovery command output by the script. Do not proceed until the recovery passes.
+   - 대화형 세션에서는 `reviewed: true`가 없으면 실행 금지다. (execution_gate.py가 이를 포함해 검증한다)
    - **루프 모드일 때만** 아래 추가 Gate를 확인한다:
      ```bash
      grep "execution_locked" .agents/traces/harness/loop-state.md

@@ -14,7 +14,39 @@
 - `SessionStart`: load `AGENTS.md` and the runtime vendor guide.
 - `PreToolUse`: run the existing Bash guard at `.agents/skills/harness/careful/bin/check-careful.sh`.
 - `PostToolUse`: run `scripts/post_tool_use_review.py` to block failed Bash commands and remind completion-adjacent commands to use `verification-before-completion`.
-- `Stop`: run `scripts/stop_review_gate.py` to block ending while `loop-state.md` is execution-locked, while dirty-worktree completion claims lack verification evidence, or while an active plan claims `reviewed: true` without valid independent review artifacts.
+- `Stop`: run `scripts/stop_review_gate.py` to block ending while `loop-state.md` is execution-locked or while dirty-worktree completion claims lack verification evidence. Invalid reviewer artifacts are reported as warnings, not blocks — the session can still end.
+
+## Stop Hook Warning Behavior
+
+`stop_review_gate.py` reports **warnings** (not blocks) when a `reviewed: true` active plan lacks valid independent review artifacts. This allows sessions to end normally while surfacing the problem.
+
+### Warning code: `review-evidence-invalid`
+
+When this warning appears in the Stop output:
+
+```json
+{
+  "continue": true,
+  "warnings": [{
+    "code": "review-evidence-invalid",
+    "plan_path": ".agentos/project/exec-plans/active/<plan>.md",
+    "detail": "missing=plan-reviewer,principle-auditor",
+    "next_action": "python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <plan-path>"
+  }]
+}
+```
+
+**Why Stop allows continue**: The Stop hook is a diagnostic gate, not an execution gate. Invalid review evidence does not make the current conversation turn unsafe to end — it means the *next implementation attempt* will be blocked.
+
+**Why execution is still fail-closed**: `harness_loop.py` and `execution_gate.py` call `review_artifacts.check_plan()` before dispatching any child CLI. A plan with `reviewed: true` but invalid/missing formal JSON artifacts will be rejected at execution time with exit code 2.
+
+**Recovery steps**:
+1. Run the check command shown in `next_action` to see which reviewers are missing or invalid.
+2. Request independent reviews from `plan-reviewer`, `principle-auditor`, and (if user-facing) `usability-reviewer`.
+3. Record each review with `review_artifacts.py record --plan <path> --reviewer <role> ...`.
+4. Re-run the check to confirm: `python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <plan-path>`
+
+The hook never auto-generates, auto-repairs, or modifies review artifacts. Only genuine independent reviewer verdicts resolve this warning.
 
 ## Adapters
 

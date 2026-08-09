@@ -112,3 +112,8 @@ root docs는 architecture intent와 decision boundary를 담는다. 상세 API�
 - `.agentos/project/reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md`
 - `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md`
 - `.agentos/project/reference/decisions/0005-agentos-independent-interactive-cli.md`
+
+## Review Gate Enforcement vs. Stop Hook Diagnostics
+
+The `stop_review_gate.py` hook is strictly diagnostic: it warns the agent (`review-evidence-invalid`) about missing review artifacts but permits the session to continue (allowing the agent to fix the missing reviews).
+The actual execution enforcement is handled by `harness_loop.py` and `execution_gate.py`, which will decisively block execution if mathematically valid Gate 2 artifacts are missing.
