@@ -1,15 +1,15 @@
 # AHA·스킬 양방향 장기지식 저장소 및 Git 연동 구현 계획
 
-> **상태:** 구현 계획 (리뷰 대기)<br>
-> **작성일:** 2026-08-09<br>
-> reviewed: false<br>
-> user_request: `aha knowledge`와 knowledge skill 양쪽에서 장기지식을 저장·검색하고, AgentOS가 설치되지 않은 환경에서도 skill 자체로 실행하며, 문서 폴더를 Git으로 백업하고 다른 프로젝트에서 연동할 수 있게 한다.<br>
-> active_agent: codex<br>
-> active_session: 2026-08-09-aha-knowledge-skill-git<br>
-> dashboard_item_id: <br>
-> implementation_started_at: <br>
-> implementation_completed_at: <br>
-> implementation_duration: <br>
+> **상태:** 구현 계획 (리뷰 대기)
+> **작성일:** 2026-08-09
+> reviewed: false
+> user_request: `aha knowledge`와 knowledge skill 양쪽에서 장기지식을 저장·검색하고, AgentOS가 설치되지 않은 환경에서도 skill 자체로 실행하며, 문서 폴더를 Git으로 백업하고 다른 프로젝트에서 연동할 수 있게 한다.
+> active_agent: codex
+> active_session: 2026-08-09-aha-knowledge-skill-git
+> dashboard_item_id:
+> implementation_started_at:
+> implementation_completed_at:
+> implementation_duration:
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 

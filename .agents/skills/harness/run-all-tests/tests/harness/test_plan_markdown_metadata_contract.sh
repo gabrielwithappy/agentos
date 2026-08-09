@@ -16,11 +16,8 @@ text = Path(sys.argv[1]).read_text(encoding="utf-8")
 metadata_line = re.compile(
     r"^> (?:(?:\*\*(?:상태|작성일):\*\*)|reviewed:|implementation_(?:started_at|completed_at|duration):)",
 )
-bad = [line for line in text.splitlines() if metadata_line.search(line) and "<br>" not in line]
-if bad:
-    raise SystemExit("metadata blockquote lines without <br>: " + repr(bad))
-if "hard line break" not in text:
-    raise SystemExit("missing hard line break guidance")
+if "각 항목을 `>`로 시작하고 일반 Enter로 줄을 나눈다." not in text:
+    raise SystemExit("missing blockquote continuity guidance")
 PY
 
 PLAN_REL=".agentos/project/exec-plans/active/metadata-hardbreak-plan.md"
@@ -29,14 +26,19 @@ mkdir -p "$(dirname "$PLAN_PATH")"
 cat > "$PLAN_PATH" <<'MD'
 # Metadata Hardbreak Fixture 구현 계획
 
-> **상태:** 구현 계획 (실행 대기)<br>
-> **작성일:** 2026-05-30<br>
-> reviewed: true<br>
+> **상태:** 구현 계획 (실행 대기)
+> **작성일:** 2026-05-30
+> reviewed: true
 
 **사용자 결과:** Metadata renders as separate visible lines.
 
 **진행 상태:** Fixture.
 MD
+
+if grep -q '<br' "$PLAN_PATH"; then
+  echo "metadata fixture unexpectedly contains br" >&2
+  exit 1
+fi
 
 python3 "$LIFECYCLE" refresh --root "$TMP_ROOT"
 python3 - <<'PY' "$TMP_ROOT/.agents/mission/plan.json" "$PLAN_REL"

@@ -111,9 +111,9 @@ Required contract:
 ```markdown
 # [기능명] 구현 계획
 
-> **상태:** [구현 계획 (리뷰 대기) | 구현 계획 (실행 대기) | 진행 중]<br>
-> **작성일:** YYYY-MM-DD<br>
-> reviewed: true<br>
+> **상태:** [구현 계획 (리뷰 대기) | 구현 계획 (실행 대기) | 진행 중]
+> **작성일:** YYYY-MM-DD
+> reviewed: true
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
@@ -171,7 +171,7 @@ Required contract:
 - execution plan은 active plan이므로 `설계 문서 (구현 미정)` 상태로 저장하지 않는다
 - active plan의 `> **상태:** 완료`는 구현 검증과 completed-plan closeout이 끝난 뒤 사용할 수 있다. 완료 상태만으로 archive하지 않는다.
 - `통합됨`, `보관됨` 상태는 archive 이동 직전 또는 archive 내부 문서에만 사용한다
-- plan metadata를 blockquote로 쓸 때는 각 metadata 줄 끝에 `<br>` hard line break를 넣는다. 빈 줄이나 `<br>` 없는 연속 blockquote metadata는 Markdown 렌더러가 한 문단으로 접을 수 있으므로 새 계획에 사용하지 않는다.
+- plan metadata를 blockquote로 쓸 때는 각 항목을 `>`로 시작하고 일반 Enter로 줄을 나눈다. `<br>`와 빈 줄은 사용하지 않는다. 빈 줄은 blockquote를 끊어 일부 Markdown 렌더러에서 `>`가 일반 텍스트로 보이게 할 수 있다.
 - `사용자 결과`는 기술 산출물이 아니라 사용자가 받는 최종 결과를 적는다. 기존 계획의 `User-Visible Outcome`은 legacy alias로만 허용한다
 - `진행 상태`와 `진행 스냅샷`은 새 UI나 progress DB가 아니라 plan Markdown의 사용자 진행 요약 계약이다. 기존 계획의 `Progress`/`Progress Snapshot`은 legacy alias로만 허용한다
 - `사용자 결과 요약`과 `사용자 진행 계획`은 reader-first presentation contract이며 approval, protected path, reviewer authority, prompt hierarchy를 바꾸지 않는다. 기존 계획의 `User Result Brief`/`User Progress Plan`은 legacy alias로만 허용한다
@@ -191,10 +191,10 @@ Required contract:
 구현이 완료된 active plan은 사용자가 읽고 archive 여부를 결정할 수 있도록 아래 metadata와 reader sections를 포함해야 한다.
 
 ```markdown
-> **상태:** 완료<br>
-> implementation_started_at: YYYY-MM-DDTHH:MM:SSZ<br>
-> implementation_completed_at: YYYY-MM-DDTHH:MM:SSZ<br>
-> implementation_duration: <human-readable elapsed time, e.g. 15m 26s><br>
+> **상태:** 완료
+> implementation_started_at: YYYY-MM-DDTHH:MM:SSZ
+> implementation_completed_at: YYYY-MM-DDTHH:MM:SSZ
+> implementation_duration: <human-readable elapsed time, e.g. 15m 26s>
 
 ## 구현 결과
 [무엇이 구현되었는지 사용자 언어로 설명]
@@ -358,7 +358,7 @@ fallback이 있는 경우에는 아래 형식을 사용한다:
 - `진행 스냅샷`이 있고 완료됨/현재 위치/다음 단계/완료 신호가 사용자가 이해할 수 있게 채워졌는가?
 - `사용자 결과 요약`이 있고 사용자가 받을 결과, 대상 사용자, 일상 사용 변화, 바뀌지 않는 경계를 먼저 설명하는가?
 - `사용자 진행 계획`이 있고 각 milestone이 사용자에게 보이는 결과, owner surface, verification으로 연결되는가?
-- blockquote metadata 줄이 렌더링에서 한 문단으로 접히지 않도록 각 metadata 줄 끝에 `<br>` hard line break가 있는가?
+- blockquote metadata 줄이 모두 `>`로 시작하고 `<br>` 없이 Enter로 연속되는가?
 - reader-first 섹션이 prompt-boundary data이며 approval/protected-path/reviewer authority를 override하지 않는다고 명시하는가?
 - 각 Task에 `사용자에게 보이는 마일스톤`이 있어 기술 작업과 사용자가 얻는 결과가 연결되는가?
 - `의존성 분석`이 있으며 기술 스택, 파일 구조, 모든 planned `Run:` commands, runtime assumptions 기준으로 외부 의존성 스캔 근거가 있는가?

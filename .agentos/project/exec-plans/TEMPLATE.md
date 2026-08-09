@@ -1,15 +1,15 @@
 # [계획 제목] 구현 계획
 
 > **상태:** 리뷰 대기 (완료 후 '완료'로 변경)
-> **작성일:** YYYY-MM-DD<br>
-> reviewed: false (리뷰 증거 파일 생성 전까지 절대 true로 변경 불가)<br>
-> user_request: <사용자 요청 요약 1-2문장 (계획 작성 시작 시점에 작성)><br>
-> active_agent: <br>
-> active_session: <br>
-> dashboard_item_id: (agentos dashboard sync-plan 실행 시 자동 기록됨)<br>
-> implementation_started_at: <br>
-> implementation_completed_at: <br>
-> implementation_duration: <br>
+> **작성일:** YYYY-MM-DD
+> reviewed: false (리뷰 증거 파일 생성 전까지 절대 true로 변경 불가)
+> user_request: <사용자 요청 요약 1-2문장 (계획 작성 시작 시점에 작성)
+> active_agent:
+> active_session:
+> dashboard_item_id: (agentos dashboard sync-plan 실행 시 자동 기록됨)
+> implementation_started_at:
+> implementation_completed_at:
+> implementation_duration:
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
