@@ -566,7 +566,19 @@ class HarnessLoop:
         path = self.project_root / plan_path
         if not path.exists():
             return False
-        return bool(REVIEWED_RE.search(path.read_text(encoding="utf-8")))
+        if not REVIEWED_RE.search(path.read_text(encoding="utf-8")):
+            return False
+            
+        script_dir = self.project_root / ".agents" / "skills" / "harness" / "writing-plans" / "scripts"
+        if str(script_dir) not in sys.path:
+            sys.path.insert(0, str(script_dir))
+            
+        try:
+            from review_artifacts import check_plan
+            check = check_plan(self.project_root, plan_path)
+            return check.valid
+        except Exception:
+            return False
 
     def _build_materialized_plan_path(self, goal: str) -> Path:
         active_dir = self.project_root / ".agentos" / "project" / "exec-plans" / "active"

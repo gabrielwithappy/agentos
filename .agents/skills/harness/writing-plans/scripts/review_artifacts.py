@@ -116,7 +116,10 @@ def required_reviewers_for_text(text: str) -> list[str]:
 
 
 def _load_artifact(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+        return {"_malformed": True}
 
 
 def _artifact_problem(
@@ -125,6 +128,8 @@ def _artifact_problem(
     expected_plan_path: str,
     expected_hash: str,
 ) -> str | None:
+    if artifact.get("_malformed"):
+        return "artifact-malformed"
     if artifact.get("schema") != ARTIFACT_SCHEMA:
         return "schema-mismatch"
     if artifact.get("reviewer_role") != reviewer:

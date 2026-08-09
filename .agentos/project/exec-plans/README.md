@@ -3,11 +3,12 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-09T14:13:24Z
+> Generated at: 2026-08-09T16:04:33Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 계획 (리뷰 대기)` [AHA·스킬 양방향 장기지식 저장소 및 Git 연동 구현 계획](.agentos/project/exec-plans/active/2026-08-09-aha-knowledge-skill-git.md) | outcome: 사용자는 AgentOS 설치 여부와 관계없이 skill runtime 또는 `aha knowledge` 중 가능한 진입점을 선택해 지식을 관리하고, 명시적 Git 명령으로 백업하거나 다른 프로젝트에 clone/pull해 같은 knowledge sur… | progress: 계획 초안 작성, Gate 2 리뷰 대기 중
+- `구현 계획 (실행 대기)` [Stop 훅의 계획 리뷰 초점화 구현 계획](.agentos/project/exec-plans/active/2026-08-10-stop-hook-review-focus.md) | reviewed | outcome: 사용자는 artifact 형식 누락 때문에 대화 종료가 막히지 않으며, 검증되지 않은 계획은 구현을 시작하려는 순간에만 명확한 복구 안내와 함께 차단된다. | progress: Intent Sheet와 현재 훅·실행 게이트 조사를 마쳤고, Gate 2 리뷰를 기다린다.
+- `구현 계획 (실행 대기)` [AHA·스킬 양방향 장기지식 저장소 및 Git 연동 구현 계획](.agentos/project/exec-plans/active/2026-08-09-aha-knowledge-skill-git.md) | reviewed | outcome: 사용자는 AgentOS 설치 여부와 관계없이 skill runtime 또는 `aha knowledge` 중 가능한 진입점을 선택해 지식을 작성·검토·publish하고, GitHub 저장소에서 상대 링크로 연결된 지식 graph를 탐색하며, 다른 프로… | progress: Gate 2 독립 리뷰 완료, Task 0 실행 대기 중
 
 ## Archived Plans
 - archive summary: completed=57, parked=0

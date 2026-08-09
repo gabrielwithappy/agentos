@@ -154,11 +154,15 @@ def main() -> int:
         print(
             json.dumps(
                 {
-                    "decision": "block",
-                    "reason": (
-                        "Active plan has `reviewed: true` without valid independent review evidence. "
-                        f"Fix {plan_path} ({detail}) before ending this turn."
-                    ),
+                    "continue": True,
+                    "warnings": [
+                        {
+                            "code": "review-evidence-invalid",
+                            "plan_path": plan_path,
+                            "detail": detail,
+                            "next_action": f"python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan {plan_path}",
+                        }
+                    ],
                 }
             )
         )
