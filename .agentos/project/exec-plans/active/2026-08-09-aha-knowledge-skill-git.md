@@ -3,7 +3,7 @@
 > **상태:** 구현 계획 (리뷰 대기)<br>
 > **작성일:** 2026-08-09<br>
 > reviewed: false<br>
-> user_request: `aha knowledge`와 knowledge skill 양쪽에서 장기지식을 저장·검색하고, 문서 폴더를 Git으로 백업하며 다른 프로젝트에서 연동할 수 있게 한다.<br>
+> user_request: `aha knowledge`와 knowledge skill 양쪽에서 장기지식을 저장·검색하고, AgentOS가 설치되지 않은 환경에서도 skill 자체로 실행하며, 문서 폴더를 Git으로 백업하고 다른 프로젝트에서 연동할 수 있게 한다.<br>
 > active_agent: codex<br>
 > active_session: 2026-08-09-aha-knowledge-skill-git<br>
 > dashboard_item_id: <br>
@@ -13,15 +13,15 @@
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
-**목표:** `aha knowledge`와 knowledge skill이 동일한 저장·검토·검색 서비스를 사용하고, 지식 문서를 독립 Git 저장소로 백업·동기화·다른 프로젝트 재사용할 수 있게 한다.
+**목표:** AgentOS 설치 없이도 knowledge skill 자체가 실행되고, `aha knowledge`는 선택적으로 같은 contract에 연결되며, 지식 문서를 독립 Git 저장소로 백업·동기화·다른 프로젝트에서 재사용할 수 있게 한다.
 
-**사용자 결과:** 사용자는 CLI 또는 스킬 지침 중 편한 진입점을 선택해 지식을 관리하고, 명시적 Git 명령으로 백업하거나 다른 프로젝트에 clone/pull해 같은 knowledge surface를 재사용한다.
+**사용자 결과:** 사용자는 AgentOS 설치 여부와 관계없이 skill runtime 또는 `aha knowledge` 중 가능한 진입점을 선택해 지식을 관리하고, 명시적 Git 명령으로 백업하거나 다른 프로젝트에 clone/pull해 같은 knowledge surface를 재사용한다.
 
 **진행 상태:** 계획 초안 작성, Gate 2 리뷰 대기 중
 
-**아키텍처:** Markdown 문서와 frontmatter 계약은 기존 knowledge domain을 유지한다. 저장소 경로·Git remote·프로젝트 checkout 정책을 하나의 repository manager가 관리하고, `aha knowledge`와 knowledge skill은 이 manager/service를 호출하는 얇은 adapter가 된다. 프로젝트의 `docs/knowledge`는 관리된 checkout surface로 유지하며, inbox 문서는 publish 전까지 instruction authority가 아니다.
+**아키텍처:** Markdown 문서와 frontmatter 계약은 기존 knowledge domain을 유지한다. 독립 skill package가 표준 Python만으로 동작하는 standalone runtime과 repository manager를 소유하고, `aha knowledge` 및 설치된 `agentos knowledge`는 가능한 경우 이 contract에 연결하는 선택적 adapter가 된다. 프로젝트의 `docs/knowledge`는 관리된 checkout surface로 유지하며, inbox 문서는 publish 전까지 instruction authority가 아니다.
 
-**기술 스택:** Python 3.11+, Typer, Markdown frontmatter, `subprocess` 기반 Git CLI, AgentOS skill catalog/manifest, pytest와 Bash harness tests
+**기술 스택:** Python 3.11 표준 라이브러리, Markdown frontmatter, `subprocess` 기반 Git CLI, 독립 skill package, 선택적 AgentOS skill catalog/manifest, pytest와 Bash harness tests
 
 ---
 
@@ -48,9 +48,9 @@
 
 | 마일스톤 | 사용자에게 보이는 결과 | 구현 소유 surface | 검증 |
 |---|---|---|---|
-| 1. 공통 저장 계약 | AHA와 skill이 같은 publish/search 결과를 반환 | `agentos/knowledge/`, `agentos/commands/knowledge.py` | `python3 -m pytest tests/test_knowledge_store.py tests/test_knowledge_cli.py tests/test_knowledge_skill.py -q` / Expected: PASS |
-| 2. Git 지식 저장소 | 지식 repository를 init/status/backup/sync할 수 있음 | `agentos/knowledge/git.py`, `agentos/commands/knowledge.py` | `bash tests/harness/test_aha_knowledge_git_workflow.sh` / Expected: `PASS aha-knowledge-git-workflow` |
-| 3. knowledge skill | 스킬이 정확한 명령과 안전한 복구 경로를 안내함 | `catalog/skills/knowledge-curator/SKILL.md`, skill manifest/catalog | `bash tests/harness/test_aha_knowledge_skill_parity.sh` / Expected: `PASS aha-knowledge-skill-parity` |
+| 1. 독립 skill runtime | AgentOS 없이 skill 명령이 실행되고 publish/search 결과를 반환함 | `catalog/skills/knowledge-curator/SKILL.md`, `catalog/skills/knowledge-curator/scripts/` | `bash tests/harness/test_aha_knowledge_standalone.sh` / Expected: `PASS aha-knowledge-standalone` |
+| 2. 공통 저장 계약 | AHA와 skill이 같은 publish/search 결과를 반환 | standalone runtime, `agentos/knowledge/`, `agentos/commands/knowledge.py` | `python3 -m pytest tests/test_knowledge_store.py tests/test_knowledge_cli.py tests/test_knowledge_skill.py -q` / Expected: PASS |
+| 3. Git 지식 저장소 | 지식 repository를 init/status/backup/sync할 수 있음 | standalone runtime, 선택적 AgentOS adapter | `bash tests/harness/test_aha_knowledge_git_workflow.sh` / Expected: `PASS aha-knowledge-git-workflow` |
 | 4. 다른 프로젝트 연동 | 별도 프로젝트에서 clone/pull한 knowledge checkout을 검색·인용함 | `docs/knowledge/README.md`, integration test fixture | `bash tests/harness/test_aha_knowledge_cross_project.sh` / Expected: `PASS aha-knowledge-cross-project` |
 
 ## 장기 적용 표면
@@ -61,13 +61,16 @@
 
 ## 파일 구조
 
-- 생성: `agentos/knowledge/git.py` — repository 초기화, remote/status/sync/backup 경계와 안전한 Git 실행
+- 생성: `catalog/skills/knowledge-curator/scripts/knowledge.py` — AgentOS/Typer/Rich 없이 실행되는 standalone knowledge runtime
+- 생성: `catalog/skills/knowledge-curator/scripts/knowledge_git.py` — repository 초기화, remote/status/sync/backup 경계와 안전한 Git 실행
+- 생성: `agentos/knowledge/git.py` — 선택적 AgentOS adapter가 호출하는 공통 Git contract
 - 수정: `agentos/knowledge/store.py` — managed checkout 경로와 기존 lifecycle의 결합
 - 수정: `agentos/commands/knowledge.py` — `init`, `status`, `sync`, `backup`, `import` 또는 동등 명령을 공통 service에 연결
 - 수정: `agentos/cli.py` 또는 AHA adapter surface — 두 진입점 등록 및 동일 output contract
 - 생성: `catalog/skills/knowledge-curator/SKILL.md` — 스킬 사용법·Git 복구 절차·권한 경계
 - 수정: `catalog/skills/catalog.json` 및 필요한 catalog manifest — skill 설치/발견 등록
 - 생성: `tests/test_knowledge_skill.py` — skill 계약과 CLI parity 검증
+- 생성: `tests/harness/test_aha_knowledge_standalone.sh` — AgentOS 미설치 환경의 직접 실행 계약
 - 생성: `tests/harness/test_aha_knowledge_git_workflow.sh` — local Git backup/restore 계약
 - 생성: `tests/harness/test_aha_knowledge_skill_parity.sh` — AHA와 skill 명령 결과 parity
 - 생성: `tests/harness/test_aha_knowledge_cross_project.sh` — 두 임시 프로젝트의 clone/pull 재사용 검증
@@ -79,7 +82,21 @@
 ## 의존성 분석
 
 - 외부 의존성: 아래에 선언함
-- 스캔 기준: 기존 Python/Typer CLI, skill catalog/manifest, 표준 Git CLI, 계획의 모든 `Run:` 명령과 cross-project fixture
+- 스캔 기준: standalone Python 표준 라이브러리, 선택적 AgentOS/Typer CLI, skill catalog/manifest, 표준 Git CLI, 계획의 모든 `Run:` 명령과 cross-project fixture
+
+### AgentOS 설치
+
+- name: AgentOS 설치
+- type: nonstandard-local-tool
+- required: false
+- purpose: `agentos knowledge` adapter와 bundled skill catalog를 제공한다. standalone skill runtime에는 필요하지 않다.
+- preflight:
+  Run: `python3 catalog/skills/knowledge-curator/scripts/knowledge.py --help`
+  Expected: `PASS knowledge-standalone-ready`
+- fallback:
+  available: true
+  reason: AgentOS가 없으면 standalone skill runtime을 직접 실행한다.
+- failure_behavior: CONTINUE_WITH_FALLBACK
 
 ## 의존성 게이트
 
@@ -119,35 +136,50 @@
 Run: `python3 -m pytest tests/test_knowledge_store.py tests/test_knowledge_cli.py -q`
 Expected: 기존 knowledge 테스트가 모두 PASS하거나, 환경 의존 실패가 원인과 함께 기록됨
 
-- [ ] **Step 2: Git 및 임시 bare remote preflight 실행**
+- [ ] **Step 2: AgentOS 없는 standalone preflight 실행**
+
+임시 `PYTHONPATH`와 import guard로 `agentos` 의존성이 없는 상태를 재현하고 skill script의 `--help`와 최소 local lifecycle을 실행한다.
+
+Run: `bash tests/harness/test_aha_knowledge_standalone.sh`
+Expected: `PASS aha-knowledge-standalone`
+
+- [ ] **Step 3: Git 및 임시 bare remote preflight 실행**
 
 Run: `git --version && tmpdir=$(mktemp -d) && git init --bare "$tmpdir/knowledge.git" >/dev/null && test -d "$tmpdir/knowledge.git/refs" && echo 'PASS knowledge-git-ready'`
 Expected: `PASS knowledge-git-ready`
 
-### Task 1: 공통 knowledge repository service 구현
+### Task 1: 독립 skill runtime과 repository service 구현
 
 **파일:**
-- 생성: `agentos/knowledge/git.py`
+- 생성: `catalog/skills/knowledge-curator/scripts/knowledge.py`, `catalog/skills/knowledge-curator/scripts/knowledge_git.py`
+- 생성: `agentos/knowledge/git.py` — standalone contract를 감싸는 선택적 adapter
 - 수정: `agentos/knowledge/store.py`, `agentos/knowledge/__init__.py`
 - 생성/수정: `tests/test_knowledge_store.py`
 
-**사용자에게 보이는 마일스톤:** knowledge 문서가 관리된 checkout 안에서 기존 lifecycle과 동일하게 안전하게 저장된다.
+**사용자에게 보이는 마일스톤:** AgentOS가 없어도 knowledge skill이 관리된 checkout 안에서 기존 lifecycle과 동일하게 안전하게 저장된다.
 
-- [ ] **Step 1: repository config와 managed path 계약 정의**
+- [ ] **Step 1: standalone runtime의 의존성 경계 정의**
+
+skill script는 `agentos.*`, Typer, Rich를 import하지 않고 Python 표준 라이브러리와 Git CLI만 사용하도록 경계를 고정한다. AgentOS adapter는 standalone runtime을 명시된 contract로 호출한다.
+
+Run: `python3 catalog/skills/knowledge-curator/scripts/knowledge.py --help`
+Expected: `PASS knowledge-standalone-ready`
+
+- [ ] **Step 2: repository config와 managed path 계약 정의**
 
 `docs/knowledge`를 project-relative managed surface로 식별하고 canonical Git repository URL, branch, checkout path, last sync metadata를 secret 없이 기록하는 config schema를 추가한다.
 
-Run: `python3 -m pytest tests/test_knowledge_store.py -q -k 'managed or path or config'`
+Run: `python3 -m pytest tests/test_knowledge_store.py tests/test_knowledge_skill.py -q -k 'managed or path or config or standalone'`
 Expected: managed path/config 검증 테스트 PASS
 
-- [ ] **Step 2: Git command runner와 dirty/conflict 보호 구현**
+- [ ] **Step 3: Git command runner와 dirty/conflict 보호 구현**
 
 `subprocess` 호출을 중앙화하고 명령·remote·credential을 redaction한다. init/status/fetch/pull/local commit/backup의 실패를 typed error로 변환하며 dirty checkout 덮어쓰기를 차단한다.
 
 Run: `python3 -m pytest tests/test_knowledge_store.py -q -k 'git or dirty or conflict'`
 Expected: 성공·실패·복구 경계 테스트 PASS
 
-- [ ] **Step 3: 기존 store lifecycle과 repository service 통합**
+- [ ] **Step 4: 기존 store lifecycle과 standalone repository service 통합**
 
 기존 frontmatter/status/category 검증을 유지하고 publish/update/deprecate 결과가 Git diff에서 추적되도록 연결한다. 자동 commit/push는 하지 않는다.
 
@@ -232,8 +264,8 @@ Expected: `PASS aha-knowledge-cross-project`
 
 - [ ] **Step 3: public boundary와 전체 focused suite 실행**
 
-Run: `python3 -m pytest tests/test_knowledge_store.py tests/test_knowledge_cli.py tests/test_knowledge_skill.py -q && bash tests/harness/test_aha_knowledge_git_workflow.sh && bash tests/harness/test_aha_knowledge_skill_parity.sh && bash tests/harness/test_aha_knowledge_cross_project.sh`
-Expected: 모든 명령이 exit code 0이고 세 harness 명령이 각각 PASS 출력
+Run: `python3 -m pytest tests/test_knowledge_store.py tests/test_knowledge_cli.py tests/test_knowledge_skill.py -q && bash tests/harness/test_aha_knowledge_standalone.sh && bash tests/harness/test_aha_knowledge_git_workflow.sh && bash tests/harness/test_aha_knowledge_skill_parity.sh && bash tests/harness/test_aha_knowledge_cross_project.sh`
+Expected: 모든 명령이 exit code 0이고 네 harness 명령이 각각 PASS 출력
 
 ### Task 5: Gate 2 리뷰·manifest·closeout
 
@@ -268,6 +300,7 @@ Expected: fresh focused suite PASS 후에만 plan의 `reviewed`/완료 상태와
 ## 리뷰 반영 이력
 
 - 2026-08-09: 사용자 선택으로 자동화 테스트와 별도 프로젝트 clone/pull 검증을 Plan Quality Gate에 반영함.
+- 2026-08-09: 사용자가 AgentOS 미설치 환경에서도 skill 자체가 실행되어야 한다는 제약을 추가함. standalone runtime, optional AgentOS adapter, 독립 실행 검증을 계획에 반영함.
 
 ## 구현 결과
 
