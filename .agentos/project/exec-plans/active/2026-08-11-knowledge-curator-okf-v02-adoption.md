@@ -17,7 +17,7 @@
 
 **목표:** 현재 독립형 `knowledge-curator`에 OKF v0.2 starter bundle 생성과 결정적 읽기 전용 적합성 검사를 추가하되, 로컬 Git 백업 전용·무의존성 runtime 경계를 유지한다.
 
-**사용자 결과 요약:** 사용자는 빈 knowledge checkout을 OKF의 `index.md`·`log.md`와 최소 concept 예제를 갖춘 번들로 명시적으로 초기화하고, 작성한 Markdown 번들이 필수 `type`과 기본 구조를 충족하는지 네트워크·원격 쓰기·자동 수정 없이 검사할 수 있다. 이 계획은 그래프 UI, 자동 hook, 원격 CI, MCP/임베딩 검색을 추가하지 않는다.
+**사용자 결과 요약:** 사용자는 빈 knowledge checkout을 OKF의 `index.md`·`log.md`와 최소 concept 예제를 갖춘 번들로 명시적으로 초기화하고, 작성한 Markdown 번들이 필수 `type`과 기본 구조를 충족하는지 네트워크·원격 쓰기·자동 수정 없이 검사할 수 있다. 또한 `tags`를 `action/plan`, `task/research`, `domain/knowledge-curator`, `context/local-git` 같은 slash형 계층 표기로 붙여 Obsidian과 prefix 검색에서 쉽게 찾을 수 있다. 이 계획은 그래프 UI, 자동 hook, 원격 CI, MCP/임베딩 검색을 추가하지 않는다.
 
 **의존성 분석:**
 - 외부 의존성: 없음.
@@ -59,8 +59,8 @@
 
 | 참조 구현 / 기능 | 현재 knowledge-curator 상태 | 결정 | 근거와 계획 반영 |
 |---|---|---|---|
-| `okf-skills`: one concept = one Markdown, `index.md` progressive disclosure, `log.md` | Git checkout만 초기화하며 OKF 번들 skeleton은 없음 | 적용 | `init --okf-starter` opt-in으로 starter를 생성한다. 기존 `init`의 빈 checkout 기본값은 바꾸지 않는다. |
-| `okf-skills`: deterministic v0.2 checker, JSON·strict warning gate | `okf_bundle_validate.py`는 stub이며 skill runtime은 stdlib-only | 부분 적용 | 필수 structural contract(`index.md`, `log.md`, parseable frontmatter, non-empty `type`, root version)를 읽기 전용으로 검사한다. optional v0.2 trust/provenance/lifecycle family는 warning으로 보고한다. |
+| `okf-skills`: one concept = one Markdown, `index.md` progressive disclosure, `log.md`, `tags` frontmatter | Git checkout만 초기화하며 OKF 번들 skeleton은 없음 | 적용 | `init --okf-starter` opt-in으로 starter를 생성하고 `tags`를 `action/plan`, `task/research`, `domain/knowledge-curator`, `context/local-git` 계층 표기로 함께 제시한다. 기존 `init`의 빈 checkout 기본값은 바꾸지 않는다. |
+| `okf-skills`: deterministic v0.2 checker, JSON·strict warning gate | `okf_bundle_validate.py`는 stub이며 skill runtime은 stdlib-only | 부분 적용 | 필수 structural contract(`index.md`, `log.md`, parseable frontmatter, non-empty `type`, root version)를 읽기 전용으로 검사한다. optional v0.2 trust/provenance/lifecycle family와 `tags`의 slash-form 규칙은 warning으로 보고한다. |
 | `okf-skills`: `--migrate` v0.1 → v0.2 in-place rewrite | 현재 no-overwrite/backup-first 안전 정책 | 제외 | 묵시적 또는 CLI-driven mutation은 별도 approval과 recovery 설계가 필요하다. 후속 독립 계획 없이는 추가하지 않는다. |
 | `okf-skills`: self-contained graph visualization, browser sanitization | terminal/Git curator이며 HTML renderer 없음 | 제외 | 정적 UI·renderer·XSS boundary·새 dependency가 추가되어 현재 요청의 최소 범위를 넘는다. |
 | `okf-skills`: GitHub Action 및 Stop hook upkeep | standalone package는 remote write·자동 hook을 거부 | 제외 | CI/hook installation과 자동 finish 차단은 운영 권한을 넓힌다. 별도 user request와 dependency gate가 필요하다. |
@@ -71,22 +71,23 @@
 
 - `init --okf-starter`는 **새로 만든 빈** `docs/knowledge` checkout에서만 `index.md`, `log.md`, `concepts/getting-started.md`를 작성한다. populated path와 `--adopt-existing` 조합은 안전 거부한다.
 - `init --okf-starter`는 모든 대상 부재·부모 directory write 가능 여부를 먼저 preflight하고, private temporary directory에서 세 파일을 완성한다. 기존 root에 세 파일을 설치하므로 multi-file atomic rename을 주장하지 않는다. 대신 `.git/knowledge-curator-starter-state.json`에 created path와 staged-content SHA-256을 기록한 뒤 no-overwrite per-file rename을 수행한다. ordinary write failure는 journal에 기록된 digest와 같은 이번 invocation 생성물만 remove하고 starter file 0개로 복구한다. process interruption으로 journal이 남으면 다음 invocation은 journal/digest를 검증해 일치하는 생성물만 cleanup하고, mismatch는 code `2` no-change `OKF_STARTER_RECOVERY_REQUIRED`로 중단한다.
+- starter concept의 `tags`는 flat YAML list로 작성하고 `action/plan`, `action/operate`, `task/research`, `domain/knowledge-curator`, `context/local-git` 같은 slash-form 계층 표기를 사용한다. nested YAML mapping은 쓰지 않고 Obsidian Dataview/prefix filter와 호환되는 문자열 배열만 허용한다. `source`는 태그가 아니라 `sources` provenance로 유지한다.
 - cleanup 뒤 re-entry는 real `docs/knowledge/.git` repository이고 top-level entry가 `.git`뿐이며 existing `origin`이 credential-safe supplied remote와 같고 current branch가 requested branch일 때만 허용한다. 이 경우 Git init/remote/branch mutation 없이 starter를 재시도한다. 그 외 populated/mismatch/non-repository 상태는 code `2` no-change다. write failure의 recovery는 `next: "Run status, correct filesystem permissions, then retry init --okf-starter with the same --remote and --branch."`이고 `changed: false`/exit `3`이다.
 - `validate --project <path>`는 읽기 전용이다. stdout은 항상 JSON object **한 줄**이고 stderr는 비어 있다. envelope은 `{ok:boolean, code:0|2|3, action:"validate", changed:false, diagnostics:[{path,severity:"error"|"warning",code,message}], next:string}`이다. error/refusal은 exit `2`, unreadable/non-UTF-8/oversized(1 MiB 초과) file 또는 filesystem error는 exit `3`, error가 없으면 exit `0`이다.
 - `validate --strict`를 적용한다. 기본 mode에서는 warnings가 있어도 exit `0`, strict mode에서는 warning이 하나 이상이면 exit `2`이고 files는 그대로다. `--migrate`는 명령으로 등록하지 않고 parser error(JSON error, exit `2`)로 거부한다.
 - 검사 discovery 범위는 bundle root의 `index.md`, `log.md`, 그리고 reserved file을 제외한 하위 directory의 `*.md`만이다. symlink, binary/NUL, 1 MiB 초과 file은 traversal하지 않고 refusal diagnostic을 낸다. `index.md`/`log.md`는 concept가 아니므로 `type` 검사의 대상이 아니다.
 - 허용 frontmatter grammar는 UTF-8 text의 첫 줄 `---`, closing `---`까지의 flat YAML subset뿐이다: `key: plain-or-single/double-quoted scalar`, `key:` 뒤에 같은 indent의 `- plain-or-quoted scalar` list. duplicate keys, tabs, block scalar, anchors/tags, flow collection, nested mapping/list, blank key 및 closing boundary 누락은 `OKF_FRONTMATTER_UNSUPPORTED` error다. `type`은 non-empty scalar여야 한다.
 - required structural checks: bundle root 존재, `index.md`와 `log.md` 존재, `index.md`의 exact scalar `okf_version: 0.2`, 발견 concept의 valid frontmatter와 non-empty `type`.
-- advisory checks: missing `description`, `status` not in `draft|stable|deprecated`, malformed `sources` scalar/list, malformed `generated`/`verified`/`stale_after`, legacy `timestamp`/`# Citations`는 warning이다. diagnostics는 path lexicographic → severity(error before warning) → code lexicographic 순으로 stable하게 정렬한다.
-- advisory field grammar: `sources`는 non-empty plain/quoted scalar 또는 non-empty scalar-list이며, `generated`은 `process:<id>|agent:<id>|human:<id> @ YYYY-MM-DDTHH:MM:SSZ` scalar, `verified`는 같은 actor/timestamp scalar 또는 그 list, `stale_after`는 exact `YYYY-MM-DD`이다. 이 subset 밖의 mapping/nesting은 각각 `OKF_SOURCES_MALFORMED`, `OKF_GENERATED_MALFORMED`, `OKF_VERIFIED_MALFORMED`, `OKF_STALE_AFTER_MALFORMED` warning이다.
-- public diagnostic code set: structural error는 `OKF_ROOT_MISSING`, `OKF_INDEX_MISSING`, `OKF_LOG_MISSING`, `OKF_VERSION_MISSING`, `OKF_VERSION_UNSUPPORTED`, `OKF_FRONTMATTER_MISSING`, `OKF_FRONTMATTER_UNSUPPORTED`, `OKF_TYPE_MISSING`; refusal/error는 `OKF_PATH_SYMLINK`, `OKF_FILE_BINARY`, `OKF_FILE_OVERSIZE`, `OKF_FILE_UNREADABLE`; advisory warning은 `OKF_DESCRIPTION_MISSING`, `OKF_STATUS_MALFORMED`, `OKF_SOURCES_MALFORMED`, `OKF_GENERATED_MALFORMED`, `OKF_VERIFIED_MALFORMED`, `OKF_STALE_AFTER_MALFORMED`, `OKF_LEGACY_TIMESTAMP`, `OKF_LEGACY_CITATIONS`로 한정한다. 한 source는 independent violation마다 복수 diagnostic을 낼 수 있으나 같은 `{path, code}`는 한 번만 낸다.
+- advisory checks: missing `description`, `status` not in `draft|stable|deprecated`, malformed `tags`, malformed `sources` scalar/list, malformed `generated`/`verified`/`stale_after`, legacy `timestamp`/`# Citations`는 warning이다. diagnostics는 path lexicographic → severity(error before warning) → code lexicographic 순으로 stable하게 정렬한다.
+- advisory field grammar: `tags`는 non-empty scalar-list이며 각 값은 `action/<value>`, `domain/<value>`, `context/<value>`, 선택적으로 `task/<value>` 형태의 slash-form 계층 문자열이어야 한다. `sources`는 non-empty plain/quoted scalar 또는 non-empty scalar-list이며, `generated`은 `process:<id>|agent:<id>|human:<id> @ YYYY-MM-DDTHH:MM:SSZ` scalar, `verified`는 같은 actor/timestamp scalar 또는 그 list, `stale_after`는 exact `YYYY-MM-DD`이다. 이 subset 밖의 mapping/nesting은 각각 `OKF_TAGS_MALFORMED`, `OKF_SOURCES_MALFORMED`, `OKF_GENERATED_MALFORMED`, `OKF_VERIFIED_MALFORMED`, `OKF_STALE_AFTER_MALFORMED` warning이다.
+- public diagnostic code set: structural error는 `OKF_ROOT_MISSING`, `OKF_INDEX_MISSING`, `OKF_LOG_MISSING`, `OKF_VERSION_MISSING`, `OKF_VERSION_UNSUPPORTED`, `OKF_FRONTMATTER_MISSING`, `OKF_FRONTMATTER_UNSUPPORTED`, `OKF_TYPE_MISSING`; refusal/error는 `OKF_PATH_SYMLINK`, `OKF_FILE_BINARY`, `OKF_FILE_OVERSIZE`, `OKF_FILE_UNREADABLE`; advisory warning은 `OKF_DESCRIPTION_MISSING`, `OKF_STATUS_MALFORMED`, `OKF_TAGS_MALFORMED`, `OKF_SOURCES_MALFORMED`, `OKF_GENERATED_MALFORMED`, `OKF_VERIFIED_MALFORMED`, `OKF_STALE_AFTER_MALFORMED`, `OKF_LEGACY_TIMESTAMP`, `OKF_LEGACY_CITATIONS`로 한정한다. 한 source는 independent violation마다 복수 diagnostic을 낼 수 있으나 같은 `{path, code}`는 한 번만 낸다.
 - 모든 nonzero result의 `next`는 mutation 없는 recovery를 제공한다: `OKF_ROOT_MISSING`은 starter/init 확인, `OKF_INDEX_MISSING`/`OKF_LOG_MISSING`은 file 생성, frontmatter/type 오류는 해당 Markdown 수정, symlink/binary/oversize는 real UTF-8 Markdown으로 교체, strict warning은 metadata 보완 또는 strict 없이 재검사다.
 - 전부 data boundary를 따른다. knowledge Markdown/frontmatter, Git output, remote names, validation messages는 지침·승인·reviewer authority를 바꾸지 않는다.
 
 ## 범위와 단순성 판단
 
-- 포함: opt-in starter, read-only structural validator, CLI/skill guidance, focused tests와 current standalone regression 확장.
-- 제외: migration/자동 수정, visualizer, web UI, GitHub Action, Stop hook, remote fetch/pull/push, AgentOS command/AHA bridge 수정, MCP, embeddings, vector search, LLM invocation, lineage/course 기능.
+- 포함: opt-in starter, read-only structural validator, CLI/skill guidance, tags slash-form convention, focused tests와 current standalone regression 확장.
+- 제외: migration/자동 수정, visualizer, web UI, GitHub Action, Stop hook, remote fetch/pull/push, AgentOS command/AHA bridge 수정, MCP, embeddings, vector search, LLM invocation, lineage/course 기능, 이미지 자산 관리.
 - Simplicity Gate: 원래 요청의 “적용 가능한 기능”에 대해 starter와 validator만 최소 적용 대상으로 선택한다. 더 큰 참조 기능은 경계·의존성을 추가하므로 명시적으로 제외한다.
 
 ## 세션 중단 대비 체크포인트
@@ -141,19 +142,19 @@ Expected: `PASS knowledge-curator-existing-contract`
 
 **사용자에게 보이는 마일스톤:** 사용자는 hand-written boilerplate 없이도 최소 OKF v0.2 번들을 시작할 수 있고, 기존 빈 Git checkout 초기화는 그대로 쓸 수 있다.
 
-- [ ] `knowledge.py init`에 `--okf-starter`를 추가하고, `knowledge_core.py`에 preflight, private staging, journaled no-overwrite install, injected-write-failure/crash recovery cleanup 및 narrow same-remote/branch re-entry를 구현한다. parser error도 JSON envelope/exit 2/`next`를 반환하고 `init --help`에는 opt-in/no-overwrite semantics가 나타난다.
+- [ ] `knowledge.py init`에 `--okf-starter`를 추가하고, `knowledge_core.py`에 preflight, private staging, journaled no-overwrite install, injected-write-failure/crash recovery cleanup 및 narrow same-remote/branch re-entry를 구현한다. parser error도 JSON envelope/exit 2/`next`를 반환하고 `init --help`에는 opt-in/no-overwrite semantics가 나타난다. starter concept에는 `tags:` block list로 `action/plan`, `task/research`, `domain/knowledge-curator`, `context/local-git` 같은 slash-form 계층 태그를 넣는다.
 
 Run: `python3 -m pytest tests/test_knowledge_okf_starter.py -q && echo 'PASS knowledge-curator-okf-starter'`
 
 Expected: `PASS knowledge-curator-okf-starter`
 
-- [ ] starter의 `index.md`에 `okf_version: 0.2`, title/description, progressive-disclosure 링크를, `log.md`에 ISO date 기록 형식을, example concept에 non-empty `type`을 작성한다. `--adopt-existing --okf-starter`와 populated checkout은 no-change error로 처리하고 write failure 후에는 starter file 0개와 `status` retry guidance를 검증한다.
+- [ ] starter의 `index.md`에 `okf_version: 0.2`, title/description, progressive-disclosure 링크를, `log.md`에 ISO date 기록 형식을, example concept에 non-empty `type`과 `tags`를 작성한다. `--adopt-existing --okf-starter`와 populated checkout은 no-change error로 처리하고 write failure 후에는 starter file 0개와 `status` retry guidance를 검증한다.
 
 Run: `python3 -m pytest tests/test_knowledge_okf_starter.py -k 'starter_contents or refuses_existing_or_adopted_checkout or write_failure_leaves_no_partial_bundle or retry_preserves_remote_branch_without_git_mutation or mismatch_refused' -q && echo 'PASS knowledge-curator-starter-safety'`
 
 Expected: `PASS knowledge-curator-starter-safety`
 
-- [ ] `SKILL.md`에 opt-in semantics, 생성 파일, no-overwrite recovery를 문서화한다.
+- [ ] `SKILL.md`에 opt-in semantics, 생성 파일, no-overwrite recovery와 `tags`의 `action/plan` slash-form 탐색 규칙을 문서화한다.
 
 Run: `python3 -m pytest tests/test_knowledge_okf_starter.py tests/test_knowledge_skill.py -k 'guidance or help or parser_error' -q && echo 'PASS knowledge-curator-starter-guidance'`
 
@@ -189,7 +190,7 @@ Expected: `PASS knowledge-curator-okf-readonly-boundary`
 
 **사용자에게 보이는 마일스톤:** 사용자는 safe local Git workflow 안에서 starter와 validation을 발견하고, 참조 구현의 제외된 기능이 임의로 활성화되지 않음을 확인할 수 있다.
 
-- [ ] `SKILL.md`에 `init --okf-starter → validate [--strict] → backup`의 command transcript, populated/adopt refusal, warning/error/read-only recovery를 추가하고, migration·push·hook·visualize가 제공되지 않는다고 명시한다.
+- [ ] `SKILL.md`에 `init --okf-starter → validate [--strict] → backup`의 command transcript, populated/adopt refusal, warning/error/read-only recovery, `tags` prefix 탐색 규칙을 추가하고, migration·push·hook·visualize가 제공되지 않는다고 명시한다.
 
 Run: `python3 -m pytest tests/test_knowledge_okf_starter.py tests/test_knowledge_skill.py -k 'guidance_contract or installed_help or parser_error_json' -q && echo 'PASS knowledge-curator-okf-guidance'`
 

@@ -3,15 +3,16 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-10T15:40:38Z
+> Generated at: 2026-08-10T16:02:04Z
 
 ## Active Plans
 - older active plans omitted=0
 - `구현 계획 (실행 대기)` [Knowledge Curator OKF v0.2 적용 구현 계획](.agentos/project/exec-plans/active/2026-08-11-knowledge-curator-okf-v02-adoption.md) | reviewed_evidence=invalid | progress: 참조 구현 비교와 후보 선별을 완료했고, 계획 Gate 2 리뷰 대기 중이다.
 
 ## Archived Plans
-- archive summary: completed=61, parked=0
-- older archived plans omitted=41
+- archive summary: completed=62, parked=0
+- older archived plans omitted=42
+- `완료` [[Frontmatter 전환] 구현 계획 문서 메타데이터 포맷 변경](.agentos/project/exec-plans/archive/2026-08-11-exec-plan-frontmatter.md) | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [Stop 훅의 계획 리뷰 초점화 구현 계획](.agentos/project/exec-plans/archive/2026-08-10-stop-hook-review-focus.md) | reviewed_evidence=invalid | outcome: 사용자는 artifact 형식 누락 때문에 대화 종료가 막히지 않으며, 검증되지 않은 계획은 구현을 시작하려는 순간에만 명확한 복구 안내와 함께 차단된다. | progress: Intent Sheet와 현재 훅·실행 게이트 조사를 마쳤고, Gate 2 리뷰를 기다린다.
 - `완료` [Knowledge Curator 독립 스킬 구현 계획](.agentos/project/exec-plans/archive/2026-08-10-knowledge-curator-standalone-skill.md) | reviewed_evidence=invalid | outcome: 사용자는 `catalog/skills/knowledge-curator/` 폴더를 원하는 skill root의 `knowledge-curator/`로 복사한 뒤, 그 복사본의 스킬 안내와 Python CLI로 knowledge Git checkout의… | progress: 독립 Gate 2 리뷰와 manifest integrity 검증 완료, 실행 대기 중.
 - `완료` [Codex Stop hook 계약 복구 구현 계획](.agentos/project/exec-plans/archive/2026-08-10-codex-stop-hook-contract.md) | reviewed_evidence=invalid | outcome: Codex 세션 종료 때 `invalid stop hook JSON output` 오류가 출력되지 않는다. Claude Code의 Stop gate는 변경하지 않는다. | progress: 간단한 Gate 2 리뷰 대기.
@@ -31,10 +32,9 @@
 - `완료` [exec-plan → GitHub Projects v2 대시보드 동기화 커맨드 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-exec-plan-dashboard-sync-command.md) | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [`agentos dashboard sync-plan --all` 일괄 동기화 옵션 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-sync-plan-all-option.md) | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [GitHub 대시보드 Status에 "Awaiting Verification" 5단계 추가 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-awaiting-verification-status.md) | progress: 계획 초안 작성, 리뷰 대기 중
-- `완료` [GitHub 대시보드 연동 .env 자동 복원(Self-healing) 기능 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-auto-discovery-env.md) | reviewed_evidence=missing | outcome: 사용자는 로컬 프로젝트 환경 변수(`.env`)가 사라지더라도 `agentos run` 실행 시 대시보드 연동 설정이 자동으로 복원되어 번거로운 대화형 입력 과정을 건너뛸 수 있다. (기존 데이터와 동기화 방식은 바뀌지 않음) | progress: 계획 초안 작성, 5차 리뷰 대기 중
 
 ## Reference Docs
-- older reference docs omitted=4
+- older reference docs omitted=5
 - `완료` [Intent Sheet: YOLO 도구 실행 모드](.agentos/project/exec-plans/archive/reference/intent/intent-20260726-yolo-tool-execution.md)
 - `완료` [Intent Sheet: AgentOS 프로젝트 작업 하네스 전환](.agentos/project/exec-plans/archive/reference/intent/intent-20260726-project-work-harness-pivot.md)
 - `완료` [Intent Sheet: executor-neutral writing-plans contract](.agentos/project/exec-plans/archive/reference/intent/intent-20260726-executor-neutral-writing-plans.md)

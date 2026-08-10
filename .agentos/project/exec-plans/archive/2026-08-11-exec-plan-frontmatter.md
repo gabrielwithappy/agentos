@@ -1,5 +1,5 @@
 ---
-status: 완료 (구현 및 검증 완료)
+status: 완료
 date: 2026-08-11
 reviewed: true (Gate 2 3종 PASS, 증거: `.agents/traces/reviews/2026-08-11-exec-plan-frontmatter/{plan-reviewer,principle-auditor,usability-reviewer}.md`)
 usability_review_required: true

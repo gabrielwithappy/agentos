@@ -17,8 +17,8 @@ if str(SCRIPT_DIR) not in sys.path:
 from review_artifacts import check_plan
 
 
-STATUS_RE = re.compile(r"^> \*\*상태:\*\* (.+?)(?:\s*<br\s*/?>)?$", re.MULTILINE)
-REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
+STATUS_RE = re.compile(r"^(?:> \*\*상태:\*\* |status:\s*)(.+?)(?:\s*<br\s*/?>)?$", re.MULTILINE)
+REVIEWED_RE = re.compile(r"^(?:> )?reviewed:\s*true(?:\s*<br\s*/?>)?$", re.MULTILINE)
 TITLE_RE = re.compile(r"^# (.+)$", re.MULTILINE)
 USER_OUTCOME_RES = [
     re.compile(r"^\*\*사용자 결과:\*\*\s*(.+)$", re.MULTILINE),
@@ -410,6 +410,10 @@ def validate_status(status: str) -> None:
 
 
 def replace_status(text: str, status: str) -> str:
+    fm_re = re.compile(r"^status:\s*.+?(?:\s*<br\s*/?>)?$", re.MULTILINE)
+    if fm_re.search(text):
+        updated, count = fm_re.subn(f"status: {status}", text, count=1)
+        return updated
     updated, count = STATUS_RE.subn(f"> **상태:** {status}", text, count=1)
     if count != 1:
         raise ValueError("status header not found")
