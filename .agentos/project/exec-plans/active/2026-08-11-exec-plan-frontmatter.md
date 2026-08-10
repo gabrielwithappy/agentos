@@ -1,5 +1,5 @@
 ---
-status: 구현 계획 (리뷰 대기)
+status: 완료 (구현 및 검증 완료)
 date: 2026-08-11
 reviewed: true (Gate 2 3종 PASS, 증거: `.agents/traces/reviews/2026-08-11-exec-plan-frontmatter/{plan-reviewer,principle-auditor,usability-reviewer}.md`)
 usability_review_required: true
@@ -7,9 +7,9 @@ user_request: 현재 프로젝트 계획을 구현할 때 구현문서의 메타
 active_agent: Antigravity
 active_session: 
 dashboard_item_id: 
-implementation_started_at: 
-implementation_completed_at: 
-implementation_duration: 
+implementation_started_at: 2026-08-11T00:36:45Z
+implementation_completed_at: 2026-08-11T00:39:20Z
+implementation_duration: 3 minutes
 ---
 
 # [Frontmatter 전환] 구현 계획 문서 메타데이터 포맷 변경
@@ -51,11 +51,11 @@ implementation_duration:
 
 | 필드 | 현재 값 |
 |---|---|
-| 진행 요약 | 리뷰 대기 |
-| 완료됨 | 계획 초안 작성 |
-| 현재 위치 | 리뷰 통과, 계획 승인 대기 |
-| 다음 단계 | 리뷰 통과 후 구현 실행 |
-| 완료 신호 | `uv run pytest tests/test_plan_parser.py`가 PASS하고, 대시보드 동기화가 정상 작동함 |
+| 진행 요약 | 구현 및 전체 검증 완료 |
+| 완료됨 | Milestone 1, 2 전체 구현 및 테스트 완료 |
+| 현재 위치 | 프로젝트 메타데이터 파서 전환 완료 |
+| 다음 단계 | (없음, 완료됨) |
+| 완료 신호 | `uv run pytest` 전체 PASS 확인 및 TEMPLATE 변경 완료 |
 
 ## 사용자 진행 계획
 
@@ -68,10 +68,13 @@ implementation_duration:
 - 2026-08-11: Gate 2 리뷰 (plan-reviewer, principle-auditor, usability-reviewer) 모두 PASS 완료.
 
 ## 구현 결과
-(구현 후 작성)
+- `agentos/observability/plan_parser.py` 및 테스트 스위트에 YAML Frontmatter 파서 로직을 추가하여 기존 방식(Blockquote) 및 신규 방식 모두 완벽히 지원하도록 변경했습니다.
+- `TEMPLATE.md`에 Frontmatter 구조(`---`)를 적용하였습니다.
+- 전체 테스트 스위트가 에러 없이 통과(675 passed)하여 하위 호환성이 검증되었습니다.
 
 ## 사용 방법
-(구현 후 작성)
+- 앞으로 신규 구현 계획서를 작성할 때는 `TEMPLATE.md`에 정의된 바와 같이 문서 최상단에 `---` 로 둘러싸인 메타데이터 포맷을 사용합니다.
+- `agentos dashboard sync-plan` 커맨드는 기존과 같이 동일하게 사용하면 되며 변경된 Frontmatter 포맷을 자동으로 인식합니다.
 
 ## 아카이브 결정
-(모든 구현과 검증, 하네스 리뷰 완료 후 아카이브 결정 사유 기록)
+모든 구현과 검증을 성공적으로 완료하였으므로 아카이브(완료) 처리 가능합니다.

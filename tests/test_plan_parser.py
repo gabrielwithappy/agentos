@@ -182,3 +182,42 @@ def test_status_to_board_status_unknown_text_falls_back_to_ready():
     # 8종류 조합 밖의 완전히 새로운 문구 — reviewed:false여도 규칙 (2)가
     # 먼저 걸려 Backlog가 되므로, 진짜 폴백은 reviewed:true인 미지 문구에서만 발생.
     assert status_to_board_status("전혀 새로운 미지의 상태 문구", "true") == "Ready"
+
+FRONTMATTER_PLAN_TEXT = """---
+status: 구현 계획 (리뷰 대기)
+date: 2026-08-11
+reviewed: false
+usability_review_required: true
+user_request: 사용자 요청 요약
+active_agent: Antigravity
+active_session: test-session
+dashboard_item_id: test-item-id
+---
+
+# Frontmatter 테스트 계획
+
+## 진행 스냅샷
+내용
+"""
+
+def test_parses_frontmatter_exec_plan():
+    summary = parse_exec_plan(FRONTMATTER_PLAN_TEXT)
+
+    assert summary.title == "Frontmatter 테스트 계획"
+    assert summary.status == "구현 계획 (리뷰 대기)"
+    assert summary.reviewed == "false"
+    assert summary.active_agent == "Antigravity"
+    assert summary.active_session == "test-session"
+    assert summary.dashboard_item_id == "test-item-id"
+    assert summary.user_request == "사용자 요청 요약"
+
+def test_upsert_meta_field_frontmatter():
+    from agentos.observability.plan_parser import upsert_meta_field
+    
+    updated_text = upsert_meta_field(FRONTMATTER_PLAN_TEXT, "dashboard_item_id", "new-item-id")
+    assert "dashboard_item_id: new-item-id" in updated_text
+    assert "dashboard_item_id: test-item-id" not in updated_text
+    
+    # Check if a new field gets inserted properly
+    updated_text_new = upsert_meta_field(FRONTMATTER_PLAN_TEXT, "new_field", "some value")
+    assert "new_field: some value" in updated_text_new
