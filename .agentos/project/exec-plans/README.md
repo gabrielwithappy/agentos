@@ -3,11 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-10T15:39:59Z
+> Generated at: 2026-08-10T15:40:38Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 계획 (리뷰 대기)` [Knowledge Curator OKF v0.2 적용 구현 계획](.agentos/project/exec-plans/active/2026-08-11-knowledge-curator-okf-v02-adoption.md) | progress: 참조 구현 비교와 후보 선별을 완료했고, 계획 Gate 2 리뷰 대기 중이다.
+- `구현 계획 (실행 대기)` [Knowledge Curator OKF v0.2 적용 구현 계획](.agentos/project/exec-plans/active/2026-08-11-knowledge-curator-okf-v02-adoption.md) | reviewed_evidence=invalid | progress: 참조 구현 비교와 후보 선별을 완료했고, 계획 Gate 2 리뷰 대기 중이다.
 
 ## Archived Plans
 - archive summary: completed=61, parked=0
