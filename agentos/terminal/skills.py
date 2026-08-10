@@ -15,7 +15,7 @@ SKILL_MANIFEST_SCHEMA = "agentos.skills/v1"
 MANIFEST_NAME = ".agentos-skills.json"
 DEFAULT_SKILL_NAMES = (
     "architecture-diagram", "ascii-art", "baoyu-comic", "baoyu-infographic", "claude-design",
-    "codebase-inspection", "design-md", "frontend-design", "future-slide", "humanizer", "p5js",
+    "codebase-inspection", "design-md", "frontend-design", "future-slide", "humanizer", "knowledge-curator", "p5js",
     "popular-web-designs", "pretext", "requesting-code-review", "sketch", "spike",
     "systematic-debugging", "xlsx",
 )

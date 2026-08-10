@@ -3,16 +3,19 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-10T11:53:48Z
+> Generated at: 2026-08-10T15:36:18Z
 
 ## Active Plans
 - older active plans omitted=0
-- `완료` [Stop 훅의 계획 리뷰 초점화 구현 계획](.agentos/project/exec-plans/active/2026-08-10-stop-hook-review-focus.md) | reviewed | outcome: 사용자는 artifact 형식 누락 때문에 대화 종료가 막히지 않으며, 검증되지 않은 계획은 구현을 시작하려는 순간에만 명확한 복구 안내와 함께 차단된다. | progress: Intent Sheet와 현재 훅·실행 게이트 조사를 마쳤고, Gate 2 리뷰를 기다린다.
-- `완료` [AHA·스킬 양방향 장기지식 저장소 및 Git 연동 구현 계획](.agentos/project/exec-plans/active/2026-08-09-aha-knowledge-skill-git.md) | reviewed | outcome: 사용자는 AgentOS 설치 여부와 관계없이 skill runtime 또는 `aha knowledge` 중 가능한 진입점을 선택해 지식을 작성·검토·publish하고, GitHub 저장소에서 상대 링크로 연결된 지식 graph를 탐색하며, 다른 프로… | progress: Gate 2 독립 리뷰 완료, Task 0 실행 대기 중
+- `구현 계획 (리뷰 대기)` [Knowledge Curator OKF v0.2 적용 구현 계획](.agentos/project/exec-plans/active/2026-08-11-knowledge-curator-okf-v02-adoption.md) | progress: 참조 구현 비교와 후보 선별을 완료했고, 계획 Gate 2 리뷰 대기 중이다.
+- `구현 계획 (실행 대기)` [Knowledge Curator 독립 스킬 구현 계획](.agentos/project/exec-plans/active/2026-08-10-knowledge-curator-standalone-skill.md) | reviewed_evidence=invalid | outcome: 사용자는 `catalog/skills/knowledge-curator/` 폴더를 원하는 skill root의 `knowledge-curator/`로 복사한 뒤, 그 복사본의 스킬 안내와 Python CLI로 knowledge Git checkout의… | progress: 독립 Gate 2 리뷰와 manifest integrity 검증 완료, 실행 대기 중.
 
 ## Archived Plans
-- archive summary: completed=57, parked=0
-- older archived plans omitted=37
+- archive summary: completed=60, parked=0
+- older archived plans omitted=40
+- `완료` [Stop 훅의 계획 리뷰 초점화 구현 계획](.agentos/project/exec-plans/archive/2026-08-10-stop-hook-review-focus.md) | reviewed_evidence=invalid | outcome: 사용자는 artifact 형식 누락 때문에 대화 종료가 막히지 않으며, 검증되지 않은 계획은 구현을 시작하려는 순간에만 명확한 복구 안내와 함께 차단된다. | progress: Intent Sheet와 현재 훅·실행 게이트 조사를 마쳤고, Gate 2 리뷰를 기다린다.
+- `완료` [Codex Stop hook 계약 복구 구현 계획](.agentos/project/exec-plans/archive/2026-08-10-codex-stop-hook-contract.md) | reviewed_evidence=invalid | outcome: Codex 세션 종료 때 `invalid stop hook JSON output` 오류가 출력되지 않는다. Claude Code의 Stop gate는 변경하지 않는다. | progress: 간단한 Gate 2 리뷰 대기.
+- `완료` [AHA·스킬 양방향 장기지식 저장소 및 Git 연동 구현 계획](.agentos/project/exec-plans/archive/2026-08-09-aha-knowledge-skill-git.md) | reviewed_evidence=invalid | outcome: 사용자는 AgentOS 설치 여부와 관계없이 skill runtime 또는 `aha knowledge` 중 가능한 진입점을 선택해 지식을 작성·검토·publish하고, GitHub 저장소에서 상대 링크로 연결된 지식 graph를 탐색하며, 다른 프로… | progress: Gate 2 독립 리뷰 완료, Task 0 실행 대기 중
 - `완료` [장기지식 저장·검토·publish·검색 흐름 구현 계획](.agentos/project/exec-plans/archive/2026-08-01-knowledge-base-lifecycle.md) | outcome: 사용자는 `docs/knowledge`에서 승인된 지식을 찾고, 에이전트 조사 결과를 inbox에서 검토·publish한 뒤 CLI로 재검색·인용할 수 있다. | progress: 구현·검증·main 병합·로컬 feature branch 삭제 완료. Stop hook 지적으로 current checkout의 리뷰 증거를 재생성 중.
 - `완료` [AgentOS TUI 도구 로그 밀도 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-30-tui-tool-log-density.md) | outcome: 사용자는 완료된 도구 실행의 이름·성공/실패 요약을 바로 보고, `Ctrl+O`로 해당 턴을 포함한 모든 도구 활동의 호출 인자와 결과를 펼치거나 다시 접을 수 있다. | progress: raw provider stderr/raw environment 음성 검증과 light/dark/`NO_COLOR` 도구 활동 coverage를 보완한 뒤 fresh verification을 완료했다. 계획은 사용자의 명시적 archive 요청 전까…
 - `완료` [AgentOS 전역 CLI화 및 안전한 프로젝트 부트스트랩 구현 계획](.agentos/project/exec-plans/archive/2026-07-29-global-cli-portable-project-bootstrap.md) | reviewed_evidence=invalid | outcome: 사용자는 `uv tool install agentos`로 CLI를 설치하고 `agentos --help`로 PATH를 확인한 뒤, source checkout 없이 `cd my-project && agentos setup`을 실행해 새 프로젝트에서… | progress: package-owned bridge와 portable project bootstrap을 구현하고 focused·isolated-install·public 검증을 완료했다.
@@ -30,9 +33,6 @@
 - `완료` [GitHub 대시보드 Status에 "Awaiting Verification" 5단계 추가 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-awaiting-verification-status.md) | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [GitHub 대시보드 연동 .env 자동 복원(Self-healing) 기능 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-auto-discovery-env.md) | reviewed_evidence=missing | outcome: 사용자는 로컬 프로젝트 환경 변수(`.env`)가 사라지더라도 `agentos run` 실행 시 대시보드 연동 설정이 자동으로 복원되어 번거로운 대화형 입력 과정을 건너뛸 수 있다. (기존 데이터와 동기화 방식은 바뀌지 않음) | progress: 계획 초안 작성, 5차 리뷰 대기 중
 - `완료` [GitHub Projects 보드 4단계 Status 컬럼 확장 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-4stage-status-mapping.md) | progress: 계획 초안 작성, 리뷰 대기 중
-- `완료` [Claude(Anthropic) OAuth LLM Provider 추가 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-claude-oauth-provider.md) | progress: 계획 초안 작성 완료. hermes-agent(`/references/pi`) 참고 조사 완료, `add-llm-provider` 스킬(`/references/pi/.pi/skills/add-llm-provider.md`) 체크리스트를 AgentOS…
-- `완료` [YOLO 도구 실행 모드 구현 계획](.agentos/project/exec-plans/archive/2026-07-26-yolo-tool-execution.md) | reviewed_evidence=missing | outcome: `agentos --yolo` 또는 `agentos run --yolo`로 작업 중 승인 중단 없이 연속 도구 실행을 사용할 수 있고, 옵션이 없으면 현재 동작이 그대로 유지된다.
-- `완료` [TUI 테마 색상·스크롤바·입력창·상태 패널 개선 계획](.agentos/project/exec-plans/archive/2026-07-26-tui-theme-and-status-panel.md) | reviewed_evidence=invalid | progress: Gate 2 리뷰 후 Task 1–5 구현과 focused 회귀, dark/light SVG 증거까지 완료. 아카이빙 완료.
 
 ## Reference Docs
 - older reference docs omitted=5

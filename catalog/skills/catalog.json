@@ -744,6 +744,25 @@
         "use_smoke": "test -f .agents/skills/xlsx/SKILL.md && test -f .agents/skills/xlsx/scripts/recalc.py"
       },
       "skill_tree_sha256": "51d85101d96802cc764e67ed835f05152b52d612148543b723394e9177792758"
+    },
+    {
+      "name": "knowledge-curator",
+      "summary": "Curate and locally back up reusable Markdown knowledge without AgentOS or remote writes.",
+      "triggers": ["knowledge", "curate", "long-term knowledge", "knowledge base", "knowledge repository"],
+      "when_to_recommend": {
+        "positive_examples": ["initialize a knowledge repository", "back up reusable research notes", "curate our project knowledge"],
+        "negative_examples": ["push a repository to GitHub", "generate a vector search index"],
+        "reason_template": "knowledge-curator matches because the user asked to safely manage reusable project knowledge.",
+        "already_installed_behavior": "copy the standalone skill folder and use its bundled CLI"
+      },
+      "source_path": "catalog/skills/knowledge-curator",
+      "install_path": ".agents/skills/knowledge-curator",
+      "license": "Agent Harness project license",
+      "upstream": {"source": "Agent Harness repo-local standalone skill"},
+      "verification": {
+        "install_smoke": "cp -R catalog/skills/knowledge-curator <skill-root>/knowledge-curator && python3 -S <skill-root>/knowledge-curator/scripts/knowledge.py --help",
+        "use_smoke": "test -f <skill-root>/knowledge-curator/SKILL.md"
+      }
     }
   ]
 }

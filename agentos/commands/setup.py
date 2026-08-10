@@ -20,7 +20,6 @@ CODEX_CONFIG = {
             {"matcher": "write_to_file|replace_file_content|multi_replace_file_content", "hooks": [{"type": "command", "command": "agentos hook bridge codex pre-write"}]},
         ],
         "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "agentos hook bridge codex post-bash"}]}],
-        "Stop": [{"hooks": [{"type": "command", "command": "agentos hook bridge codex stop", "timeout": 10}]}],
     }
 }
 CLAUDE_CONFIG = {

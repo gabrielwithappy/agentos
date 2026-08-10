@@ -17,6 +17,7 @@
     "qa",
     "requirement-discovery",
     "run-all-tests",
+    "skill-creator",
     "sync-manifest",
     "verification-before-completion",
     "writing-plans"
