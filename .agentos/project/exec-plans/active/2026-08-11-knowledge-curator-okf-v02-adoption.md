@@ -1,6 +1,6 @@
 # Knowledge Curator OKF v0.2 적용 구현 계획
 
-> **상태:** 구현 계획 (실행 대기)
+> **상태:** 완료
 > **작성일:** 2026-08-11
 > reviewed: true
 > **usability_review_required:** true
@@ -8,10 +8,10 @@
 > active_agent: Codex
 > active_session: /home/gabriel/agent/prj-agent/agentos-workspace/agentos (branch: plan/okf-adoption-comparison)
 > dashboard_item_id: PVTI_lAHOBiJEFc4Bek_Ezg1-qdo<br>
-> implementation_completed_at:
-> implementation_duration:
-> implementation_baseline_commit:
-> implementation_preexisting_status:
+> implementation_completed_at: 2026-08-10T16:24:44Z
+> implementation_duration: 2026-08-11 세션 (feature/knowledge-curator-okf-v02-adoption)
+> implementation_baseline_commit: f01ff75d04eaa8d9250752f3bd1cca23b61006c7
+> implementation_preexisting_status: ""
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
@@ -122,7 +122,7 @@
 
 **사용자에게 보이는 마일스톤:** 이미 진행 중인 standalone skill 구현을 훼손하거나 중복 구현하지 않는 출발점이 확보된다.
 
-- [ ] 선행 `2026-08-10-knowledge-curator-standalone-skill`의 header가 exact `완료`와 non-empty `implementation_completed_at`을 갖고 predecessor closeout의 `PASS knowledge-curator-final` evidence가 있으며, `catalog/skills/knowledge-curator/**`와 shared test/harness files에 staged·unstaged·untracked 변경이 없음을 확인한다. 검증이 끝나면 `git rev-parse HEAD` SHA와 allowlist 밖의 기존 `git status --porcelain --untracked-files=all` rows를 JSON-escaped 한 줄로 계산한다. 에이전트는 그 두 값만 `apply_patch`로 이 계획 header의 `implementation_baseline_commit`/`implementation_preexisting_status`에 기록한다. 하나라도 실패하면 이 계획은 `NEEDS_CONTEXT`로 중단하고 선행 계획을 먼저 마무리한다.
+- [x] 선행 `2026-08-10-knowledge-curator-standalone-skill`의 header가 exact `완료`와 non-empty `implementation_completed_at`을 갖고 predecessor closeout의 `PASS knowledge-curator-final` evidence가 있으며, `catalog/skills/knowledge-curator/**`와 shared test/harness files에 staged·unstaged·untracked 변경이 없음을 확인한다. 검증이 끝나면 `git rev-parse HEAD` SHA와 allowlist 밖의 기존 `git status --porcelain --untracked-files=all` rows를 JSON-escaped 한 줄로 계산한다. 에이전트는 그 두 값만 `apply_patch`로 이 계획 header의 `implementation_baseline_commit`/`implementation_preexisting_status`에 기록한다. 하나라도 실패하면 이 계획은 `NEEDS_CONTEXT`로 중단하고 선행 계획을 먼저 마무리한다.
 
 - [ ] header write 전에 SHA가 40 lowercase hex인지, status snapshot이 JSON string인지 local Python으로 검증하고, `apply_patch`의 exact old/new header line context를 사용한다. patch 후에는 Task 0 `Run:`의 read-only `grep`/JSON parse로 기록값을 재검증한다. shell substitution·`sed`·임의 text replacement로 plan을 수정하지 않는다.
 
@@ -130,7 +130,7 @@ Run: `grep -q '^> \*\*상태:\*\* 완료' .agentos/project/exec-plans/active/202
 
 Expected: `PASS knowledge-curator-baseline-ready`
 
-- [ ] 기존 `init`/`status`/`backup`/`sync` JSON exit contract와 no-push 경계를 snapshot test로 고정한다.
+- [x] 기존 `init`/`status`/`backup`/`sync` JSON exit contract와 no-push 경계를 snapshot test로 고정한다.
 
 Run: `python3 -m pytest tests/test_knowledge_skill.py tests/test_knowledge_git_security.py -q && echo 'PASS knowledge-curator-existing-contract'`
 
@@ -142,19 +142,19 @@ Expected: `PASS knowledge-curator-existing-contract`
 
 **사용자에게 보이는 마일스톤:** 사용자는 hand-written boilerplate 없이도 최소 OKF v0.2 번들을 시작할 수 있고, 기존 빈 Git checkout 초기화는 그대로 쓸 수 있다.
 
-- [ ] `knowledge.py init`에 `--okf-starter`를 추가하고, `knowledge_core.py`에 preflight, private staging, journaled no-overwrite install, injected-write-failure/crash recovery cleanup 및 narrow same-remote/branch re-entry를 구현한다. parser error도 JSON envelope/exit 2/`next`를 반환하고 `init --help`에는 opt-in/no-overwrite semantics가 나타난다. starter concept에는 `tags:` block list로 `action/plan`, `task/research`, `domain/knowledge-curator`, `context/local-git` 같은 slash-form 계층 태그를 넣는다.
+- [x] `knowledge.py init`에 `--okf-starter`를 추가하고, `knowledge_core.py`에 preflight, private staging, journaled no-overwrite install, injected-write-failure/crash recovery cleanup 및 narrow same-remote/branch re-entry를 구현한다. parser error도 JSON envelope/exit 2/`next`를 반환하고 `init --help`에는 opt-in/no-overwrite semantics가 나타난다. starter concept에는 `tags:` block list로 `action/plan`, `task/research`, `domain/knowledge-curator`, `context/local-git` 같은 slash-form 계층 태그를 넣는다.
 
 Run: `python3 -m pytest tests/test_knowledge_okf_starter.py -q && echo 'PASS knowledge-curator-okf-starter'`
 
 Expected: `PASS knowledge-curator-okf-starter`
 
-- [ ] starter의 `index.md`에 `okf_version: 0.2`, title/description, progressive-disclosure 링크를, `log.md`에 ISO date 기록 형식을, example concept에 non-empty `type`과 `tags`를 작성한다. `--adopt-existing --okf-starter`와 populated checkout은 no-change error로 처리하고 write failure 후에는 starter file 0개와 `status` retry guidance를 검증한다.
+- [x] starter의 `index.md`에 `okf_version: 0.2`, title/description, progressive-disclosure 링크를, `log.md`에 ISO date 기록 형식을, example concept에 non-empty `type`과 `tags`를 작성한다. `--adopt-existing --okf-starter`와 populated checkout은 no-change error로 처리하고 write failure 후에는 starter file 0개와 `status` retry guidance를 검증한다.
 
 Run: `python3 -m pytest tests/test_knowledge_okf_starter.py -k 'starter_contents or refuses_existing_or_adopted_checkout or write_failure_leaves_no_partial_bundle or retry_preserves_remote_branch_without_git_mutation or mismatch_refused' -q && echo 'PASS knowledge-curator-starter-safety'`
 
 Expected: `PASS knowledge-curator-starter-safety`
 
-- [ ] `SKILL.md`에 opt-in semantics, 생성 파일, no-overwrite recovery와 `tags`의 `action/plan` slash-form 탐색 규칙을 문서화한다.
+- [x] `SKILL.md`에 opt-in semantics, 생성 파일, no-overwrite recovery와 `tags`의 `action/plan` slash-form 탐색 규칙을 문서화한다.
 
 Run: `python3 -m pytest tests/test_knowledge_okf_starter.py tests/test_knowledge_skill.py -k 'guidance or help or parser_error' -q && echo 'PASS knowledge-curator-starter-guidance'`
 
@@ -166,19 +166,19 @@ Expected: `PASS knowledge-curator-starter-guidance`
 
 **사용자에게 보이는 마일스톤:** 사용자는 bundle을 바꾸지 않고 어떤 파일이 최소 OKF 구조를 위반하는지 JSON 진단으로 알 수 있다.
 
-- [ ] `okf_bundle_validate.py`를 표준 라이브러리만으로 구현하고 `knowledge.py validate --project <path> [--strict]`에서 호출한다. checker는 채택 계약의 grammar/discovery/diagnostic ordering/envelope을 반환하며 shell, Git, network를 실행하지 않는다.
+- [x] `okf_bundle_validate.py`를 표준 라이브러리만으로 구현하고 `knowledge.py validate --project <path> [--strict]`에서 호출한다. checker는 채택 계약의 grammar/discovery/diagnostic ordering/envelope을 반환하며 shell, Git, network를 실행하지 않는다.
 
 Run: `python3 -m pytest tests/test_okf_bundle_validation.py -q && echo 'PASS knowledge-curator-okf-validation'`
 
 Expected: `PASS knowledge-curator-okf-validation`
 
-- [ ] 필수 오류와 advisory warning을 분리하고 stable diagnostic code/order를 보장한다. valid/warning/default success/strict refusal/error/refusal의 stdout 한 줄, empty stderr, exit code, `changed:false`, `next`를 각각 fixture로 고정한다.
+- [x] 필수 오류와 advisory warning을 분리하고 stable diagnostic code/order를 보장한다. valid/warning/default success/strict refusal/error/refusal의 stdout 한 줄, empty stderr, exit code, `changed:false`, `next`를 각각 fixture로 고정한다.
 
 Run: `python3 -m pytest tests/test_okf_bundle_validation.py -k 'grammar or errors or warnings or strict or json_contract or diagnostic_order' -q && echo 'PASS knowledge-curator-okf-diagnostics'`
 
 Expected: `PASS knowledge-curator-okf-diagnostics`
 
-- [ ] validator 전후에 content hash가 같은지, symlink escape 및 binary/oversized input이 no-change rejection인지 regression으로 고정한다.
+- [x] validator 전후에 content hash가 같은지, symlink escape 및 binary/oversized input이 no-change rejection인지 regression으로 고정한다.
 
 Run: `python3 -m pytest tests/test_okf_bundle_validation.py tests/test_knowledge_git_security.py -q && echo 'PASS knowledge-curator-okf-readonly-boundary'`
 
@@ -190,19 +190,19 @@ Expected: `PASS knowledge-curator-okf-readonly-boundary`
 
 **사용자에게 보이는 마일스톤:** 사용자는 safe local Git workflow 안에서 starter와 validation을 발견하고, 참조 구현의 제외된 기능이 임의로 활성화되지 않음을 확인할 수 있다.
 
-- [ ] `SKILL.md`에 `init --okf-starter → validate [--strict] → backup`의 command transcript, populated/adopt refusal, warning/error/read-only recovery, `tags` prefix 탐색 규칙을 추가하고, migration·push·hook·visualize가 제공되지 않는다고 명시한다.
+- [x] `SKILL.md`에 `init --okf-starter → validate [--strict] → backup`의 command transcript, populated/adopt refusal, warning/error/read-only recovery, `tags` prefix 탐색 규칙을 추가하고, migration·push·hook·visualize가 제공되지 않는다고 명시한다.
 
 Run: `python3 -m pytest tests/test_knowledge_okf_starter.py tests/test_knowledge_skill.py -k 'guidance_contract or installed_help or parser_error_json' -q && echo 'PASS knowledge-curator-okf-guidance'`
 
 Expected: `PASS knowledge-curator-okf-guidance`
 
-- [ ] standalone direct-copy 실행과 모든 knowledge-curator focused suites를 실행한다. 테스트 fixture는 temporary local directories와 bare Git repository만 사용하며 user checkout/remote에는 쓰지 않는다.
+- [x] standalone direct-copy 실행과 모든 knowledge-curator focused suites를 실행한다. 테스트 fixture는 temporary local directories와 bare Git repository만 사용하며 user checkout/remote에는 쓰지 않는다.
 
 Run: `python3 -m pytest tests/test_knowledge_skill.py tests/test_knowledge_git_security.py tests/test_knowledge_okf_starter.py tests/test_okf_bundle_validation.py -q && bash tests/harness/test_aha_knowledge_standalone.sh && bash tests/harness/test_aha_knowledge_security_boundary.sh && bash tests/harness/test_aha_knowledge_git_workflow.sh && bash tests/harness/test_aha_knowledge_okf_validation.sh && echo 'PASS knowledge-curator-okf-final'`
 
 Expected: `PASS knowledge-curator-okf-final`
 
-- [ ] source/CLI boundary와 excluded capability의 부재를 behavioral negative tests로 검사한다. Task 0 header의 exact `implementation_baseline_commit`과 `implementation_preexisting_status`를 읽고, checker는 tracked diff와 current staged/unstaged/untracked porcelain rows를 함께 비교한다. File Structure allowlist와 active plan path 밖의 current row는 preexisting snapshot에 exact하게 존재해야 한다. 따라서 Task 1–3의 new untracked 금지 파일도 FAIL이며, Task 0 이후의 active plan header update는 허용된다. `--push`, `--migrate`, visualization/MCP command와 Git `fetch|pull|push` invocation은 command-capture fixture에서 모두 거부·미호출이어야 한다.
+- [x] source/CLI boundary와 excluded capability의 부재를 behavioral negative tests로 검사한다. Task 0 header의 exact `implementation_baseline_commit`과 `implementation_preexisting_status`를 읽고, checker는 tracked diff와 current staged/unstaged/untracked porcelain rows를 함께 비교한다. File Structure allowlist와 active plan path 밖의 current row는 preexisting snapshot에 exact하게 존재해야 한다. 따라서 Task 1–3의 new untracked 금지 파일도 FAIL이며, Task 0 이후의 active plan header update는 허용된다. `--push`, `--migrate`, visualization/MCP command와 Git `fetch|pull|push` invocation은 command-capture fixture에서 모두 거부·미호출이어야 한다.
 
 Run: `python3 -m pytest tests/test_knowledge_git_security.py tests/test_knowledge_skill.py -k 'no_push_or_fetch_or_pull or rejects_migrate_or_visualize_or_mcp' -q && python3 -c 'import json,re,subprocess; p=".agentos/project/exec-plans/active/2026-08-11-knowledge-curator-okf-v02-adoption.md"; h=open(p).read(); base=next(x.split(": ",1)[1] for x in h.splitlines() if x.startswith("> implementation_baseline_commit: ")); prior=json.loads(next(x.split(": ",1)[1] for x in h.splitlines() if x.startswith("> implementation_preexisting_status: "))); allowed={p,"catalog/skills/knowledge-curator/SKILL.md","catalog/skills/knowledge-curator/scripts/knowledge_core.py","catalog/skills/knowledge-curator/scripts/knowledge.py","catalog/skills/knowledge-curator/scripts/okf_bundle_validate.py","tests/test_knowledge_okf_starter.py","tests/test_okf_bundle_validation.py","tests/test_knowledge_skill.py","tests/test_knowledge_git_security.py","tests/harness/test_aha_knowledge_okf_validation.sh"}; rows=subprocess.check_output(["git","status","--porcelain","--untracked-files=all"],text=True).splitlines(); committed=subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines(); bad_rows=[r for r in rows if r[3:] not in allowed and r not in prior.splitlines()]; bad_committed=[x for x in committed if x not in allowed]; assert re.fullmatch(r"[0-9a-f]{40}",base) and not bad_rows and not bad_committed, (bad_rows,bad_committed); print("PASS knowledge-curator-okf-scope-status")' && echo 'PASS knowledge-curator-okf-scope-boundary'`
 
@@ -216,11 +216,42 @@ Expected: `PASS knowledge-curator-okf-scope-boundary`
 
 ## 구현 결과
 
-구현 후 작성: 실제 변경 경로, user-facing behavior, fresh verification 결과를 기록한다.
+- **knowledge_core.py**: OKF starter 생성 로직 추가 (preflight, private staging, journaled no-overwrite install, crash recovery, re-entry 검증)
+- **knowledge.py**: `--okf-starter` 플래그, `validate` 명령, `--migrate` 거부, JSON 파서 오류 envelope 추가
+- **okf_bundle_validate.py**: stdlib-only 읽기 전용 OKF v0.2 구조 검사기 (전체 grammar/diagnostic/ordering/envelope 구현)
+- **SKILL.md**: OKF starter, validate/strict, 진단 코드 테이블, 미제공 기능 목록, recovery guidance 추가
+- **tests/test_knowledge_okf_starter.py**: 신규 — starter content, preflight, write failure, retry, help 테스트 (15 tests)
+- **tests/test_okf_bundle_validation.py**: 전면 재작성 — grammar, errors, warnings, strict, JSON contract, diagnostic ordering, read-only boundary (43 tests)
+- **tests/test_knowledge_skill.py**: validate help, parser error JSON, guidance, no_push, rejects_migrate regression 추가
+- **tests/test_knowledge_git_security.py**: OKF starter 보안 (no push/fetch/pull, no partial state) 추가
+- **tests/harness/test_aha_knowledge_okf_validation.sh**: 전면 재작성 — 5-case smoke test (valid/invalid/strict/stderr/migrate)
+
+**Fresh verification:** PASS knowledge-curator-okf-final (74 pytest + 4 harness all PASS)
 
 ## 사용 방법
 
-구현 후 작성: exact starter·validate commands와 warning/error recovery를 기록한다.
+```bash
+# 1. OKF v0.2 starter로 초기화
+python3 scripts/knowledge.py init \
+  --project /path/to/project \
+  --remote file:///path/to/knowledge.git \
+  --okf-starter
+
+# 2. 구조 검사 (읽기 전용)
+python3 scripts/knowledge.py validate --project docs/knowledge
+# Strict 모드 (warning도 exit 2)
+python3 scripts/knowledge.py validate --project docs/knowledge --strict
+
+# 3. 로컬 백업
+python3 scripts/knowledge.py backup --project /path/to/project --message "my change"
+
+# 4. 상태 확인
+python3 scripts/knowledge.py status --project /path/to/project
+```
+
+**Tags slash-form 예시:** `action/plan`, `task/research`, `domain/knowledge-curator`, `context/local-git`
+
+**Recovery:** validate 출력의 `next` 필드에 mutation 없는 수정 방법이 항상 포함됩니다.
 
 ## 아카이브 결정
 
