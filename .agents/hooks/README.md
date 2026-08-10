@@ -54,3 +54,10 @@ The hook never auto-generates, auto-repairs, or modifies review artifacts. Only 
 - `adapters/claude-code/settings.json` is the Claude Code native hook template.
 - `adapters/agy/plugin.json` is the Antigravity (agy) native hook plugin template.
 - `adapters/claude/README.md` documents the generic Claude no-native-hook boundary.
+
+## `review-evidence-invalid` Warning
+
+The `review-evidence-invalid` warning code indicates that an active plan contains a `reviewed: true` header, but lacks valid supporting review artifacts.
+- **How to fix:** Run `python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <path>` to diagnose the missing or invalid artifacts, then complete the missing Gate 2 reviews.
+- **Why Stop allows continue:** The Stop hook is now strictly diagnostic for review validation, allowing the agent to continue writing or fixing the plan without being prematurely blocked by incomplete reviews.
+- **Why execution is still fail-closed:** The execution boundary (`harness_loop.py` and `execution_gate.py`) is fail-closed. You cannot begin executing a plan without mathematically validated Gate 2 artifacts.
