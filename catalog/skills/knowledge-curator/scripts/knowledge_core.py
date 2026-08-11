@@ -6,24 +6,34 @@ import json
 import os
 import subprocess
 import tempfile
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
 
 class KnowledgeError(Exception):
-    def __init__(self, message: str, code: int = 2, next_command: str = "Run status after fixing the reported issue.") -> None:
+    def __init__(self, message: str, code: int = 2, next_command: str = "Run status after fixing the reported issue.", details: dict[str, object] | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.next_command = next_command
+        self.details = details or {}
 
 
 def _safe_env() -> dict[str, str]:
-    return {key: value for key, value in os.environ.items() if not any(token in key.lower() for token in ("token", "credential", "password", "secret", "auth"))}
+    env = os.environ.copy()
+    env.update({"GIT_TERMINAL_PROMPT": "0", "GIT_EDITOR": "true", "GIT_MERGE_AUTOEDIT": "no"})
+    return env
 
 
 def _remote_is_safe(remote: str) -> bool:
     parsed = urlparse(remote)
-    return bool(remote) and not parsed.username and not parsed.password and "@" not in parsed.netloc
+    if not remote or any(char.isspace() for char in remote):
+        return False
+    if parsed.scheme == "file":
+        return bool(parsed.path) and not parsed.netloc and not parsed.query and not parsed.fragment
+    if parsed.scheme in {"https", "ssh"}:
+        return bool(parsed.hostname) and not parsed.username and not parsed.password and not parsed.query and not parsed.fragment
+    return bool(re.fullmatch(r"git@[A-Za-z0-9][A-Za-z0-9.-]*:[^\s:@?#]+", remote))
 
 
 def _sha256_text(content: str) -> str:
@@ -131,7 +141,22 @@ class KnowledgeCore:
         return target
 
     def _git(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(["git", *args], cwd=cwd, env=_safe_env(), text=True, capture_output=True, check=False)
+        return subprocess.run(["git", *args], cwd=cwd, env=_safe_env(), text=True, stdin=subprocess.DEVNULL, capture_output=True, check=False)
+
+    def _branch_is_safe(self, branch: str) -> bool:
+        result = subprocess.run(["git", "check-ref-format", "--branch", branch], env=_safe_env(), text=True, stdin=subprocess.DEVNULL, capture_output=True, check=False)
+        return result.returncode == 0
+
+    def _sync_policy(self, checkout: Path) -> str:
+        result = self._git(checkout, "config", "--local", "--get", "knowledge-curator.sync-policy")
+        policy = result.stdout.strip()
+        return policy if policy in {"local", "manual", "auto"} else "local"
+
+    def _branch(self, checkout: Path) -> str:
+        result = self._git(checkout, "symbolic-ref", "--quiet", "--short", "HEAD")
+        if result.returncode or not self._branch_is_safe(result.stdout.strip()):
+            raise KnowledgeError("Knowledge branch is invalid; no network action was taken.", next_command="Reinitialize the checkout with a valid branch name.")
+        return result.stdout.strip()
 
     def _require_repo(self, project_root: str | None) -> Path:
         checkout = self._checkout(project_root)
@@ -301,11 +326,15 @@ class KnowledgeCore:
     # Core commands
     # ------------------------------------------------------------------
 
-    def init(self, remote: str | None, branch: str | None, project_root: str | None, adopt_existing: bool = False, okf_starter: bool = False) -> dict[str, object]:
+    def init(self, remote: str | None, branch: str | None, project_root: str | None, adopt_existing: bool = False, okf_starter: bool = False, sync_policy: str = "local") -> dict[str, object]:
         if not remote or not _remote_is_safe(remote):
             raise KnowledgeError("Unsafe or missing remote URL; credentials are not accepted.", next_command="Use a credential-free --remote URL.")
         checkout = self._checkout(project_root)
         branch = branch or "main"
+        if sync_policy not in {"local", "manual", "auto"}:
+            raise KnowledgeError("Invalid sync policy; no checkout was created.", next_command="Use --sync-policy local, manual, or auto.")
+        if not self._branch_is_safe(branch):
+            raise KnowledgeError("Invalid branch name; no checkout was created.", next_command="Use a valid Git branch name.")
 
         if okf_starter:
             # --okf-starter cannot be combined with --adopt-existing
@@ -340,8 +369,8 @@ class KnowledgeCore:
                 if result.returncode:
                     raise KnowledgeError("Git initialization failed.", 3, "Confirm Git is installed and rerun init.")
                 self._git(checkout, "remote", "add", "origin", remote)
-                if branch:
-                    self._git(checkout, "branch", "-M", branch)
+                self._git(checkout, "branch", "-M", branch)
+                self._git(checkout, "config", "--local", "knowledge-curator.sync-policy", sync_policy)
             # Install starter files
             files = self._starter_files()
             self._install_starter(checkout, files)
@@ -358,8 +387,8 @@ class KnowledgeCore:
         if result.returncode:
             raise KnowledgeError("Git initialization failed.", 3, "Confirm Git is installed and rerun init.")
         self._git(checkout, "remote", "add", "origin", remote)
-        if branch:
-            self._git(checkout, "branch", "-M", branch)
+        self._git(checkout, "branch", "-M", branch)
+        self._git(checkout, "config", "--local", "knowledge-curator.sync-policy", sync_policy)
         return self._result(True, 0, "init", True, "Add reviewed knowledge files, then run backup.")
 
     def status(self, project_root: str | None) -> dict[str, object]:
@@ -368,7 +397,10 @@ class KnowledgeCore:
         if result.returncode:
             raise KnowledgeError("Git status failed.", 3, "Run status in the knowledge checkout after fixing Git.")
         dirty = bool(result.stdout.strip())
-        return self._result(True, 0, "status", False, "Run backup to create a local commit." if dirty else "Knowledge checkout is clean.", "dirty" if dirty else "clean")
+        result = self._result(True, 0, "status", False, "Run backup to create a local commit." if dirty else "Knowledge checkout is clean.", "dirty" if dirty else "clean")
+        result["sync_policy"] = self._sync_policy(checkout)
+        result["branch"] = self._branch(checkout)
+        return result
 
     def backup(self, project_root: str | None, message: str | None) -> dict[str, object]:
         if not message:
@@ -383,17 +415,80 @@ class KnowledgeCore:
         commit = self._git(checkout, "commit", "-m", message)
         if add.returncode or commit.returncode:
             raise KnowledgeError("Local backup commit failed.", 3, "Configure local Git user.name/user.email and rerun backup.")
-        return self._result(True, 0, "backup", True, "Run status to verify the local checkout is clean.")
+        if self._sync_policy(checkout) == "auto":
+            payload = self._sync(checkout, local_backup_saved=True)
+            payload["action"] = "backup"
+            payload["local_backup_saved"] = True
+            return payload
+        return self._result(True, 0, "backup", True, "Run status to verify the local checkout is clean.") | {"local_backup_saved": True, "remote_published": False}
 
-    def sync(self, project_root: str | None, push: bool = False, confirm_branch: str | None = None) -> dict[str, object]:
-        if push:
-            raise KnowledgeError("Push is not supported by the standalone skill; no network action was taken.", next_command="Run sync without --push to inspect local state.")
-        return self.status(project_root) | {"action": "sync", "next": "Sync is local-only; no fetch, pull, or push was performed."}
+    def _sync(self, checkout: Path, local_backup_saved: bool = False) -> dict[str, object]:
+        status = self._git(checkout, "status", "--porcelain")
+        if status.returncode:
+            raise KnowledgeError("Git status failed.", 3, "Run status after fixing Git.", {"phase": "preflight", "local_backup_saved": local_backup_saved, "remote_published": False})
+        if status.stdout.strip():
+            raise KnowledgeError("Knowledge checkout is dirty; no sync was started.", next_command="Run backup first, then rerun sync.", details={"phase": "preflight", "local_backup_saved": local_backup_saved, "remote_published": False})
+        branch = self._branch(checkout)
+        origin = self._git(checkout, "remote", "get-url", "origin")
+        if origin.returncode:
+            raise KnowledgeError("Knowledge remote is not configured; no network action was taken.", next_command="Run init with a credential-free --remote URL.", details={"phase": "preflight", "local_backup_saved": local_backup_saved, "remote_published": False})
+        fetched = self._git(checkout, "fetch", "--no-tags", "origin")
+        if fetched.returncode:
+            raise KnowledgeError("Remote fetch failed; local knowledge files were not changed.", 3, "Configure the existing Git credential helper; do not paste credentials into this CLI.", {"phase": "fetch", "local_backup_saved": local_backup_saved, "remote_published": False})
+        remote_ref = f"refs/remotes/origin/{branch}"
+        remote_head = self._git(checkout, "rev-parse", "--verify", remote_ref)
+        local_head = self._git(checkout, "rev-parse", "--verify", "HEAD")
+        if remote_head.returncode:
+            if local_head.returncode:
+                raise KnowledgeError("Remote and local branch are empty; no sync was started.", next_command="Add knowledge files and run backup before sync.", details={"phase": "bootstrap", "local_backup_saved": local_backup_saved, "remote_published": False})
+            return self._push(checkout, branch, local_backup_saved, changed=True)
+        fetched_branch = self._git(checkout, "fetch", "--no-tags", "origin", branch)
+        if fetched_branch.returncode:
+            raise KnowledgeError("Remote branch fetch failed; local knowledge files were not changed.", 3, "Configure the existing Git credential helper; do not paste credentials into this CLI.", {"phase": "fetch", "local_backup_saved": local_backup_saved, "remote_published": False})
+        if local_head.returncode:
+            merged = self._git(checkout, "merge", "--ff-only", "FETCH_HEAD")
+            if merged.returncode:
+                raise KnowledgeError("Remote bootstrap could not be applied; local knowledge files were not changed.", 3, "Inspect the normal Git checkout, then rerun sync.", {"phase": "merge", "local_backup_saved": local_backup_saved, "remote_published": False})
+            return self._result(True, 0, "sync", True, "Remote knowledge is now available locally.") | {"phase": "merge", "local_backup_saved": local_backup_saved, "remote_published": True}
+        local = local_head.stdout.strip()
+        remote = remote_head.stdout.strip()
+        if local == remote:
+            return self._result(True, 0, "sync", False, "Local and remote knowledge are already synchronized.") | {"phase": "complete", "local_backup_saved": local_backup_saved, "remote_published": True}
+        local_ancestor = self._git(checkout, "merge-base", "--is-ancestor", local, remote)
+        if local_ancestor.returncode == 0:
+            merged = self._git(checkout, "merge", "--ff-only", "FETCH_HEAD")
+            if merged.returncode:
+                raise KnowledgeError("Fast-forward failed; local knowledge files were not changed.", 3, "Inspect the normal Git checkout, then rerun sync.", {"phase": "merge", "local_backup_saved": local_backup_saved, "remote_published": False})
+            return self._result(True, 0, "sync", True, "Remote knowledge was fast-forwarded locally.") | {"phase": "merge", "local_backup_saved": local_backup_saved, "remote_published": True}
+        remote_ancestor = self._git(checkout, "merge-base", "--is-ancestor", remote, local)
+        if remote_ancestor.returncode == 0:
+            return self._push(checkout, branch, local_backup_saved, changed=True)
+        preflight = self._git(checkout, "merge-tree", "--write-tree", local, remote)
+        if preflight.returncode:
+            raise KnowledgeError("Remote knowledge conflicts; no merge was started.", next_command="Resolve the competing knowledge edits in a normal Git checkout, then rerun sync.", details={"phase": "conflict", "local_backup_saved": local_backup_saved, "remote_published": False})
+        merged = self._git(checkout, "merge", "--no-edit", "-m", f"knowledge-curator sync: merge {branch}", "FETCH_HEAD")
+        if merged.returncode:
+            raise KnowledgeError("Safe merge failed; no recovery action was taken automatically.", 3, "Inspect the normal Git checkout, then rerun sync.", {"phase": "merge", "local_backup_saved": local_backup_saved, "remote_published": False})
+        return self._push(checkout, branch, local_backup_saved, changed=True)
+
+    def _push(self, checkout: Path, branch: str, local_backup_saved: bool, changed: bool) -> dict[str, object]:
+        pushed = self._git(checkout, "push", "origin", f"HEAD:{branch}")
+        if pushed.returncode:
+            return self._result(False, 3, "sync", changed, "Run sync after reconciling the remote.", "Local commit retained; remote publication failed.") | {"phase": "push", "local_backup_saved": local_backup_saved, "remote_published": False}
+        return self._result(True, 0, "sync", changed, "Knowledge changes are published to the remote.") | {"phase": "push", "local_backup_saved": local_backup_saved, "remote_published": True}
+
+    def sync(self, project_root: str | None) -> dict[str, object]:
+        checkout = self._require_repo(project_root)
+        policy = self._sync_policy(checkout)
+        if policy == "local":
+            raise KnowledgeError("Sync policy is local; no network action was taken.", next_command="Reinitialize with --sync-policy manual or auto to enable remote sync.", details={"phase": "policy", "local_backup_saved": False, "remote_published": False})
+        return self._sync(checkout)
 
     def emit(self, action: str, fn, *args, **kwargs) -> int:
         try:
             payload = fn(*args, **kwargs)
         except KnowledgeError as exc:
             payload = self._result(False, exc.code, action, False, exc.next_command, str(exc))
+            payload.update(exc.details)
         print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
         return int(payload["code"])

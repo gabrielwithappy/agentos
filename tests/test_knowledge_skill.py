@@ -14,7 +14,10 @@ def _run(*args: str):
 
 def test_skill_contract_and_cli_parity():
     text = (ROOT / "catalog/skills/knowledge-curator/SKILL.md").read_text()
-    assert "name: knowledge-curator" in text and "Copy the folder" in text
+    assert "name: knowledge-curator" in text
+    assert "Run commands from the copied skill directory." in text
+    assert "AgentOS" not in text
+    assert "catalog/skills/knowledge-curator" not in text
     assert _run("--help").returncode == 0
 
 
@@ -78,18 +81,17 @@ def test_parser_error_json_validate():
     assert "migrate" in payload.get("message", "").lower() or "next" in payload
 
 
-def test_no_push_or_fetch_or_pull(tmp_path):
-    """sync --push must be refused with no network activity."""
+def test_local_policy_refuses_sync_before_network_activity(tmp_path):
+    """The default local policy refuses sync without attempting a remote action."""
     project = tmp_path / "project"
     project.mkdir()
     _run("init", "--project", str(project), "--remote", "file:///tmp/test.git")
-    result = _run("sync", "--project", str(project), "--push")
+    result = _run("sync", "--project", str(project))
     assert result.returncode == 2
     payload = json.loads(result.stdout)
     assert payload["changed"] is False
-    # Must not contain any network-related stdout
-    assert "fetch" not in result.stdout
-    assert "push" not in result.stdout or "not supported" in result.stdout
+    assert payload["phase"] == "policy"
+    assert payload["remote_published"] is False
 
 
 def test_rejects_migrate_or_visualize_or_mcp():

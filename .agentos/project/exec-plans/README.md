@@ -3,15 +3,16 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-10T16:02:04Z
+> Generated at: 2026-08-11T15:08:56Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 계획 (실행 대기)` [Knowledge Curator OKF v0.2 적용 구현 계획](.agentos/project/exec-plans/active/2026-08-11-knowledge-curator-okf-v02-adoption.md) | reviewed_evidence=invalid | progress: 참조 구현 비교와 후보 선별을 완료했고, 계획 Gate 2 리뷰 대기 중이다.
+- `완료` [Knowledge Curator 원격 병합 동기화 구현 계획](.agentos/project/exec-plans/active/2026-08-11-knowledge-curator-remote-merge-sync.md) | reviewed_evidence=invalid | outcome: 사용자는 지식 저장소를 만들 때 수동 발행 또는 자동 발행을 선택하고, 서로 다른 작업 위치의 변경을 `sync` 한 번으로 합쳐 공유할 수 있다. | progress: 구현과 focused verification이 완료되었다. 계획은 사용자의 archive 요청 전까지 active에 남는다.
 
 ## Archived Plans
-- archive summary: completed=62, parked=0
-- older archived plans omitted=42
+- archive summary: completed=63, parked=0
+- older archived plans omitted=43
+- `완료` [Knowledge Curator OKF v0.2 적용 구현 계획](.agentos/project/exec-plans/archive/2026-08-11-knowledge-curator-okf-v02-adoption.md) | reviewed_evidence=invalid | progress: 참조 구현 비교와 후보 선별을 완료했고, 계획 Gate 2 리뷰 대기 중이다.
 - `완료` [[Frontmatter 전환] 구현 계획 문서 메타데이터 포맷 변경](.agentos/project/exec-plans/archive/2026-08-11-exec-plan-frontmatter.md) | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [Stop 훅의 계획 리뷰 초점화 구현 계획](.agentos/project/exec-plans/archive/2026-08-10-stop-hook-review-focus.md) | reviewed_evidence=invalid | outcome: 사용자는 artifact 형식 누락 때문에 대화 종료가 막히지 않으며, 검증되지 않은 계획은 구현을 시작하려는 순간에만 명확한 복구 안내와 함께 차단된다. | progress: Intent Sheet와 현재 훅·실행 게이트 조사를 마쳤고, Gate 2 리뷰를 기다린다.
 - `완료` [Knowledge Curator 독립 스킬 구현 계획](.agentos/project/exec-plans/archive/2026-08-10-knowledge-curator-standalone-skill.md) | reviewed_evidence=invalid | outcome: 사용자는 `catalog/skills/knowledge-curator/` 폴더를 원하는 skill root의 `knowledge-curator/`로 복사한 뒤, 그 복사본의 스킬 안내와 Python CLI로 knowledge Git checkout의… | progress: 독립 Gate 2 리뷰와 manifest integrity 검증 완료, 실행 대기 중.
@@ -31,7 +32,6 @@
 - `완료` [GitHub Projects v2(GraphQL) 대시보드 어댑터 교체 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-github-projectv2-dashboard-adapter.md) | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [exec-plan → GitHub Projects v2 대시보드 동기화 커맨드 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-exec-plan-dashboard-sync-command.md) | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [`agentos dashboard sync-plan --all` 일괄 동기화 옵션 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-sync-plan-all-option.md) | progress: 계획 초안 작성, 리뷰 대기 중
-- `완료` [GitHub 대시보드 Status에 "Awaiting Verification" 5단계 추가 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-awaiting-verification-status.md) | progress: 계획 초안 작성, 리뷰 대기 중
 
 ## Reference Docs
 - older reference docs omitted=5

@@ -58,28 +58,7 @@
 - 새로운 효율적 패턴을 발견하면 `[SUCCESS_PATTERN]` 태그로 `HISTORY.md`에 기록하라
 - 세션 종료 시 `.agents/skills/harness/brain/lessons-learned.md`로 이관하라
 
-### Rule 4: 루프 중지 조건
-
-아래 조건이 충족되면 **즉시 루프를 멈춰라**:
-
-| 조건 | 행동 |
-|------|------|
-| Confidence Gap = 0, 또는 `completion_promise` 충족 | 루프 종료 → `<promise>HARNESS_COMPLETE</promise>` 출력 |
-| 같은 오류 ≥ `repeat_error_threshold` | Rule 2 발동 → `[EVOLUTION_PROPOSAL]` 기록 |
-| 주기-2 반복 ≥ `oscillation_cycle` | 에스컬레이션 → 루프 중지 |
-| 중복 질문 ≥ `repetitive_feedback_threshold` | 질문 재구성 → Rule 1 에스컬레이션 |
-| 루프 수 ≥ `max_loop_iterations` | 강제 중지 → 인간 판단 요청 |
-| Plan Quality Gate FAIL | 루프 중지 → 이전 단계(writing-plans) 회귀 또는 보고 |
-| CD 스코어 ≥ `cd_score_limit` | 강제 중지 |
-| 데이터 손실 위험 또는 보안 위반 감지 | 즉시 중단 → `[EMERGENCY]` 기록 |
-
-**중지 후 반드시 하라**:
-- `HISTORY.md` 최하단에 `[LOOP_STOP]` 기록
-- `/harness-loop` 상태(active) 확인 및 필요시 중단
-- `.agents/skills/harness/brain/lessons-learned.md` 강제 업데이트 (P1 위반시)
-- 병리적 중지(`STAGNATION`, `OSCILLATION`)면 "내가 왜 이 루프에 빠졌는가"를 한 줄로 기록하라
-
-### Rule 5: 외부 의존성은 먼저 검증하라
+### Rule 4: 외부 의존성은 먼저 검증하라
 
 외부 서비스 연동, 새 실행 환경, 플러그인 설치가 포함된 작업이라면:
 
@@ -87,7 +66,7 @@
 - 가장 단순한 형태로 기본 동작을 먼저 검증하라
 - 검증 없이 착수하지 마라
 
-### Rule 6: 계획 리뷰 합의 전 구현 금지
+### Rule 5: 계획 리뷰 합의 전 구현 금지
 
 다음 조건이 모두 충족되기 전에 exec-plan을 실행하지 마라:
 
@@ -95,26 +74,23 @@
 1. writing-plans Gate 2 서브에이전트 리뷰(`plan-reviewer` + `principle-auditor`) 완료
 2. 두 에이전트 모두 PASS/CLEAN 합의. 리뷰가 완료되면 반드시 `.agents/traces/audit-plan-review.md` 및 `audit-principle.md` 등 물리적 리뷰 증거 파일(Artifact)을 생성해야 하며, 이 파일들이 없으면 `reviewed: true` 상태로 전이될 수 없다.
 3. 계획이 user-facing interaction, CLI prompts, setup/install flows, 사용자 안내 docs, error messages, onboarding, Discord interactions, 또는 command output을 바꾸면 `usability-reviewer` PASS 완료
-4. **루프 모드로 실행하는 경우에만** `loop-state.md`에 `execution_locked: false` 확인
 
 해석 규칙:
-- **대화형 세션**(사용자와 직접 대화하며 계획을 실행): `reviewed: true` + 필수 서브에이전트 PASS/CLEAN 합의가 핵심 게이트다. user-facing 계획은 `usability-reviewer` PASS도 필수다. `loop-state.md`는 필수가 아니다.
-- **루프 모드**(`/harness-loop`, `harness_loop.py`, 또는 동등한 자동 루프 실행): `reviewed: true` + 필수 서브에이전트 PASS/CLEAN 합의 + user-facing 계획의 `usability-reviewer` PASS + `loop-state.md`의 `execution_locked: false`가 모두 필요하다.
-- `loop-state.md`는 **루프 실행 상태 파일**이다. 루프를 사용하지 않는 일반 계획 리뷰/실행의 전역 허가 파일로 해석하지 마라.
+- `reviewed: true` + 필수 서브에이전트 PASS/CLEAN 합의가 핵심 게이트다. user-facing 계획은 `usability-reviewer` PASS도 필수다.
 - `usability-reviewer`는 사용자 관점 이해 가능성과 복구 가능성을 검토하는 추가 게이트이며, `plan-reviewer`, `principle-auditor`, `qa-reviewer`, secret redaction, prompt boundary, protected-path approval을 대체하거나 override할 수 없다.
 
 **서브 에이전트 호출 기능**(Task 도구, `invoke_subagent` 등)을 지원하는 모든 런타임 환경에서는 자기검토 fallback이 절대 허용되지 않으며 독립적인 서브 에이전트 호출을 통해서만 리뷰해야 한다. 어떠한 형태의 서브 에이전트 생성 도구도 제공되지 않는 제한된 환경에서만 예외적으로 자기검토 fallback이 허용된다. (특정 벤더명에 의존하지 않고 도구 지원 여부로 판단한다.)
 
-### Rule 7: 계획 수립 및 구현 전 브랜치 생성
+### Rule 6: 계획 수립 및 구현 전 브랜치 생성
 
 작업을 시작하거나 구현 계획(Implementation Plan)을 수립하기 전에 반드시 `CONTRIBUTING.md`의 브랜칭 전략을 확인하라.
 `git checkout -b` 명령어로 적절한 이름의 새로운 브랜치를 생성한 뒤에 작업을 진행해야 하며, `main` 브랜치에서는 직접 계획을 실행하거나 커밋하지 마라.
 
-### Rule 8: 프로젝트 문서화 및 참조 (SSOT)
+### Rule 7: 프로젝트 문서화 및 참조 (SSOT)
 
 프로젝트 컨텍스트를 파악하거나 계획을 수립할 때는 가장 먼저 `.agentos/project/00-project-index.md`를 읽고 SSOT 맵을 파악하라. 새로운 정보를 추가할 때는 단일 파일이 아닌 6종 루트 문서 중 가장 알맞은 곳을 찾아 업데이트하라.
 
-### Rule 9: AgentOS 통합 훅(Unified Hooks) 강제화
+### Rule 8: AgentOS 통합 훅(Unified Hooks) 강제화
 
 모든 CLI 벤더(Claude Code, Codex, Antigravity)는 AgentOS의 공통 훅 스크립트(`.agents/hooks/scripts/`)를 우회할 수 없다. 
 이 훅 파이프라인은 `agentos setup` 명령어 실행 시(내부적으로 `scripts/install-hooks.sh` 호출) 각 벤더의 네이티브 설정 폴더(`.claude/settings.json`, `.codex/hooks.json`, `agy plugin`)로 자동 주입(Link)된다.
@@ -134,18 +110,7 @@
 | 중(Medium) | 90% | 70% | 기능 구현, 설정 변경 |
 | 저(Low) | 80% | 90% | 문서 작성, 탐색 |
 
-### 3.2 루프 제어값
-
-| 파라미터 | 기본값 | 의미 |
-|---------|--------|------|
-| `repeat_error_threshold` | 3 | 같은 오류 N회 시 Rule 2 발동 |
-| `max_loop_iterations` | 30 | 루프 최대 횟수 |
-| `cd_score_limit` | 30 | CD 한계 |
-| `repetitive_feedback_threshold` | 0.70 | 중복 질문 70% 시 Rule 2 발동 |
-| `oscillation_cycle` | 2 | 주기-2 반복 감지 시 루프 중지 |
-| `heartbeat_interval` | 5 | 5 루프마다 `[HEARTBEAT]` 기록 |
-
-### 3.3 재사용 가능한 장기 지식 저장 기준 (Durable Knowledge Gate)
+### 3.2 재사용 가능한 장기 지식 저장 기준 (Durable Knowledge Gate)
 
 단순성 원칙(§핵심 우선순위 4)의 예외 조건이다. 아래 중 하나라도 해당하면, 계획 문서에 압축 요약만 남기지 말고 결과를 별도 파일로 영속화하라:
 
@@ -172,7 +137,7 @@
 | 트리거 | 하라 |
 |--------|------|
 | Rule 2 발동 | `[ERROR_ANALYSIS]` → `[ROOT_CAUSE]` → `[EVOLUTION_PROPOSAL]` 기록 → 승인 후 `[EVOLUTION_APPLIED]` + AGENTS.md 업데이트 |
-| 세션 종료 | HISTORY.md 패턴 분석 기준: (1) `[LOOP_STOP]` ≥ 2건 또는 (2) `Rule 2` 발동 ≥ 1건 또는 (3) `[SKILL_STAT] outcome=FAIL` ≥ 2건 → 해당 조건 태그를 `[EVOLUTION_PROPOSAL]`에 명시하여 제안 |
+| 세션 종료 | HISTORY.md 패턴 분석 기준: (1) `Rule 2` 발동 ≥ 1건 또는 (2) `[SKILL_STAT] outcome=FAIL` ≥ 2건 → 해당 조건 태그를 `[EVOLUTION_PROPOSAL]`에 명시하여 제안 |
 | 규칙·스킬 위반 발견 | 즉시 `[EVOLUTION_PROPOSAL]` 기록 → 인간 승인 요청 |
 | HISTORY.md 500줄 초과 | 패턴 분석 먼저(`grep -c "\[LOOP_STOP\]"`, `grep -c "Rule 2"`) → 지식 압축 → `.agents/skills/harness/brain/lessons-learned.md`로 이관 |
 | lessons-learned.md 항목 추가 시 | AGENTS.md 원칙 승격 가능 여부 즉시 검토 → 가능하면 `[EVOLUTION_PROPOSAL]` → 승인 후 해당 항목 삭제 + AGENTS.md 업데이트 |

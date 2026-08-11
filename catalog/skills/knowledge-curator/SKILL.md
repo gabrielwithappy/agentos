@@ -1,6 +1,6 @@
 ---
 name: knowledge-curator
-description: Manage durable project knowledge in a portable local Git checkout. Use this skill whenever the user asks to curate, initialize, inspect, back up, or safely synchronize long-term Markdown knowledge, including requests mentioning knowledge bases, knowledge repositories, knowledge inboxes, or reusable research notes. Use it even when AgentOS is unavailable; the bundled CLI is standalone.
+description: Manage durable project knowledge in a portable local Git checkout. Use this skill whenever the user asks to curate, initialize, inspect, back up, or safely synchronize long-term Markdown knowledge, including requests mentioning knowledge bases, knowledge repositories, knowledge inboxes, or reusable research notes. The bundled CLI is standalone.
 ---
 
 # Knowledge Curator
@@ -9,11 +9,11 @@ Use this skill to keep reusable Markdown knowledge in a local Git checkout witho
 
 ## First use
 
-Copy the folder into any skill root, then run the installed copy. AgentOS is not required.
+Run commands from the copied skill directory.
 
 ```bash
-cp -R catalog/skills/knowledge-curator /tmp/skills/knowledge-curator
-python3 -S /tmp/skills/knowledge-curator/scripts/knowledge.py --help
+cd /path/to/knowledge-curator
+python3 -S scripts/knowledge.py --help
 ```
 
 Initialize an empty project's checkout with a credential-free remote URL:
@@ -21,6 +21,22 @@ Initialize an empty project's checkout with a credential-free remote URL:
 ```bash
 python3 scripts/knowledge.py init --project /path/to/project --remote file:///path/to/knowledge.git --branch main
 ```
+
+Choose a sync policy at initialization. The safe default is `local`; it never contacts the remote.
+
+| Policy | Backup behavior | `sync` behavior |
+|---|---|---|
+| `local` | Local commit only | Refused before network activity |
+| `manual` | Local commit only | Fetches, safely merges, then publishes when you explicitly run `sync` |
+| `auto` | After a successful local commit, attempts the same safe sync | Also allows explicit `sync` |
+
+For an interactive Korean-language setup, use the wizard. Prompts are on stderr; stdout still contains exactly one JSON result.
+
+```bash
+python3 scripts/knowledge.py init --wizard --project /path/to/project
+```
+
+The wizard explains that the remote must exist already, asks for a credential-free remote URL and branch, defaults to `local`, and requires `yes` before enabling `auto`. EOF or cancellation creates no checkout and returns exit `2`; rerun `init --wizard` when ready.
 
 The command creates only `/path/to/project/docs/knowledge`. A populated directory is rejected unless `--adopt-existing` is explicit; adoption never fetches, pulls, pushes, or overwrites files.
 
@@ -139,8 +155,11 @@ python3 scripts/knowledge.py validate --project docs/knowledge
 # 4. Back up locally
 python3 scripts/knowledge.py backup --project /path/to/project --message "add my-concept"
 
-# 5. Check status
+# 5. Check policy and local status (no network)
 python3 scripts/knowledge.py status --project /path/to/project
+
+# 6. With manual or auto policy, safely synchronize
+python3 scripts/knowledge.py sync --project /path/to/project
 ```
 
 ## Not provided by this skill
@@ -151,7 +170,6 @@ separate reviewed plan and dependency gate:
 - `--migrate`: automatic in-place frontmatter rewrite (requires explicit approval and rollback design)
 - Visualization / graph UI / browser rendering
 - GitHub Actions / CI integration
-- Remote fetch, pull, or push (sync is always local-only)
 - Stop hook / automatic finish detection
 - MCP server, embeddings, or vector search
 - LLM invocation of any kind
@@ -161,13 +179,18 @@ separate reviewed plan and dependency gate:
 1. Run `status --project <project>` to inspect the checkout without changing it.
 2. Add reviewed Markdown files under `docs/knowledge`.
 3. Run `backup --project <project> --message "describe the change"` to make a local Git commit.
-4. Run `sync --project <project>` for a local-only state check. It never fetches, pulls, or pushes.
+4. With `manual` or `auto`, run `sync --project <project>` to fetch and publish deliberately. It never uses `git pull`, rebase, stash, reset, clean, force push, or automatic conflict resolution.
 
 Every command prints one JSON object. `ok: true` and exit 0 mean success; an input or safety refusal has `code: 2`; a local Git failure has `code: 3`. The `next` field gives the safe next command. Credential-bearing remote URLs are rejected and are never echoed back.
 
 ## Safety and recovery
 
-- `sync --push` is intentionally rejected. Use `sync` without it; this package never performs network writes.
+- Only `manual` and `auto` policies permit remote sync. `local` refuses it before network activity.
+- `sync` uses non-interactive Git (`GIT_TERMINAL_PROMPT=0`), a fast-forward where possible, and a preflighted ordinary merge where histories diverge. A merge commit is created with a deterministic message; no editor or stdin prompt is opened.
+- A conflict means no merge was started: resolve the competing knowledge edits in a normal Git checkout, then rerun `sync`.
+- Authentication failure means configure the existing Git credential helper; do not paste credentials into this CLI.
+- A push rejection keeps the valid local commit. The JSON result reports `phase: "push"` and `remote_published: false`; reconcile normally, then rerun `sync`.
+- Fetch may update Git's `FETCH_HEAD` and remote-tracking refs, but a fetch or merge-preflight failure leaves HEAD, index, worktree, and knowledge files unchanged.
 - Dirty checkouts are safe to back up. Git merge, rebase, or cherry-pick states are rejected without changes; finish or abort that Git operation, then run `status`.
 - A symlinked `docs/knowledge` directory is rejected. Replace it with a real directory before retrying.
 - The CLI never runs `git reset --hard`, `git clean`, forced checkout, or automatic stash.
