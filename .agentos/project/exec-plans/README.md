@@ -3,10 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-11T15:08:56Z
+> Generated at: 2026-08-23T02:04:28Z
 
 ## Active Plans
 - older active plans omitted=0
+- `완료` [최신 knowledge-curator 스킬 적용 구현 계획](.agentos/project/exec-plans/active/2026-08-23-knowledge-curator-apply.md) | reviewed_evidence=missing | progress: 최신 소스와 catalog 차이를 확인했으며, 리뷰 후 구현 대기 중이다.
 - `완료` [Knowledge Curator 원격 병합 동기화 구현 계획](.agentos/project/exec-plans/active/2026-08-11-knowledge-curator-remote-merge-sync.md) | reviewed_evidence=invalid | outcome: 사용자는 지식 저장소를 만들 때 수동 발행 또는 자동 발행을 선택하고, 서로 다른 작업 위치의 변경을 `sync` 한 번으로 합쳐 공유할 수 있다. | progress: 구현과 focused verification이 완료되었다. 계획은 사용자의 archive 요청 전까지 active에 남는다.
 
 ## Archived Plans

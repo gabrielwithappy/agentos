@@ -1,20 +1,11 @@
-"""
-Read-only OKF v0.2 structural checker.
 
-stdlib-only, no network access, no Git invocation, no file mutation.
 
-Public API:
-    validate_bundle(project_path: str, strict: bool = False) -> dict
 
-Exit codes (returned via code field):
-    0 - no errors (warnings allowed in non-strict mode)
-    2 - structural error, refusal, or strict warning
-    3 - filesystem error / unreadable path
-"""
 from __future__ import annotations
 
 import os
 import re
+from urllib.parse import unquote, urlparse
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +25,7 @@ CODE_VERSION_UNSUPPORTED = "OKF_VERSION_UNSUPPORTED"
 CODE_FRONTMATTER_MISSING = "OKF_FRONTMATTER_MISSING"
 CODE_FRONTMATTER_UNSUPPORTED = "OKF_FRONTMATTER_UNSUPPORTED"
 CODE_TYPE_MISSING = "OKF_TYPE_MISSING"
+CODE_NOT_LINKED_FROM_INDEX = "OKF_NOT_LINKED_FROM_INDEX"
 
 # Refusal/filesystem error codes
 CODE_PATH_SYMLINK = "OKF_PATH_SYMLINK"
@@ -68,14 +60,8 @@ _RE_TAG = re.compile(r"^[a-z][a-z0-9_-]*/[^\s/][^\s]*$")
 # ---------------------------------------------------------------------------
 
 def _parse_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
-    """
-    Parse YAML frontmatter from Markdown text.
 
-    Returns (fields_dict, error_code) where error_code is:
-        None             - success
-        CODE_FRONTMATTER_MISSING     - no opening ---
-        CODE_FRONTMATTER_UNSUPPORTED - structural violation in the block
-    """
+
     lines = text.splitlines()
     if not lines or lines[0].rstrip() != "---":
         return None, CODE_FRONTMATTER_MISSING
@@ -93,17 +79,8 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
 
 
 def _parse_flat_yaml(lines: list[str]) -> tuple[dict[str, Any] | None, str | None]:
-    """
-    Parse a flat YAML subset:
-    - key: scalar
-    - key:
-        - item1
-        - item2
 
-    Returns (dict, None) on success or (None, error_code) on parse error.
-    Disallows: tabs, block scalars, anchors, tags, flow collections,
-               nested mappings/lists, blank keys, duplicate keys.
-    """
+
     result: dict[str, Any] = {}
     seen_keys: set[str] = set()
     i = 0
@@ -172,7 +149,7 @@ def _parse_flat_yaml(lines: list[str]) -> tuple[dict[str, Any] | None, str | Non
 
 
 def _unquote(s: str) -> str:
-    """Remove surrounding single or double quotes from a scalar."""
+
     if len(s) >= 2 and ((s[0] == '"' and s[-1] == '"') or (s[0] == "'" and s[-1] == "'")):
         return s[1:-1]
     return s
@@ -183,10 +160,8 @@ def _unquote(s: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _read_file_safe(path: Path) -> tuple[str | None, str | None]:
-    """
-    Read a file safely. Returns (content, None) or (None, error_code).
-    Refuses symlinks, binary files, files > 1 MiB.
-    """
+
+
     if path.is_symlink():
         return None, CODE_PATH_SYMLINK
     try:
@@ -220,6 +195,7 @@ _NEXT_MESSAGES: dict[str, str] = {
     CODE_FRONTMATTER_MISSING: "Add a YAML frontmatter block (--- ... ---) to the file.",
     CODE_FRONTMATTER_UNSUPPORTED: "Simplify frontmatter to flat key: scalar or key:\\n  - item list; remove tabs, anchors, flow collections, and nested mappings.",
     CODE_TYPE_MISSING: "Add a non-empty 'type:' field to the concept frontmatter.",
+    CODE_NOT_LINKED_FROM_INDEX: "Add a relative Markdown link to the file from the nearest index.md.",
     CODE_PATH_SYMLINK: "Replace the symlink with a real UTF-8 Markdown file.",
     CODE_FILE_BINARY: "Replace the binary file with a real UTF-8 Markdown file.",
     CODE_FILE_OVERSIZE: "Split or trim the file to under 1 MiB.",
@@ -261,7 +237,7 @@ def _sort_key(d: dict[str, str]) -> tuple[str, int, str]:
 # ---------------------------------------------------------------------------
 
 def _check_index(root: Path, diagnostics: list[dict]) -> None:
-    """Check index.md for presence and okf_version."""
+
     index_path = root / "index.md"
     if not index_path.exists():
         diagnostics.append(_diag("index.md", "error", CODE_INDEX_MISSING))
@@ -287,7 +263,7 @@ def _check_index(root: Path, diagnostics: list[dict]) -> None:
 
 
 def _check_log(root: Path, diagnostics: list[dict]) -> None:
-    """Check log.md for presence."""
+
     log_path = root / "log.md"
     if not log_path.exists():
         diagnostics.append(_diag("log.md", "error", CODE_LOG_MISSING))
@@ -298,7 +274,7 @@ def _check_log(root: Path, diagnostics: list[dict]) -> None:
 
 
 def _check_advisory(rel_path: str, fields: dict[str, Any], diagnostics: list[dict]) -> None:
-    """Check advisory fields for a concept file."""
+
     # description
     desc = fields.get("description")
     if not desc or (isinstance(desc, str) and not desc.strip()):
@@ -356,7 +332,7 @@ def _check_advisory(rel_path: str, fields: dict[str, Any], diagnostics: list[dic
 
 
 def _check_legacy_citations(rel_path: str, content: str, diagnostics: list[dict]) -> None:
-    """Check for legacy '# Citations' sections."""
+
     for line in content.splitlines():
         if re.match(r"^#{1,6}\s+Citations\s*$", line):
             diagnostics.append(_diag(rel_path, "warning", CODE_LEGACY_CITATIONS))
@@ -364,7 +340,7 @@ def _check_legacy_citations(rel_path: str, content: str, diagnostics: list[dict]
 
 
 def _check_concept(root: Path, rel_path: str, diagnostics: list[dict]) -> None:
-    """Check a single concept file."""
+
     path = root / rel_path
     if path.is_symlink():
         diagnostics.append(_diag(rel_path, "error", CODE_PATH_SYMLINK))
@@ -393,32 +369,102 @@ def _check_concept(root: Path, rel_path: str, diagnostics: list[dict]) -> None:
     _check_legacy_citations(rel_path, content, diagnostics)
 
 
+def _markdown_targets(content: str, index_path: Path, root: Path) -> set[str]:
+    targets: set[str] = set()
+    for raw_target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", content):
+        target = raw_target.strip().strip("<>")
+        parsed = urlparse(target)
+        if parsed.scheme or parsed.netloc or target.startswith("#"):
+            continue
+        relative = unquote(parsed.path)
+        if not relative:
+            continue
+        resolved = (index_path.parent / relative).resolve()
+        try:
+            targets.add(str(resolved.relative_to(root.resolve())))
+        except ValueError:
+            continue
+    return targets
+
+
+def _index_paths(root: Path) -> set[Path]:
+    paths: set[Path] = set()
+    for dirpath, dirnames, filenames in os.walk(root):
+        current = Path(dirpath)
+        if current.is_symlink():
+            dirnames[:] = []
+            continue
+        if "index.md" in filenames:
+            paths.add(current / "index.md")
+    return paths
+
+
+def _nearest_index(path: Path, indexes: set[Path], root: Path) -> Path | None:
+    current = path.parent
+    root = root.resolve()
+    while True:
+        candidate = current / "index.md"
+        if candidate in indexes:
+            return candidate
+        if current == root:
+            return None
+        current = current.parent
+
+
+def _parent_index(path: Path, indexes: set[Path], root: Path) -> Path | None:
+    current = path.parent.parent
+    root = root.resolve()
+    while True:
+        candidate = current / "index.md"
+        if candidate in indexes:
+            return candidate
+        if current == root:
+            return None
+        current = current.parent
+
+
+def _check_index_links(root: Path, diagnostics: list[dict]) -> None:
+    indexes = _index_paths(root)
+    if not indexes:
+        return
+    link_targets: dict[Path, set[str]] = {}
+    for index_path in indexes:
+        content, err = _read_file_safe(index_path)
+        if err:
+            continue
+        assert content is not None
+        link_targets[index_path] = _markdown_targets(content, index_path, root)
+
+    for rel_path in _discover_concepts(root):
+        path = root / rel_path
+        index_path = _nearest_index(path, indexes, root)
+        if index_path is not None and rel_path not in link_targets.get(index_path, set()):
+            diagnostics.append(_diag(rel_path, "warning", CODE_NOT_LINKED_FROM_INDEX))
+
+    for index_path in indexes:
+        if index_path == root / "index.md":
+            continue
+        rel_path = str(index_path.relative_to(root))
+        parent_index = _parent_index(index_path, indexes, root)
+        if parent_index is not None and rel_path not in link_targets.get(parent_index, set()):
+            diagnostics.append(_diag(rel_path, "warning", CODE_NOT_LINKED_FROM_INDEX))
+
+
 def _discover_concepts(root: Path) -> list[str]:
-    """
-    Discover concept files: *.md files in subdirectories of root.
-    Skips: index.md, log.md (reserved), symlinks, directories.
-    """
+
+
     concepts: list[str] = []
-    reserved_top = {"index.md", "log.md"}
+    reserved = {"index.md", "log.md"}
 
     for dirpath, dirnames, filenames in os.walk(root):
         current = Path(dirpath)
         # Skip symlink directories
         if current.is_symlink():
             continue
-        # Skip the root level's reserved files
         rel_dir = current.relative_to(root)
-        if str(rel_dir) == ".":
-            # Top-level: skip reserved
-            for fname in filenames:
-                if fname not in reserved_top and fname.endswith(".md"):
-                    rel = fname
-                    concepts.append(rel)
-        else:
-            for fname in filenames:
-                if fname.endswith(".md"):
-                    rel = str(Path(rel_dir) / fname)
-                    concepts.append(rel)
+        for fname in filenames:
+            if fname.endswith(".md") and fname not in reserved:
+                concepts.append(str(Path(rel_dir) / fname))
 
     return sorted(concepts)
 
@@ -428,17 +474,8 @@ def _discover_concepts(root: Path) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def validate_bundle(project_path: str, strict: bool = False) -> dict[str, Any]:
-    """
-    Validate an OKF v0.2 bundle at the given path.
 
-    Returns a single result dict with:
-        ok: bool
-        code: 0 | 2 | 3
-        action: "validate"
-        changed: false
-        diagnostics: list of {path, severity, code, message}
-        next: str
-    """
+
     root = Path(project_path).resolve()
     diagnostics: list[dict] = []
 
@@ -465,6 +502,7 @@ def validate_bundle(project_path: str, strict: bool = False) -> dict[str, Any]:
 
     for rel in concepts:
         _check_concept(root, rel, diagnostics)
+    _check_index_links(root, diagnostics)
 
     # Deduplicate: same (path, code) → keep first
     seen: set[tuple[str, str]] = set()

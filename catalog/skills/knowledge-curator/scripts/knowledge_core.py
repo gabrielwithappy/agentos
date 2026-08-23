@@ -1,4 +1,4 @@
-"""Portable, stdlib-only runtime for the knowledge-curator skill."""
+
 from __future__ import annotations
 
 import hashlib
@@ -61,6 +61,7 @@ This knowledge base is managed with the **knowledge-curator** skill and follows 
 ## Getting started
 
 - See `concepts/getting-started.md` for an example concept.
+- See [concepts](concepts/index.md) for the folder index.
 - Use `knowledge.py backup --message "..."` to save a local commit.
 - Use `knowledge.py status` to inspect the current checkout state.
 
@@ -70,7 +71,13 @@ This knowledge base is managed with the **knowledge-curator** skill and follows 
 |------|---------|
 | `index.md` | Entry point (this file) |
 | `log.md`   | Chronological decision and activity log |
-| `concepts/` | One Markdown file per concept |
+| `concepts/` | Concepts and its folder index |
+"""
+
+_OKF_CONCEPTS_INDEX_TEMPLATE = """\
+# Concepts
+
+* [Getting Started](getting-started.md) - OKF v0.2 example concept.
 """
 
 _OKF_LOG_TEMPLATE = """\
@@ -175,26 +182,24 @@ class KnowledgeCore:
         return checkout / ".git" / "knowledge-curator-starter-state.json"
 
     def _starter_files(self) -> dict[str, str]:
-        """Return {relative-path: content} for the three starter files."""
+
         import datetime
         today = datetime.date.today().isoformat()
         return {
             "index.md": _OKF_INDEX_TEMPLATE,
             "log.md": _OKF_LOG_TEMPLATE.format(today=today),
+            "concepts/index.md": _OKF_CONCEPTS_INDEX_TEMPLATE,
             "concepts/getting-started.md": _OKF_CONCEPT_TEMPLATE,
         }
 
     def _is_empty_checkout(self, checkout: Path) -> bool:
-        """True if the checkout has a .git dir but no other content."""
+
         items = [p for p in checkout.iterdir() if p.name != ".git"]
         return len(items) == 0
 
     def _recover_partial_starter(self, checkout: Path, journal_path: Path) -> None:
-        """
-        On next invocation, if journal exists, validate each entry:
-        - If digest matches the actual file content → it is an aborted starter file → remove.
-        - If digest mismatches → foreign content → raise OKF_STARTER_RECOVERY_REQUIRED (exit 2).
-        """
+
+
         try:
             journal = json.loads(journal_path.read_text("utf-8"))
         except Exception:
@@ -234,12 +239,8 @@ class KnowledgeCore:
         journal_path.unlink(missing_ok=True)
 
     def _check_re_entry(self, checkout: Path, remote: str, branch: str) -> bool:
-        """
-        Return True if this is a safe re-entry after cleanup:
-        - .git exists, only entry in checkout is .git
-        - existing origin matches requested remote
-        - current branch matches requested branch
-        """
+
+
         if not (checkout / ".git").exists():
             return False
         items = [p for p in checkout.iterdir() if p.name != ".git"]
@@ -256,11 +257,8 @@ class KnowledgeCore:
         return True
 
     def _install_starter(self, checkout: Path, files: dict[str, str]) -> None:
-        """
-        Stage files in a private temp dir, then install no-overwrite per-file.
-        Journal records created paths and their SHA-256 digests.
-        On write failure: cleanup only this invocation's journal-listed files.
-        """
+
+
         journal_path = self._journal_path(checkout)
         created: dict[str, str] = {}
 
@@ -406,6 +404,16 @@ class KnowledgeCore:
         if not message:
             raise KnowledgeError("Backup requires --message.", next_command="Run backup --message '<summary>'.")
         checkout = self._require_repo(project_root)
+        from okf_bundle_validate import validate_bundle
+
+        validation = validate_bundle(str(checkout), strict=True)
+        if not validation["ok"]:
+            raise KnowledgeError(
+                "Knowledge validation failed; no backup was created.",
+                2,
+                validation["next"],
+                {"diagnostics": validation["diagnostics"]},
+            )
         status = self._git(checkout, "status", "--porcelain")
         if status.returncode:
             raise KnowledgeError("Git status failed.", 3, "Run status after fixing Git.")

@@ -13,6 +13,8 @@
 [2026-07-20T22:46:42Z] [CHECKPOINT] 하네스 검증 완료 | PASS=25 FAIL=29 | .agents/skills/harness/run-all-tests/tests/harness/run_harness_tests.sh
 [2026-07-28T13:20:00Z] [CHECKPOINT] trigger_id=writing-plans-dashboard-announce trigger_source=user_request user_problem=계획 문서 작성 시작 시점에 사용자 요청·에이전트·세션 정보를 GitHub 대시보드에 즉시 발행하는 기능 계획 수립 요청 classification=local-fix plan=.agentos/project/exec-plans/active/2026-07-28-writing-plans-dashboard-announce.md result=Gate2 1차 FAIL(5건 지적) 반영 후 2차 재리뷰 plan-reviewer=PASS/principle-auditor=PASS/usability-reviewer=PASS 확보 reviewed:true 전환 artifact=.agents/traces/audit-plan-review-writing-plans-dashboard-announce.md,.agents/traces/audit-principle-writing-plans-dashboard-announce.md,.agents/traces/audit-usability-writing-plans-dashboard-announce.md verification=PASS gate2-all-reviewers-pass next_action=Task0-preflight부터-구현-실행
 
+[2026-08-23T02:03:49Z] [CHECKPOINT] trigger_id=knowledge-curator-apply trigger_source=user_request user_problem=지정된 최신 knowledge-curator skill을 AgentOS에 적용 classification=local-fix plan=.agentos/project/exec-plans/active/2026-08-23-knowledge-curator-apply.md result=source bundle을 catalog skill root에 동기화하고 OKF inspect/reorganize/evidence 자산을 반영했으며 존재하지 않는 skill-curator agent는 삭제하지 않음 artifact=catalog/skills/knowledge-curator,.agents/traces/audit-plan-review-knowledge-curator-apply.md,.agents/traces/audit-principle-knowledge-curator-apply.md,.agents/traces/audit-usability-knowledge-curator-apply.md verification=PASS source-catalog-parity; PASS 17-knowledge-tests; PASS copied-inspect-suite; PASS standalone-help; PASS sync-manifest-check next_action=사용자 검토 후 PR 또는 main 병합 결정
+
 ## 2026-07-21: TUI Transcript and Streaming Improvements
 - **Goal:** Pi TUI parity for UI/UX rendering
 - **Actions:**

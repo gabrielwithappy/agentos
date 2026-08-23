@@ -52,12 +52,13 @@ python3 scripts/knowledge.py init \
   --okf-starter
 ```
 
-This creates three files in `docs/knowledge/`:
+This creates four files in `docs/knowledge/`:
 
 | File | Purpose |
 |------|---------|
 | `index.md` | Entry point with `okf_version: "0.2"` frontmatter |
 | `log.md`   | Chronological activity log |
+| `concepts/index.md` | Folder index for the starter concept |
 | `concepts/getting-started.md` | Example concept with slash-form `tags` |
 
 **Rules:**
@@ -71,6 +72,56 @@ This creates three files in `docs/knowledge/`:
 **Tag convention:** tags in starter files use slash-form hierarchy
 (e.g. `action/plan`, `task/research`, `domain/knowledge-curator`, `context/local-git`).
 This format is compatible with Obsidian Dataview and prefix search.
+
+## Folder convention
+
+OKF folders are producer-defined groups, not a fixed taxonomy. When creating new knowledge:
+1. **Always read existing folders and `index.md` files first.**
+2. Reuse an existing folder when the new document belongs there.
+3. Create a new folder **only** when there is a clear, repeating theme that justifies it.
+4. Separate document writing from restructuring. If you need to reorganize, use the `reorganize` command instead of manually moving files.
+
+For a new group, create the directory, add its `index.md`, and link that index from the nearest parent `index.md`. Link each document from the nearest applicable index. `index.md` and `log.md` are reserved at every directory level and are never concept documents. A document's `type` is independent of its folder name.
+
+## Inspect OKF v0.2 structure (read-only)
+
+Before reorganizing, you can inspect the bundle structure, links, and validity:
+
+```bash
+python3 scripts/knowledge.py inspect --project docs/knowledge
+```
+
+This returns a detailed JSON payload of the bundle's current state, including parsed frontmatter, extracted links, and validation findings.
+
+## Reorganize Knowledge Bundle
+
+The `reorganize` command automates the restructuring of documents based on Jaccard-weighted scoring of titles, tags, links, and folder paths. It strictly separates planning from application.
+
+### 1. Plan Generation (read-only)
+```bash
+python3 scripts/knowledge.py reorganize --project docs/knowledge --plan plan.json
+```
+This generates a deterministic JSON plan. It evaluates candidate files and scores them against existing folder groups. Items below the threshold are not moved.
+
+### 2. Approval
+```bash
+python3 scripts/knowledge.py reorganize --project docs/knowledge --plan plan.json --approve
+```
+Marks the items in the plan as approved. Unapproved items are ignored during application.
+
+### 3. Application
+```bash
+# Staging only (safe, does not touch target checkout)
+python3 scripts/knowledge.py reorganize --project docs/knowledge --plan plan.json --apply
+
+# Explicit direct apply to the target repository
+python3 scripts/knowledge.py reorganize --project docs/knowledge --plan plan.json --apply-to-project
+```
+
+**Safety boundaries:**
+- `--apply` is strictly staging-only. It validates the plan in a temporary directory and leaves the project checkout untouched.
+- `--apply-to-project` performs an explicit, direct modification of the target repository via `git mv`.
+- Both commands reject execution if the target checkout is dirty (uncommitted changes) or if conflicts (rename chains, multiple sources to same destination) are detected.
 
 ## Validate OKF v0.2 structure (read-only)
 
@@ -99,7 +150,8 @@ Output is always a single JSON line on stdout; stderr is empty. The envelope:
 
 Exit codes: `0` = no errors, `2` = error or strict warning, `3` = filesystem error.
 
-**Checked files:** `index.md`, `log.md`, and `*.md` files under subdirectories.
+**Checked files:** the root `index.md` and `log.md`, reserved `index.md` and `log.md` files at
+any depth, and non-reserved `*.md` concept files throughout the bundle.
 Symlinks, binary files, and files over 1 MiB are refused (diagnostic, no crash).
 
 **Recovery:** the `next` field in each diagnostic gives a mutation-free fix.
@@ -116,6 +168,7 @@ Symlinks, binary files, and files over 1 MiB are refused (diagnostic, no crash).
 | `OKF_FRONTMATTER_MISSING` | Concept has no `---` frontmatter | Add a YAML frontmatter block |
 | `OKF_FRONTMATTER_UNSUPPORTED` | Frontmatter uses disallowed syntax | Use flat `key: scalar` or `key:\n  - item` list only |
 | `OKF_TYPE_MISSING` | Concept has no non-empty `type` field | Add `type: concept` (or your taxonomy value) |
+| `OKF_NOT_LINKED_FROM_INDEX` | A concept or nested folder index is not linked from the applicable `index.md` | Add a relative Markdown link from the applicable index |
 
 ### Refusal codes (error, filesystem)
 
@@ -152,7 +205,7 @@ python3 scripts/knowledge.py init --project /path/to/project \
 # 3. Validate structure (read-only)
 python3 scripts/knowledge.py validate --project docs/knowledge
 
-# 4. Back up locally
+# 4. Back up locally (runs validate --strict first)
 python3 scripts/knowledge.py backup --project /path/to/project --message "add my-concept"
 
 # 5. Check policy and local status (no network)
