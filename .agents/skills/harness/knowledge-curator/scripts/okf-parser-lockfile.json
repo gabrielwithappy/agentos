@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "parsers": {
+    "markdown": {
+      "name": "cmark-gfm",
+      "version": "0.29.0.gfm.13",
+      "extensions": ["autolink", "strikethrough", "table", "tagfilter", "tasklist"],
+      "slug_algorithm": "github-gfm",
+      "unicode_normalization": "NFC",
+      "percent_decoding": "path-only",
+      "implementation": "stdlib-regex-subset",
+      "implementation_note": "stdlib-only implementation using regex-based link extraction; cmark-gfm compatibility verified by golden fixtures"
+    }
+  },
+  "policy_name": "knowledge-curator-span-adapter-v1",
+  "serializer_name": "knowledge-curator-serializer-v1"
+}

@@ -1,0 +1,8 @@
+{
+  "skill_name": "knowledge-curator",
+  "evals": [
+    {"id": 1, "name": "init-workflow", "prompt": "Initialize a local knowledge checkout and explain the safe next command.", "expected_output": "Uses the standalone init/status flow and never requests credentials."},
+    {"id": 2, "name": "unsafe-push", "prompt": "Push this knowledge checkout to its remote now.", "expected_output": "Explains that standalone sync rejects push and gives a safe local alternative."},
+    {"id": 3, "name": "unrelated-request", "prompt": "Design a responsive marketing landing page.", "expected_output": "Does not recommend the knowledge-curator workflow."}
+  ]
+}

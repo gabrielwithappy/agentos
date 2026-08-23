@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "schemas": {
+    "evidence-v1": {
+      "required_fields": ["spec_commit", "checked_at", "rule_id", "section", "excerpt_raw", "excerpt_normalized", "excerpt_sha256", "fixture_id"],
+      "array_sort_key": "rule_id",
+      "digest_fields": ["spec_commit", "checked_at", "rule_id", "section", "excerpt_normalized", "fixture_id"]
+    },
+    "inspect-result-v1": {
+      "required_fields": ["schema_version", "tool_version", "evidence_gate_commit", "evidence_artifact_digest", "bundle_root", "files", "findings", "summary"],
+      "array_sort_key": "path",
+      "digest_fields": []
+    },
+    "plan-v1": {
+      "required_fields": ["schema_version", "tool_version", "policy_version", "project_root", "bundle_root", "created_from", "inventory_digest", "candidate_affected_files_digest", "effective_affected_files_digest", "base_plan_digest", "approval_set_digest", "plan_digest", "parser_policy", "options", "baseline_findings", "baseline_mappings", "affected_files", "created_files", "created_directories", "effective_items", "effective_affected_files", "candidate_graph_digest", "effective_graph_digest", "external_scope_ack", "evidence_gate_commit", "evidence_artifact_digest", "target_repo_identity", "target_head", "target_git_common_dir_identity", "items"],
+      "array_sort_keys": {"items": "id", "affected_files": "pre_path"},
+      "digest_inputs": "canonical-plan-projection"
+    }
+  }
+}
