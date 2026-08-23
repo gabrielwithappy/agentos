@@ -43,6 +43,8 @@ It is a reading surface, not a runtime, and it does not auto-install anything.
 
 ## Workspace Skills
 
+- `imagegen`
+
 - `cavecrew`
 - `caveman`
 - `caveman-commit`

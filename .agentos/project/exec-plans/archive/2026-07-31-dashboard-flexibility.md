@@ -1,6 +1,6 @@
 # 대시보드 연동 아키텍처 유연성 확보 구현 계획
 
-> **상태:** 완료<br>
+> **상태:** 완료
 > **작성일:** 2026-07-31<br>
 > reviewed: true<br>
 > usability_review_required: true<br>
