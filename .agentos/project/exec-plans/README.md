@@ -3,17 +3,18 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-23T03:53:44Z
+> Generated at: 2026-08-23T06:03:01Z
 
 ## Active Plans
+- 현재 실행 중인 계획 없음
 - older active plans omitted=0
-- `완료` [최신 knowledge-curator 스킬 적용 구현 계획](.agentos/project/exec-plans/active/2026-08-23-knowledge-curator-apply.md) | reviewed_evidence=missing | progress: 최신 소스와 catalog 차이를 확인했으며, 리뷰 후 구현 대기 중이다.
-- `완료` [Knowledge Agent 단일 원격 이관 구현 계획](.agentos/project/exec-plans/active/2026-08-23-knowledge-agent-remote-only.md) | reviewed_evidence=missing
-- `완료` [Knowledge Curator 원격 병합 동기화 구현 계획](.agentos/project/exec-plans/active/2026-08-11-knowledge-curator-remote-merge-sync.md) | reviewed_evidence=missing | outcome: 사용자는 지식 저장소를 만들 때 수동 발행 또는 자동 발행을 선택하고, 서로 다른 작업 위치의 변경을 `sync` 한 번으로 합쳐 공유할 수 있다. | progress: 구현과 focused verification이 완료되었다. 계획은 사용자의 archive 요청 전까지 active에 남는다.
 
 ## Archived Plans
-- archive summary: completed=63, parked=0
-- older archived plans omitted=43
+- archive summary: completed=66, parked=0
+- older archived plans omitted=46
+- `완료` [최신 knowledge-curator 스킬 적용 구현 계획](.agentos/project/exec-plans/archive/2026-08-23-knowledge-curator-apply.md) | reviewed_evidence=missing | progress: 최신 소스와 catalog 차이를 확인했으며, 리뷰 후 구현 대기 중이다.
+- `완료` [Knowledge Agent 단일 원격 이관 구현 계획](.agentos/project/exec-plans/archive/2026-08-23-knowledge-agent-remote-only.md) | reviewed_evidence=missing
+- `완료` [Knowledge Curator 원격 병합 동기화 구현 계획](.agentos/project/exec-plans/archive/2026-08-11-knowledge-curator-remote-merge-sync.md) | reviewed_evidence=missing | outcome: 사용자는 지식 저장소를 만들 때 수동 발행 또는 자동 발행을 선택하고, 서로 다른 작업 위치의 변경을 `sync` 한 번으로 합쳐 공유할 수 있다. | progress: 구현과 focused verification이 완료되었다. 계획은 사용자의 archive 요청 전까지 active에 남는다.
 - `완료` [Knowledge Curator OKF v0.2 적용 구현 계획](.agentos/project/exec-plans/archive/2026-08-11-knowledge-curator-okf-v02-adoption.md) | reviewed_evidence=missing | progress: 참조 구현 비교와 후보 선별을 완료했고, 계획 Gate 2 리뷰 대기 중이다.
 - `완료` [[Frontmatter 전환] 구현 계획 문서 메타데이터 포맷 변경](.agentos/project/exec-plans/archive/2026-08-11-exec-plan-frontmatter.md) | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [Stop 훅의 계획 리뷰 초점화 구현 계획](.agentos/project/exec-plans/archive/2026-08-10-stop-hook-review-focus.md) | reviewed_evidence=missing | outcome: 사용자는 artifact 형식 누락 때문에 대화 종료가 막히지 않으며, 검증되지 않은 계획은 구현을 시작하려는 순간에만 명확한 복구 안내와 함께 차단된다. | progress: Intent Sheet와 현재 훅·실행 게이트 조사를 마쳤고, Gate 2 리뷰를 기다린다.
@@ -31,9 +32,6 @@
 - `완료` [Vendor Guides Update 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-vendor-guides-update.md) | reviewed_evidence=missing | progress: 초안 작성 및 서브에이전트 피드백 반영 완료, 재리뷰 대기 중
 - `완료` [TUI 도구 활동 정보량·승인 팝업 가시성 개선 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-tui-tool-activity-and-approval-visibility.md) | reviewed_evidence=missing | progress: 구현·전체 검증·Gate 2 리뷰 모두 완료.
 - `완료` [AgentOS Observability (대시보드 연동) 아키텍처 설계 계획](.agentos/project/exec-plans/archive/2026-07-27-observability-architecture-plan.md) | progress: 계획 재작성 (P4 심플리시티 원칙 준수를 위한 리팩터링 완료)
-- `완료` [GitHub Projects v2(GraphQL) 대시보드 어댑터 교체 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-github-projectv2-dashboard-adapter.md) | progress: 계획 초안 작성, 리뷰 대기 중
-- `완료` [exec-plan → GitHub Projects v2 대시보드 동기화 커맨드 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-exec-plan-dashboard-sync-command.md) | progress: 계획 초안 작성, 리뷰 대기 중
-- `완료` [`agentos dashboard sync-plan --all` 일괄 동기화 옵션 구현 계획](.agentos/project/exec-plans/archive/2026-07-27-dashboard-sync-plan-all-option.md) | progress: 계획 초안 작성, 리뷰 대기 중
 
 ## Reference Docs
 - older reference docs omitted=5
