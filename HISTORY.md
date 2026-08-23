@@ -15,6 +15,8 @@
 
 [2026-08-23T02:03:49Z] [CHECKPOINT] trigger_id=knowledge-curator-apply trigger_source=user_request user_problem=지정된 최신 knowledge-curator skill을 AgentOS에 적용 classification=local-fix plan=.agentos/project/exec-plans/active/2026-08-23-knowledge-curator-apply.md result=source bundle을 catalog skill root에 동기화하고 OKF inspect/reorganize/evidence 자산을 반영했으며 존재하지 않는 skill-curator agent는 삭제하지 않음 artifact=catalog/skills/knowledge-curator,.agents/traces/audit-plan-review-knowledge-curator-apply.md,.agents/traces/audit-principle-knowledge-curator-apply.md,.agents/traces/audit-usability-knowledge-curator-apply.md verification=PASS source-catalog-parity; PASS 17-knowledge-tests; PASS copied-inspect-suite; PASS standalone-help; PASS sync-manifest-check next_action=사용자 검토 후 PR 또는 main 병합 결정
 
+[2026-08-23T03:52:05Z] [CHECKPOINT] trigger_id=knowledge-agent-remote-only trigger_source=user_request user_problem=로컬 docs/knowledge 데이터를 knowledge-agent 원격 저장소에 병합하고 해당 저장소를 단일 knowledge remote로 사용 classification=local-fix plan=.agentos/project/exec-plans/active/2026-08-23-knowledge-agent-remote-only.md result=knowledge-agent main에 AgentOS knowledge lifecycle 문서를 추가하고 AgentOS docs/knowledge를 pointer-only 안내로 전환 artifact=https://github.com/gabrielwithappy/knowledge-agent commit=a06745d,.agentos/project/exec-plans/active/2026-08-23-knowledge-agent-remote-only.md,docs/knowledge/README.md,docs/knowledge/index.md,.agentos/project/00-project-index.md verification=PASS remote-okf-validate; PASS remote-main-push; PASS pointer-doc-assertions next_action=AgentOS branch commit/push 결정
+
 ## 2026-07-21: TUI Transcript and Streaming Improvements
 - **Goal:** Pi TUI parity for UI/UX rendering
 - **Actions:**
