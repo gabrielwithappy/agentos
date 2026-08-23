@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -112,7 +113,8 @@ def write_snapshot(snapshot_path: Path, *, state: ConversationState, last_event_
     further to validate — sequence-match is the acceptance criterion.
     """
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = snapshot_path.with_name(snapshot_path.name + ".tmp")
+    # Concurrent commits must not share a staging path before the atomic rename.
+    tmp_path = snapshot_path.with_name(f"{snapshot_path.name}.{uuid.uuid4().hex}.tmp")
     payload = {
         "schema_version": CONVERSATION_SESSION_SCHEMA_VERSION,
         "last_event_sequence": last_event_sequence,

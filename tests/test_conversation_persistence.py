@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from unittest import mock
 
 from agentos.conversation.persistence import (
@@ -96,6 +97,23 @@ def test_rebuild_state_discards_an_orphaned_rename_interrupted_tmp_snapshot(tmp_
 
     assert rebuilt is not None
     assert rebuilt.session_id == "s1"  # rebuilt from the real (renamed) snapshot, `.tmp` ignored
+
+
+def test_concurrent_snapshot_writes_use_independent_staging_files(tmp_path):
+    _, snapshot_path = _paths(tmp_path)
+    states = [empty_state("s1", branch_id=f"branch-{index}") for index in range(2)]
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        list(
+            executor.map(
+                lambda item: write_snapshot(snapshot_path, state=item[1], last_event_sequence=item[0]),
+                enumerate(states),
+            )
+        )
+
+    payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    assert payload["state"]["session_id"] == "s1"
+    assert not list(tmp_path.glob(f"{snapshot_path.name}.*.tmp"))
 
 
 def test_rebuild_state_replays_events_committed_after_the_last_snapshot(tmp_path):
