@@ -1,23 +1,17 @@
 # Knowledge Index
 
-This index is the human entrypoint for reviewed project knowledge. It can be refreshed manually as documents are added, published, or deprecated.
+This local index is pointer-only.
 
-## Inbox
+The canonical knowledge repository is `knowledge-agent`:
 
-- Drafts awaiting review live in `docs/knowledge/inbox/`.
+<https://github.com/gabrielwithappy/knowledge-agent>
 
-## References
+New knowledge notes should be created in that repository, not in local AgentOS `docs/knowledge`.
 
-- No published reference documents yet.
+## Local Role
 
-## Topics
+This directory only tells future agents where the shared knowledge repository lives and how to validate it.
 
-- No published topic documents yet.
+## Validation
 
-## Decisions
-
-- No published decision documents yet.
-
-## Search
-
-Use `agentos knowledge search "<keyword>"` for recall and `agentos knowledge context "<keyword>"` for citation bundles. Knowledge search is optional planning support; it does not bypass Gate 2 review or root project document authority.
+Use the standalone `knowledge-curator` validator against a cloned `knowledge-agent` checkout.
