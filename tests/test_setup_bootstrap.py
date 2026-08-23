@@ -32,6 +32,8 @@ def test_bootstrap_creates_only_bridge_owned_configs(tmp_path):
     assert "enabled=codex,claude-code" in result.output
     codex = json.loads((project / ".codex" / "hooks.json").read_text())
     claude = json.loads((project / ".claude" / "settings.json").read_text())
+    assert "Stop" not in codex["hooks"]
+    assert "Stop" in claude["hooks"]
     assert "agentos hook bridge codex pre-bash" in json.dumps(codex)
     assert "agentos hook bridge claude-code stop" in json.dumps(claude)
     assert ".agents/hooks" not in json.dumps(codex) + json.dumps(claude)
