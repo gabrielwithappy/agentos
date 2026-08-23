@@ -427,6 +427,7 @@ def _check_index_links(root: Path, diagnostics: list[dict]) -> None:
     indexes = _index_paths(root)
     if not indexes:
         return
+    root_index = root / "index.md"
     link_targets: dict[Path, set[str]] = {}
     for index_path in indexes:
         content, err = _read_file_safe(index_path)
@@ -438,7 +439,7 @@ def _check_index_links(root: Path, diagnostics: list[dict]) -> None:
     for rel_path in _discover_concepts(root):
         path = root / rel_path
         index_path = _nearest_index(path, indexes, root)
-        if index_path is not None and rel_path not in link_targets.get(index_path, set()):
+        if index_path is not None and index_path != root_index and rel_path not in link_targets.get(index_path, set()):
             diagnostics.append(_diag(rel_path, "warning", CODE_NOT_LINKED_FROM_INDEX))
 
     for index_path in indexes:

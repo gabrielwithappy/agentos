@@ -404,16 +404,18 @@ class KnowledgeCore:
         if not message:
             raise KnowledgeError("Backup requires --message.", next_command="Run backup --message '<summary>'.")
         checkout = self._require_repo(project_root)
-        from okf_bundle_validate import validate_bundle
+        has_root_bundle = (checkout / "index.md").exists() and (checkout / "log.md").exists()
+        if has_root_bundle:
+            from okf_bundle_validate import validate_bundle
 
-        validation = validate_bundle(str(checkout), strict=True)
-        if not validation["ok"]:
-            raise KnowledgeError(
-                "Knowledge validation failed; no backup was created.",
-                2,
-                validation["next"],
-                {"diagnostics": validation["diagnostics"]},
-            )
+            validation = validate_bundle(str(checkout), strict=True)
+            if not validation["ok"]:
+                raise KnowledgeError(
+                    "Knowledge validation failed; no backup was created.",
+                    2,
+                    validation["next"],
+                    {"diagnostics": validation["diagnostics"]},
+                )
         status = self._git(checkout, "status", "--porcelain")
         if status.returncode:
             raise KnowledgeError("Git status failed.", 3, "Run status after fixing Git.")
