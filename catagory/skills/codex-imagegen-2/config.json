@@ -1,0 +1,6 @@
+{
+  "default_quality": "high",
+  "default_size": "1024x1024",
+  "default_format": "png",
+  "output_dir": "/home/gabriel/agent/prj-agent/agentos-workspace/agentos/.agents/traces/images"
+}

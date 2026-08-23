@@ -744,6 +744,41 @@
         "use_smoke": "test -f .agents/skills/xlsx/SKILL.md && test -f .agents/skills/xlsx/scripts/recalc.py"
       },
       "skill_tree_sha256": "51d85101d96802cc764e67ed835f05152b52d612148543b723394e9177792758"
+    },
+    {
+      "name": "codex-imagegen-2",
+      "summary": "Generate and edit images using OpenAI Codex OAuth and ChatGPT Plus/Pro subscription. Bypass API limits and per-image billing.",
+      "category": "image-generation",
+      "triggers": [
+        "generate an image",
+        "edit an image",
+        "transparent background",
+        "product image",
+        "image mockup",
+        "illustration",
+        "cute bear"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "generate a product hero image",
+          "remove the background from this image",
+          "create a transparent character sprite"
+        ],
+        "negative_examples": [
+          "edit an SVG icon",
+          "build a CSS background",
+          "create a deterministic HTML diagram"
+        ],
+        "reason_template": "codex-imagegen-2 matches because the user requested a generated or edited raster image.",
+        "already_installed_behavior": "already installed; use the project-local codex-imagegen-2 skill instead of reinstalling"
+      },
+      "source_path": "catagory/skills/codex-imagegen-2",
+      "install_path": ".agents/skills/codex-imagegen-2",
+      "license": "MIT",
+      "verification": {
+        "install_smoke": "agentos skill install codex-imagegen-2 --project <target> --yes",
+        "use_smoke": "test -f .agents/skills/codex-imagegen-2/SKILL.md"
+      }
     }
   ]
 }
