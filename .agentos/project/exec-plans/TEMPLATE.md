@@ -3,6 +3,10 @@ status: 리뷰 대기 (완료 후 '완료'로 변경)
 date: YYYY-MM-DD
 reviewed: false
 usability_review_required: true
+review_tier: auto
+review_required: auto
+review_budget: auto
+review_reason: auto
 user_request: <사용자 요청 요약 1-2문장 (계획 작성 시작 시점에 작성)>
 active_agent: 
 active_session: 

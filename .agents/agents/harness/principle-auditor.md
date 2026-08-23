@@ -31,6 +31,8 @@ AUDIT_CHECK:
 
 ## Review Criteria
 
+핵심 원칙, protected path, security, runtime contract와 검증 가능성에 영향을 주지 않는 문체·포맷 차이는 audit finding이 아니다. 핵심 blocker가 없으면 최대 5개 finding에서 멈추고 PASS/CLEAN을 반환한다.
+
 1. **P1 Reliability (Evidence)**: Does the change improve the traceability of agent actions and include executable verification?
 2. **P2 Durability (SSOT)**: Does the change clarify the Single Source of Truth? Does it separate Engine from Mission?
 3. **P3 Efficiency (Automation)**: Does the change break existing scripts or manual workflows?

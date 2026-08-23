@@ -33,7 +33,7 @@
 
 답변에 더 많은 evidence가 필요하면 현재 3-category taxonomy에 맞는 등록 supporting doc을 요청한다. RTM/API example/검증 근거/visual support note는 `reference/implementation/`, 운영 복구와 runtime 절차는 `reference/operations/`, review note와 handoff pack은 `reference/decisions/`로 보낸다.
 
-장기지식이나 이전 조사 결과가 필요하면 `docs/knowledge/README.md`에서 흐름을 확인하고 `agentos knowledge search "<keyword>"` 또는 `agentos knowledge context "<keyword>"`를 선택적으로 사용한다. 이 결과는 재사용 가능한 evidence이며 root project documents, active plan, Gate 2 reviewer authority, protected-path rules를 override하지 않는다.
+장기지식이나 이전 조사 결과가 필요하면 `docs/knowledge/README.md`와 `catalog/skills/knowledge-curator/SKILL.md`에서 흐름을 확인하고 standalone curator의 `inspect` 또는 `validate`를 선택적으로 사용한다. 이 결과는 재사용 가능한 evidence이며 root project documents, active plan, Gate 2 reviewer authority, protected-path rules를 override하지 않는다.
 
 ## 프로젝트 문서 읽는 법
 
@@ -86,7 +86,7 @@ agent에게 plan이나 implement를 요청하기 전에 이 5분 읽기 경로�
 | Supporting doc or category | parent root doc | status | reason for creation | freshness rule |
 |---|---|---|---|---|
 | `reference/implementation/` | `02-product-scope-and-requirements.md`, `03-system-contract.md`, and `04-safety-risk-verification.md` | 현재 | Requirement discovery package, module decomposition, contracts, schemas, traceability, verification evidence, and cross-cutting implementation design. | Refresh when requirement mapping, implementation shape, interface behavior, or verification evidence changes. |
-| `docs/knowledge/README.md` and `docs/knowledge/index.md` | `02-product-scope-and-requirements.md`, `03-system-contract.md`, `04-safety-risk-verification.md`, and `06-decisions-change-log.md` | 현재 | 장기지식의 inbox 검토, publish, search, context/citation 진입점을 제공하고 이후 계획에서 재사용 가능한 조사 근거를 찾게 함. | Refresh when `agentos knowledge` command behavior, metadata contract, category lifecycle, or authority boundary changes. |
+| `docs/knowledge/README.md` and `docs/knowledge/index.md` | `02-product-scope-and-requirements.md`, `03-system-contract.md`, `04-safety-risk-verification.md`, and `06-decisions-change-log.md` | 현재 | standalone `knowledge-curator` 스킬의 OKF knowledge bundle 진입점과 검증 흐름을 제공하고 이후 계획에서 재사용 가능한 조사 근거를 찾게 함. | Refresh when curator command behavior, OKF metadata contract, bundle lifecycle, or authority boundary changes. |
 | `reference/decisions/` | `03-system-contract.md`, `05-agent-operating-contract.md`, and `06-decisions-change-log.md` | 현재 | ADR-style decision records, architecture rationale, reviews/audits, experiment notes, and handoff-sized context. | Refresh when a decision is accepted, review evidence changes, or long-lived architecture context is revised. |
 | `reference/operations/` | `03-system-contract.md` and `04-safety-risk-verification.md` | 현재 | Deployment, runtime, recovery, credential, and operator runbooks. | Refresh when operating procedure or recovery path changes. |
 | `reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md` | `02-product-scope-and-requirements.md`, `03-system-contract.md`, and `04-safety-risk-verification.md` | 현재 | LLM account-login strategy의 참조 구현 근거와 현재 AgentOS credential gap을 고정. | Refresh when provider authentication policy, VS Code extension source ownership, credential boundary, or LLM transport verification evidence changes. |

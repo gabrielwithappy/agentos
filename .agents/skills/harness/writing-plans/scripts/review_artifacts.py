@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from review_policy import ReviewPolicy, classify_plan
+
 
 REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
 STATUS_RE = re.compile(r"^> \*\*상태:\*\* (.+?)(?:\s*<br\s*/?>)?$", re.MULTILINE)
@@ -47,6 +49,7 @@ LIVING_SECTION_RE = re.compile(
 ALLOWED_PASS_RESULTS = {"PASS", "PASS/APPROVE", "PASS/CLEAN"}
 REQUIRED_REVIEWERS = ("plan-reviewer", "principle-auditor")
 ARTIFACT_SCHEMA = "gate2-review-artifact-v1"
+SELF_CHECK_SCHEMA = "simple-plan-self-check-v1"
 
 
 @dataclass
@@ -60,6 +63,7 @@ class ReviewCheck:
     missing: list[str]
     invalid: dict[str, str]
     artifacts: dict[str, dict[str, Any]]
+    policy: ReviewPolicy
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -72,6 +76,7 @@ class ReviewCheck:
             "missing": self.missing,
             "invalid": self.invalid,
             "artifacts": self.artifacts,
+            "policy": self.policy.to_dict(),
         }
 
 
@@ -109,10 +114,7 @@ def review_dir(root: Path, plan_path: str) -> Path:
 
 
 def required_reviewers_for_text(text: str) -> list[str]:
-    reviewers = list(REQUIRED_REVIEWERS)
-    if USABILITY_REQUIRED_RE.search(text):
-        reviewers.append("usability-reviewer")
-    return reviewers
+    return list(classify_plan(text).reviewers)
 
 
 def _load_artifact(path: Path) -> dict[str, Any]:
@@ -159,12 +161,33 @@ def _artifact_problem(
     return None
 
 
+def _self_check_problem(
+    artifact: dict[str, Any], expected_plan_path: str, expected_hash: str, policy: ReviewPolicy
+) -> str | None:
+    if artifact.get("_malformed"):
+        return "artifact-malformed"
+    if artifact.get("schema") != SELF_CHECK_SCHEMA:
+        return "schema-mismatch"
+    if artifact.get("plan_path") != expected_plan_path:
+        return "plan-path-mismatch"
+    if artifact.get("plan_sha256") != expected_hash:
+        return "plan-hash-mismatch"
+    if artifact.get("policy") != policy.to_dict():
+        return "policy-mismatch"
+    if not artifact.get("summary"):
+        return "missing-summary"
+    if not artifact.get("validator"):
+        return "missing-validator"
+    return None
+
+
 def check_plan(root: Path, plan_path: str) -> ReviewCheck:
     root = root.resolve()
     plan_file = (root / plan_path).resolve()
     rel_path = plan_file.relative_to(root).as_posix()
     text = load_text(plan_file)
-    required = required_reviewers_for_text(text)
+    policy = classify_plan(text)
+    required = list(policy.reviewers)
     expected_hash = plan_hash(text)
     slug = plan_slug(rel_path)
     artifacts_dir = review_dir(root, rel_path)
@@ -174,6 +197,17 @@ def check_plan(root: Path, plan_path: str) -> ReviewCheck:
     artifacts: dict[str, dict[str, Any]] = {}
 
     reviewer_ids: dict[str, str] = {}
+    if not policy.review_required:
+        artifact_path = artifacts_dir / "self-check.json"
+        if not artifact_path.is_file():
+            missing.append("self-check")
+        else:
+            artifact = _load_artifact(artifact_path)
+            problem = _self_check_problem(artifact, rel_path, expected_hash, policy)
+            if problem:
+                invalid["self-check"] = problem
+            else:
+                artifacts["self-check"] = artifact
     for reviewer in required:
         artifact_path = artifacts_dir / f"{reviewer}.json"
         if not artifact_path.is_file():
@@ -209,6 +243,7 @@ def check_plan(root: Path, plan_path: str) -> ReviewCheck:
         missing=missing,
         invalid=invalid,
         artifacts=artifacts,
+        policy=policy,
     )
 
 
@@ -221,6 +256,8 @@ def record_review(
     reviewer_source: str,
     summary: str,
     implementer_id: str | None,
+    usage_tokens: int | None = None,
+    duration_ms: int | None = None,
 ) -> Path:
     plan_file = (root / plan_path).resolve()
     rel_path = plan_file.relative_to(root).as_posix()
@@ -237,6 +274,10 @@ def record_review(
         raise ValueError("summary is required")
     if implementer_id and implementer_id == reviewer_id:
         raise ValueError("implementer_id must differ from reviewer_id")
+    if usage_tokens is not None and usage_tokens < 0:
+        raise ValueError("usage_tokens must be non-negative")
+    if duration_ms is not None and duration_ms < 0:
+        raise ValueError("duration_ms must be non-negative")
 
     artifact = {
         "schema": ARTIFACT_SCHEMA,
@@ -249,11 +290,41 @@ def record_review(
         "implementer_id": implementer_id,
         "summary": summary,
         "reviewed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "policy": classify_plan(text).to_dict(),
     }
+    if usage_tokens is not None:
+        artifact["usage_tokens"] = usage_tokens
+    if duration_ms is not None:
+        artifact["duration_ms"] = duration_ms
 
     out_dir = review_dir(root, rel_path)
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{reviewer}.json"
+    out_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return out_path
+
+
+def record_self_check(root: Path, plan_path: str, summary: str, validator: str) -> Path:
+    plan_file = (root / plan_path).resolve()
+    rel_path = plan_file.relative_to(root).as_posix()
+    text = load_text(plan_file)
+    policy = classify_plan(text)
+    if policy.review_required:
+        raise ValueError("self-check is only allowed for simple plans")
+    if not summary or not validator:
+        raise ValueError("summary and validator are required")
+    artifact = {
+        "schema": SELF_CHECK_SCHEMA,
+        "plan_path": rel_path,
+        "plan_sha256": plan_hash(text),
+        "policy": policy.to_dict(),
+        "summary": summary,
+        "validator": validator,
+        "checked_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    out_dir = review_dir(root, rel_path)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "self-check.json"
     out_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return out_path
 
@@ -266,7 +337,7 @@ def _resolve_root(value: str | None) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Gate 2 review artifact helpers")
-    parser.add_argument("command", choices=["check", "record", "slug"])
+    parser.add_argument("command", choices=["check", "record", "self-check", "slug"])
     parser.add_argument("--root", default=None)
     parser.add_argument("--plan", dest="plan_path", required=True)
     parser.add_argument("--reviewer")
@@ -274,6 +345,9 @@ def main() -> None:
     parser.add_argument("--reviewer-id")
     parser.add_argument("--reviewer-source")
     parser.add_argument("--summary")
+    parser.add_argument("--validator")
+    parser.add_argument("--usage-tokens", type=int)
+    parser.add_argument("--duration-ms", type=int)
     parser.add_argument("--implementer-id")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
@@ -302,6 +376,14 @@ def main() -> None:
             raise SystemExit(1)
         return
 
+    if args.command == "self-check":
+        try:
+            out_path = record_self_check(root, args.plan_path, args.summary or "", args.validator or "")
+        except ValueError as exc:
+            parser.exit(1, f"ERROR: {exc}\n")
+        print(f"PASS simple-plan-self-check {out_path.relative_to(root).as_posix()}")
+        return
+
     try:
         out_path = record_review(
             root=root,
@@ -312,6 +394,8 @@ def main() -> None:
             reviewer_source=args.reviewer_source or "",
             summary=args.summary or "",
             implementer_id=args.implementer_id,
+            usage_tokens=args.usage_tokens,
+            duration_ms=args.duration_ms,
         )
     except ValueError as exc:
         parser.exit(1, f"ERROR: {exc}\n")

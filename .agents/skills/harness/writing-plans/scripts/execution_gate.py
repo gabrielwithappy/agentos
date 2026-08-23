@@ -25,6 +25,7 @@ def main():
 
     check = check_plan(root, plan_path)
     if check.valid:
+        print(f"PASS execution-gate tier={check.policy.tier}")
         sys.exit(0)
     
     issues = []
@@ -34,7 +35,14 @@ def main():
         issues.append("invalid=" + ",".join(check.invalid.keys()))
         
     print(f"FAIL execution-gate { ' '.join(issues) }")
-    print(f"Run recovery command: python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan {plan_path}")
+    if check.policy.review_required:
+        recovery = f"python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan {plan_path}"
+    else:
+        recovery = (
+            "python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py self-check "
+            f"--plan {plan_path} --summary '<summary>' --validator '<passed command>'"
+        )
+    print(f"Run recovery command: {recovery}")
     sys.exit(2)
 
 if __name__ == "__main__":

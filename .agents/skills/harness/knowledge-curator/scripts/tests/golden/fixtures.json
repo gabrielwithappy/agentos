@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "fixtures": [
+    {
+      "id": "fixture-reserved-filenames-v1",
+      "rule_id": "okf-reserved-filenames",
+      "description": "index.md and log.md are reserved at every directory level",
+      "cases": [
+        {"input": "index.md", "is_reserved": true},
+        {"input": "log.md", "is_reserved": true},
+        {"input": "concept.md", "is_reserved": false},
+        {"input": "getting-started.md", "is_reserved": false},
+        {"input": "_template.md", "is_reserved": false}
+      ]
+    },
+    {
+      "id": "fixture-type-required-v1",
+      "rule_id": "okf-type-required",
+      "description": "Non-reserved .md files require non-empty type field",
+      "cases": [
+        {"frontmatter": {"type": "concept"}, "valid": true},
+        {"frontmatter": {"type": "report"}, "valid": true},
+        {"frontmatter": {"type": ""}, "valid": false, "finding": "okf-type-missing"},
+        {"frontmatter": {}, "valid": false, "finding": "okf-type-missing"}
+      ]
+    },
+    {
+      "id": "fixture-index-optional-v1",
+      "rule_id": "okf-index-optional",
+      "description": "index.md is optional; its absence is not an OKF error",
+      "cases": [
+        {"has_index": false, "finding": null, "okf_error": false},
+        {"has_index": true, "finding": null, "okf_error": false}
+      ]
+    },
+    {
+      "id": "fixture-log-optional-v1",
+      "rule_id": "okf-log-optional",
+      "description": "log.md is optional; its absence at non-root is not an OKF error",
+      "cases": [
+        {"has_log": false, "at_bundle_root": false, "finding": null, "okf_error": false},
+        {"has_log": false, "at_bundle_root": true, "finding": "missing-root-log", "okf_error": false, "project_warning": true},
+        {"has_log": true, "at_bundle_root": true, "finding": null, "okf_error": false}
+      ]
+    },
+    {
+      "id": "fixture-link-parse-v1",
+      "rule_id": "link-parsing",
+      "description": "Link parsing rules for inline links",
+      "cases": [
+        {"markdown": "[text](target.md)", "kind": "inline", "destination": "target.md"},
+        {"markdown": "[text](../other/target.md)", "kind": "inline", "destination": "../other/target.md"},
+        {"markdown": "[text](https://example.com)", "kind": "inline", "destination": "https://example.com", "external": true},
+        {"markdown": "[text](#anchor)", "kind": "inline", "destination": "#anchor", "fragment_only": true},
+        {"markdown": "<a href=\"target.md\">text</a>", "kind": "html", "finding": "unsupported-link"}
+      ]
+    }
+  ]
+}

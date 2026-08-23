@@ -427,17 +427,24 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
 - `contrarian`: 숨은 가정, 반대 가설, no-op 대안을 점검한다
 - `simplifier`: 불필요한 파일, 단계, 추상화를 줄이고 최소 경로를 제안한다
 
-이 helper들은 **optional**이며, 최종 mandatory review gate를 대체하지 않는다. 필수 gate는 계속 `plan-reviewer` + `principle-auditor`다. user-facing prompts, wizard, setup/install flow, error messages, onboarding, docs that instruct users, Discord interaction, or command output을 바꾸는 계획은 `usability_review_required: true`로 분류하고 `usability-reviewer=PASS`도 필수다.
+이 helper들은 **optional**이며, `review_policy.py`가 결정한 required reviewer를 대체하지 않는다.
+
+### Review Tier Policy
+
+`review_policy.py`는 declared file surface와 위험 신호로 tier를 결정한다. frontmatter의 `review_tier` 또는 `review_required`는 설명용 기록일 뿐 tier를 낮추지 못한다.
+
+- `simple`: 최대 두 개의 비민감 Markdown 파일만 바꾸는 작업이다. LLM reviewer를 호출하지 않고 `self-check.json`에 실제 validator와 요약을 기록한 뒤 execution gate를 통과한다.
+- `standard`: `plan-reviewer` 한 명이 economy model class와 최대 3,000 tokens, 120 seconds, 1회 시도로 목표·범위·검증만 점검한다.
+- `high-risk`: protected path, security/data/external dependency, CLI/setup/onboarding/error behavior, architecture migration 작업이다. `plan-reviewer`와 `principle-auditor`가 capable model class와 reviewer별 최대 8,000 tokens, 300 seconds, 2회 시도로 검토한다. 실제 user interaction이 바뀌면 `usability-reviewer`도 추가한다.
+
+리뷰어는 목표 불일치, 범위/ownership 오류, 위험·권한·prompt boundary, rollback/verification 누락, 실제 사용자 복구 실패만 blocking finding으로 보고한다. 문체 선호, 제목, 이미 `Run:`/`Expected:`로 닫힌 설명의 반복, 요청 밖의 개선 아이디어는 blocking finding으로 만들지 않는다.
 
 ### Gate 2: 서브에이전트 리뷰
 
 계획 작성 완료 후 아래 절차를 수행한다:
 
-1. Gate 0, Gate 1 자기 검토 완료
-   - 계획이 user-facing prompts, wizard, setup/install flow, error messages, onboarding, 사용자 안내 docs, Discord interaction, 또는 command output을 바꾸는지 분류한다.
-   - 해당되면 계획에 `usability_review_required: true`를 기록하고 Gate 2에 `usability-reviewer` 리뷰를 포함한다.
-   - 해당되지 않으면 `usability_review_required: false`를 기록한다.
-2. **서브에이전트 리뷰 및 암호학적 서명 발급**:
+1. Gate 0, Gate 1 자기 검토 후 `review_policy.py` tier를 확인한다. `simple`은 `self-check`을 기록하고 execution gate를 통과하면 구현할 수 있다.
+2. `standard`와 `high-risk`만 **서브에이전트 리뷰 및 암호학적 서명 발급**을 수행한다:
    - 에이전트가 스스로 `multi_agent_v1__spawn_agent` 등을 통해 우회 증거를 생성하지 못하며, 반드시 아래 전용 리뷰 요청 스크립트를 실행하여 서명된 리뷰 증거를 획득해야 한다.
    ```bash
    python3 .agents/skills/harness/writing-plans/scripts/request_review.py <plan-path>
@@ -451,7 +458,7 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
      ```
    - 수정 완료 후 Gate 0 재검토 → 통과하면 Gate 2 재수행
    - 사람에게 "수정하자"고 요청하지 마라 — 수정은 작성 에이전트의 책임이다
-4. **Approved** → `plan-reviewer=PASS`와 `principle-auditor=PASS|CLEAN`이 모두 확보되고, `usability_review_required: true`이면 `usability-reviewer=PASS`까지 확보되며, corresponding reviewer artifact가 runtime review surface에 기록되면 계획 파일 헤더에 `reviewed: true`, `> **상태:** 구현 계획 (실행 대기)` 반영 후 저장
+4. **Approved** → policy가 요구한 reviewer PASS artifact가 확보되고 corresponding runtime evidence가 기록되면 계획 파일 헤더에 `reviewed: true`, `> **상태:** 구현 계획 (실행 대기)` 반영 후 저장
 5. **[계획 작성 시작 즉시] 대시보드 발행 (대시보드 연동 설정 시):**
    계획 파일(`.agentos/project/exec-plans/active/<날짜>-<이름>.md`)을 생성하거나 제목이 확정된 직후, 아래 명령을 실행한다. 대시보드가 설정되지 않은 경우 이 명령은 안전하게 스킵되어 계획 작성을 막지 않는다.
    ```bash

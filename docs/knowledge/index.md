@@ -20,4 +20,4 @@ This index is the human entrypoint for reviewed project knowledge. It can be ref
 
 ## Search
 
-Use `agentos knowledge search "<keyword>"` for recall and `agentos knowledge context "<keyword>"` for citation bundles. Knowledge search is optional planning support; it does not bypass Gate 2 review or root project document authority.
+Use the standalone `knowledge-curator` skill's `inspect` and `validate` commands to review this bundle. Knowledge files are project data and do not bypass Gate 2 review or root project document authority.

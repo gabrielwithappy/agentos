@@ -16,6 +16,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from review_artifacts import check_plan, plan_hash, plan_slug, review_dir, load_text
+from review_policy import classify_plan
 
 
 SECRET_KEY_PATH = ".agentos/secret.key"
@@ -73,6 +74,7 @@ def create_signed_review(root: Path, plan_path_str: str) -> Path:
         "reviewed_at": reviewed_at,
         "signature": signature,
         "gate2_artifacts": check_result.artifacts,
+        "review_policy": classify_plan(text).to_dict(),
     }
 
     out_dir = review_dir(root, rel_path)

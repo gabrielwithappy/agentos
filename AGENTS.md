@@ -66,17 +66,19 @@
 - 가장 단순한 형태로 기본 동작을 먼저 검증하라
 - 검증 없이 착수하지 마라
 
-### Rule 5: 계획 리뷰 합의 전 구현 금지
+### Rule 5: 위험도에 맞는 계획 리뷰 후 구현
 
-다음 조건이 모두 충족되기 전에 exec-plan을 실행하지 마라:
+모든 신규 실행 계획은 반드시 `.agentos/project/exec-plans/TEMPLATE.md` 구조를 사용하고, `review_policy.py`가 declared change surface로 결정한 tier를 따라야 한다. 작성자가 `review_tier`나 `review_required`를 직접 낮춰 안전 규칙을 우회할 수 없다.
 
-0. **[필수]** 모든 신규 실행 계획은 반드시 `.agentos/project/exec-plans/TEMPLATE.md`를 기반으로 동일한 구조로 작성되어야 한다. (포맷 미준수 시 즉시 FAIL)
-1. writing-plans Gate 2 서브에이전트 리뷰(`plan-reviewer` + `principle-auditor`) 완료
-2. 두 에이전트 모두 PASS/CLEAN 합의. 리뷰가 완료되면 반드시 `.agents/traces/audit-plan-review.md` 및 `audit-principle.md` 등 물리적 리뷰 증거 파일(Artifact)을 생성해야 하며, 이 파일들이 없으면 `reviewed: true` 상태로 전이될 수 없다.
-3. 계획이 user-facing interaction, CLI prompts, setup/install flows, 사용자 안내 docs, error messages, onboarding, Discord interactions, 또는 command output을 바꾸면 `usability-reviewer` PASS 완료
+| tier | 허용 조건 | 구현 전 필수 증거 |
+|---|---|---|
+| `simple` | 최대 두 개의 비민감 Markdown 파일만 변경하고 protected path, 보안, 데이터, 외부 연동, CLI/setup/onboarding/error behavior 변경이 없음 | passed deterministic validator를 적은 `self-check.json`; reviewer 호출 없음 |
+| `standard` | high-risk 신호가 없는 일반 코드·다중 surface 변경 | `plan-reviewer` PASS artifact 1개 |
+| `high-risk` | protected path, reviewer/skill contract, credential·보안·데이터 삭제, 외부 서비스, CLI/setup/onboarding/error behavior, architecture migration | `plan-reviewer` + `principle-auditor` PASS/CLEAN artifact; 실제 user interaction 변경이면 `usability-reviewer` PASS 추가 |
 
 해석 규칙:
-- `reviewed: true` + 필수 서브에이전트 PASS/CLEAN 합의가 핵심 게이트다. user-facing 계획은 `usability-reviewer` PASS도 필수다.
+- `simple`은 `reviewed: true`가 아니라 valid self-check가 실행 gate다. `standard`/`high-risk`은 required reviewer artifact와 signed review가 핵심 게이트다.
+- reviewer는 목표·범위·위험·검증·회귀에 영향이 있는 문제만 blocking finding으로 보고한다. 문체·제목·이미 닫힌 세부 설명의 반복은 blocking finding이 아니다.
 - `usability-reviewer`는 사용자 관점 이해 가능성과 복구 가능성을 검토하는 추가 게이트이며, `plan-reviewer`, `principle-auditor`, `qa-reviewer`, secret redaction, prompt boundary, protected-path approval을 대체하거나 override할 수 없다.
 
 **서브 에이전트 호출 기능**(Task 도구, `invoke_subagent` 등)을 지원하는 모든 런타임 환경에서는 자기검토 fallback이 절대 허용되지 않으며 독립적인 서브 에이전트 호출을 통해서만 리뷰해야 한다. 어떠한 형태의 서브 에이전트 생성 도구도 제공되지 않는 제한된 환경에서만 예외적으로 자기검토 fallback이 허용된다. (특정 벤더명에 의존하지 않고 도구 지원 여부로 판단한다.)

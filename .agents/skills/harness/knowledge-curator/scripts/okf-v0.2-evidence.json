@@ -1,0 +1,46 @@
+{
+  "artifact_digest": "sha256:6be9be1ad33950ac61a7a9e9fc2f920cc0742a3651b80ce1087793a0d311edc9",
+  "rules": [
+    {
+      "checked_at": "2026-08-22T13:43:41Z",
+      "excerpt_normalized": "The following filenames have defined meaning at any level of the\nhierarchy and MUST NOT be used for concept documents:\n\n| Filename   | Purpose                          |\n|------------|----------------------------------|\n| `index.md` | Directory listing. See §8.       |\n| `log.md`   | Update history. See §9.          |\n\nAll other `.md` files are concept documents.",
+      "excerpt_raw": "The following filenames have defined meaning at any level of the\nhierarchy and MUST NOT be used for concept documents:\n\n| Filename   | Purpose                          |\n|------------|----------------------------------|\n| `index.md` | Directory listing. See §8.       |\n| `log.md`   | Update history. See §9.          |\n\nAll other `.md` files are concept documents.",
+      "excerpt_sha256": "35b149fb18b00e9fccf34d5728be8ce036ccab7c7aac6720489b3fa76b87dee8",
+      "fixture_id": "fixture-reserved-filenames-v1",
+      "rule_id": "okf-reserved-filenames",
+      "section": "3.1",
+      "spec_commit": "fa58f38fc5ef3364607aa811696594ff6ab69452"
+    },
+    {
+      "checked_at": "2026-08-22T13:43:41Z",
+      "excerpt_normalized": "`type` is the only always-required key; a concept carrying just `type` is\nfully conformant (§11).",
+      "excerpt_raw": "`type` is the only always-required key; a concept carrying just `type` is\nfully conformant (§11).",
+      "excerpt_sha256": "ac2cb133139c6cd5e15559b4696277eec67c623f857dd67fa82c65c2a9e5c65b",
+      "fixture_id": "fixture-type-required-v1",
+      "rule_id": "okf-type-required",
+      "section": "4.1",
+      "spec_commit": "fa58f38fc5ef3364607aa811696594ff6ab69452"
+    },
+    {
+      "checked_at": "2026-08-22T13:43:41Z",
+      "excerpt_normalized": "An `index.md` file MAY appear in any directory, including the bundle root.\nIt enumerates the directory's contents to support **progressive\ndisclosure**: letting a human or agent see what is available before\nopening individual documents.",
+      "excerpt_raw": "An `index.md` file MAY appear in any directory, including the bundle root.\nIt enumerates the directory's contents to support **progressive\ndisclosure**: letting a human or agent see what is available before\nopening individual documents.",
+      "excerpt_sha256": "4aed4ea38a1c2d2656ff6dccd89c7863d2cd6dcd9f0a801d55e3c0271ba2b4c9",
+      "fixture_id": "fixture-index-optional-v1",
+      "rule_id": "okf-index-optional",
+      "section": "8",
+      "spec_commit": "fa58f38fc5ef3364607aa811696594ff6ab69452"
+    },
+    {
+      "checked_at": "2026-08-22T13:43:41Z",
+      "excerpt_normalized": "A `log.md` file MAY appear at any level of the hierarchy to record the\nhistory of changes to that scope. The format is a flat list of\ndate-grouped entries, newest first:",
+      "excerpt_raw": "A `log.md` file MAY appear at any level of the hierarchy to record the\nhistory of changes to that scope. The format is a flat list of\ndate-grouped entries, newest first:",
+      "excerpt_sha256": "180f24c13034c7c3a96677d67692414794478504482b9a2f1bb50d59258d8913",
+      "fixture_id": "fixture-log-optional-v1",
+      "rule_id": "okf-log-optional",
+      "section": "9",
+      "spec_commit": "fa58f38fc5ef3364607aa811696594ff6ab69452"
+    }
+  ],
+  "schema_version": 1
+}
