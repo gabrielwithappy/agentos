@@ -1,6 +1,6 @@
 # 벤더 중립 대시보드 자동 동기화 훅 배선 구현 계획
 
-> **상태:** 완료<br>
+> **상태:** 완료
 > **작성일:** 2026-08-01<br>
 > reviewed: true<br>
 > usability_review_required: true<br>

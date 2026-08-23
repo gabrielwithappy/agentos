@@ -1,6 +1,6 @@
 # Gate 2 리뷰 게이트 Python 3.9 크래시 및 해시 무효화 버그 수정 계획
 
-> **상태:** 완료<br>
+> **상태:** 완료
 > **작성일:** 2026-08-01<br>
 > reviewed: true<br>
 > usability_review_required: true<br>

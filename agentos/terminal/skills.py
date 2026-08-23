@@ -17,7 +17,7 @@ DEFAULT_SKILL_NAMES = (
     "architecture-diagram", "ascii-art", "baoyu-comic", "baoyu-infographic", "claude-design",
     "codebase-inspection", "design-md", "frontend-design", "future-slide", "humanizer", "p5js",
     "knowledge-curator", "popular-web-designs", "pretext", "requesting-code-review", "sketch", "spike",
-    "systematic-debugging", "xlsx",
+    "systematic-debugging", "xlsx", "codex-imagegen-2",
 )
 
 
