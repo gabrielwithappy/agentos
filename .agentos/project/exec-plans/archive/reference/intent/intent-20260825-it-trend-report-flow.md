@@ -8,7 +8,7 @@
 
 ## Plan Quality Gate
 - [ ] Run: `python3 -m unittest discover -s knowledge-agent/skills/it-trend-report/tests -v` Expected: 모든 테스트 PASS
-- [ ] Run: `python3 /home/gabriel/.codex/skills/.system/skill-creator/scripts/quick_validate.py knowledge-agent/skills/it-trend-report` Expected: `Skill is valid!`
+- [ ] Run: `python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py knowledge-agent/skills/it-trend-report` Expected: `Skill is valid!`
 - [ ] Run: `! rg -n 'runs/today|/root/workspace|\["git"|git", "(push|commit|config|add)' knowledge-agent/skills/it-trend-report/scripts` Expected: 출력 없음
 - [ ] Run: `python3 -S knowledge-agent/skills/knowledge-curator/scripts/knowledge.py validate --project knowledge-agent/docs/knowledge` Expected: JSON `"ok": true`, exit 0
 

@@ -138,7 +138,7 @@ Expected: 출력 없음, exit 0
 
 - [x] **Step 3.1: skill 형식과 전체 OKF bundle을 검증한다.**
 
-Run: `python3 /home/gabriel/.codex/skills/.system/skill-creator/scripts/quick_validate.py knowledge-agent/skills/it-trend-report && python3 -S knowledge-agent/skills/knowledge-curator/scripts/knowledge.py validate --project knowledge-agent/docs/knowledge`
+Run: `python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py knowledge-agent/skills/it-trend-report && python3 -S knowledge-agent/skills/knowledge-curator/scripts/knowledge.py validate --project knowledge-agent/docs/knowledge`
 Expected: `Skill is valid!`, JSON `"ok": true`, exit 0
 
 - [x] **Step 3.2: 변경 범위를 확인한다.**

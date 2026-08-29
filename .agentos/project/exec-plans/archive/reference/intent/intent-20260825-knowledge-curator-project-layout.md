@@ -8,7 +8,7 @@
 
 ## Plan Quality Gate
 > 계획 실행 완료 후, 아래 조건들이 자동 검증으로 통과하는가?
-- [ ] Run: `python3 /home/gabriel/agent/prj-agent/agentos-workspace/agentos/.agents/skills/harness/skill-creator/scripts/quick_validate.py knowledge-agent/skills/knowledge-curator` Expected: `Skill is valid`
+- [ ] Run: `python3 ./.agents/skills/harness/skill-creator/scripts/quick_validate.py knowledge-agent/skills/knowledge-curator` Expected: `Skill is valid`
 - [ ] Run: `python3 -S knowledge-agent/skills/knowledge-curator/scripts/knowledge.py validate --project knowledge-agent/docs/knowledge` Expected: JSON에 `"ok": true` 및 exit 0
 - [ ] Run: `rg -n "docs/knowledge|skills/.*runs|repository root|starter|backup|validate|status" knowledge-agent/skills/knowledge-curator/SKILL.md` Expected: 저장 위치·근거 분리·기존 bundle 운영·검증/백업 흐름이 모두 검색됨
 

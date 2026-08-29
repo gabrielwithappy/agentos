@@ -102,7 +102,7 @@ Expected: 출력 없음, exit 0
 
 - [x] **Step 2.1: skill-creator validator를 실행한다.**
 
-Run: `python3 /home/gabriel/.codex/skills/.system/skill-creator/scripts/quick_validate.py knowledge-agent/skills/knowledge-curator`
+Run: `python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py knowledge-agent/skills/knowledge-curator`
 Expected: `Skill is valid`
 
 - [x] **Step 2.2: 현재 `docs/knowledge`를 OKF 검증한다.**

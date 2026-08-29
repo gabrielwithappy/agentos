@@ -5,7 +5,7 @@
 > reviewed: true<br>
 > user_request: 사용자별 profile은 현재 단계에서 도입하지 않고, 모든 사용자가 동일한 하네스 agent와 핵심 하네스 skill 구조를 사용하도록 정리한다.<br>
 > active_agent: codex<br>
-> active_session: /home/gabriel/agent/prj-agent/agentos-workspace/agentos (branch: feature/2026-08-29-common-agentos-base-resources)<br>
+> active_session: ~/agent/prj-agent/agentos-workspace/agentos (branch: feature/2026-08-29-common-agentos-base-resources)<br>
 > dashboard_item_id: <br>
 > implementation_started_at: <br>
 > implementation_completed_at: <br>
