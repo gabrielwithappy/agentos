@@ -31,7 +31,7 @@ from agentos.llm.tools.registry import ALL_TOOL_NAMES
 from agentos.llm.redaction import sanitize
 from agentos.terminal.logging_setup import configure_logging, get_logger
 from agentos.terminal.paths import initialize_state, write_preferred_provider
-from agentos.terminal.skills import global_skill_read_paths, global_skills_dir
+from agentos.terminal.skills import project_skill_read_paths, project_skill_dirs
 from agentos.terminal.sessions import (
     SessionError,
     append_event,
@@ -865,8 +865,8 @@ class AgentOSTui(App[None]):
             prompt,
             cwd=Path.cwd(),
             tool_names=list(ALL_TOOL_NAMES),
-            allowed_read_paths=global_skill_read_paths(),
-            blocked_read_roots=(global_skills_dir(),),
+            allowed_read_paths=project_skill_read_paths(Path.cwd()),
+            blocked_read_roots=project_skill_dirs(Path.cwd()),
             confirm_tool_call=confirm_tool_call,
             yolo=self.yolo,
         )

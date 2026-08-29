@@ -11,7 +11,7 @@ from agentos.conversation.bootstrap import find_bootstrap_message
 from agentos.llm.tools.approval import approval_prompt
 from agentos.terminal.tui.renderers import render_event
 from agentos.llm.tools.registry import ALL_TOOL_NAMES
-from agentos.terminal.skills import global_skill_read_paths, global_skills_dir
+from agentos.terminal.skills import project_skill_read_paths, project_skill_dirs
 from agentos.conversation.persistence import commit_turn, next_sequence
 from agentos.conversation.runtime import ConversationRuntime
 from agentos.llm.session import UnsupportedProviderError, unsupported_provider_event
@@ -204,8 +204,8 @@ def run_interactive(provider: str = "mock", yolo: bool = False) -> int:
                 prompt,
                 cwd=Path.cwd(),
                 tool_names=list(ALL_TOOL_NAMES),
-                allowed_read_paths=global_skill_read_paths(),
-                blocked_read_roots=(global_skills_dir(),),
+            allowed_read_paths=project_skill_read_paths(Path.cwd()),
+            blocked_read_roots=project_skill_dirs(Path.cwd()),
                 confirm_tool_call=_confirm_tool_call,
                 yolo=yolo,
             ):

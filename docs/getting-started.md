@@ -15,7 +15,7 @@ cd /path/to/your-project
 agentos setup
 ```
 
-개발 checkout에서 검증할 때만 `uv tool install --force .` 또는 `uv run agentos setup`을 사용합니다. `agentos`가 PATH에서 발견되지 않으면 `uv tool update-shell`을 실행하고 새 shell에서 `agentos --help`를 다시 실행하세요.
+개발 checkout을 설치할 때는 저장소 루트에서 `./install.sh`를 실행합니다. 이 스크립트가 현재 checkout을 찾아 설치합니다. 직접 실행하려면 `uv tool install --force .` 또는 `uv run agentos setup`을 사용할 수 있습니다. `agentos`가 PATH에서 발견되지 않으면 `uv tool update-shell`을 실행하고 새 shell에서 `agentos --help`를 다시 실행하세요.
 
 `setup`은 현재 디렉터리(또는 `agentos setup --path <project-dir>`)에 기본 `AGENTS.md`, Codex `.codex/hooks.json`, Claude Code `.claude/settings.json`을 만듭니다. 생성된 hook은 project-local script를 실행하지 않고 package-owned `agentos hook bridge ...`만 호출합니다. Gemini/Antigravity plugin은 아직 설정하지 않습니다.
 
@@ -74,4 +74,4 @@ agentos project status
 agentos doctor --json
 ```
 
-`setup`은 사용자 상태와 기본 전역 카탈로그 스킬을 설치합니다. LLM 로그인은 별도입니다. 추가 외부 스킬이 필요할 때만 `agentos skill install /path/to/my-skill`을 사용합니다. `project init`은 현재 프로젝트의 `.agentos/agentos-project/`에 전역 스킬 snapshot과 전역 hook 설정의 digest reference만 만듭니다. 프로젝트의 hook이나 설정을 실행하지 않으며, 다시 실행해도 관리되는 AgentOS 경로만 갱신합니다.
+`setup`은 사용자 상태와 기본 전역 카탈로그 스킬, package-owned 공통 하네스 base(agent와 핵심 skill)를 설치합니다. LLM 로그인은 별도입니다. 추가 외부 스킬이 필요할 때만 `agentos skill install /path/to/my-skill`을 사용합니다. `project init`은 현재 프로젝트의 `.agentos/agentos-project/`에 추적용 snapshot을 만들고, 동일한 공통 base와 실제 런타임이 읽는 `.agents/skills` 및 `.agents/agents/harness`를 프로젝트에 적용합니다. 기존 `.agents/README.md` 같은 관리되지 않는 파일은 보존합니다. 초기화 후 `agentos project status`로 상태를 확인할 수 있습니다. 사용자별 profile/override 설정은 현재 지원하지 않습니다.
