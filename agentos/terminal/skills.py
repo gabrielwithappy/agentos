@@ -204,3 +204,31 @@ def global_skill_read_paths(home: str | Path | None = None) -> tuple[Path, ...]:
             continue
         paths.append(skill_file.resolve())
     return tuple(paths)
+
+
+def project_skill_dirs(cwd: str | Path, home: str | Path | None = None) -> tuple[Path, ...]:
+    """Return project-local skills first, followed by the global fallback."""
+    project_root = Path(cwd).expanduser().resolve()
+    marker = project_root / ".agentos" / "agentos-project" / "manifest.json"
+    local = project_root / ".agents" / "skills"
+    global_root = global_skills_dir(home)
+    result: list[Path] = []
+    if marker.is_file() and not marker.is_symlink() and local.is_dir() and not local.is_symlink():
+        result.append(local)
+    if global_root.is_dir() and not global_root.is_symlink() and global_root not in result:
+        result.append(global_root)
+    return tuple(result)
+
+
+def project_skill_read_paths(cwd: str | Path, home: str | Path | None = None) -> tuple[Path, ...]:
+    """Return readable project-local and global skill files in precedence order."""
+    paths: list[Path] = []
+    for root in project_skill_dirs(cwd, home):
+        for entry in root.iterdir():
+            skill_file = entry / "SKILL.md"
+            if entry.is_symlink() or not entry.is_dir() or skill_file.is_symlink() or not skill_file.is_file():
+                continue
+            resolved = skill_file.resolve()
+            if resolved not in paths:
+                paths.append(resolved)
+    return tuple(paths)

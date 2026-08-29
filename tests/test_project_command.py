@@ -3,6 +3,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from agentos.cli import app
+from agentos.commands import project as project_command
 
 runner = CliRunner()
 
@@ -24,6 +25,66 @@ def test_project_init_is_opt_in_and_status_is_cwd_scoped(tmp_path):
     assert result.exit_code == 0 and '"current"' in result.stdout
     assert (project / ".agentos" / "agentos-project" / "skills" / "source" / "SKILL.md").is_file()
     assert not (project / ".agentos" / "config.toml").exists()
+
+
+def test_project_init_applies_harness_resources_to_runtime_surface(tmp_path):
+    home, project = tmp_path / "home", tmp_path / "project"
+    project.mkdir()
+    assert runner.invoke(app, ["setup"], env={"AGENTOS_HOME": str(home)}).exit_code == 0
+
+    result = runner.invoke(app, ["project", "init", "--path", str(project), "--json"], env={"AGENTOS_HOME": str(home)})
+
+    assert result.exit_code == 0, result.output
+    assert '"agents": ["harness"]' in result.stdout
+    assert (project / ".agents" / "agents" / "harness" / "plan-reviewer.md").is_file()
+    assert (project / ".agents" / "skills" / "harness" / "SKILL.md").is_file() is False
+    assert (project / ".agents" / "skills" / "harness" / "brain" / "SKILL.md").is_file()
+    assert (project / ".agents" / "skills" / "xlsx" / "SKILL.md").is_file()
+
+
+def test_proj_is_project_init_alias(tmp_path):
+    home, project = tmp_path / "home", tmp_path / "project"
+    project.mkdir()
+    assert runner.invoke(app, ["setup"], env={"AGENTOS_HOME": str(home)}).exit_code == 0
+
+    result = runner.invoke(app, ["proj", "init", "--path", str(project), "--json"], env={"AGENTOS_HOME": str(home)})
+
+    assert result.exit_code == 0, result.output
+    assert (project / ".agents" / "agents" / "harness" / "plan-reviewer.md").is_file()
+
+
+def test_project_init_uses_packaged_harness_when_checkout_is_unavailable(tmp_path, monkeypatch):
+    home, project, packaged = tmp_path / "home", tmp_path / "project", tmp_path / "package"
+    project.mkdir()
+    (packaged / "agents").mkdir(parents=True)
+    (packaged / "skills").mkdir()
+    source_root = Path(__file__).resolve().parents[1]
+    import shutil
+    shutil.copytree(source_root / ".agents" / "agents" / "harness", packaged / "agents" / "harness")
+    shutil.copytree(source_root / ".agents" / "skills" / "harness", packaged / "skills" / "harness")
+    monkeypatch.setattr(project_command, "_source_checkout_root", lambda: None)
+    monkeypatch.setattr(project_command, "_packaged_harness_root", lambda: packaged)
+    assert runner.invoke(app, ["setup"], env={"AGENTOS_HOME": str(home)}).exit_code == 0
+
+    result = runner.invoke(app, ["project", "init", "--path", str(project), "--json"], env={"AGENTOS_HOME": str(home)})
+
+    assert result.exit_code == 0, result.output
+    assert (project / ".agents" / "agents" / "harness" / "plan-reviewer.md").is_file()
+    assert (project / ".agents" / "skills" / "harness" / "brain" / "SKILL.md").is_file()
+
+
+def test_project_init_preserves_unmanaged_agents_files(tmp_path):
+    home, project = tmp_path / "home", tmp_path / "project"
+    project.mkdir()
+    custom = project / ".agents" / "README.md"
+    custom.parent.mkdir()
+    custom.write_text("user-owned\n", encoding="utf-8")
+    assert runner.invoke(app, ["setup"], env={"AGENTOS_HOME": str(home)}).exit_code == 0
+
+    result = runner.invoke(app, ["project", "init", "--path", str(project)], env={"AGENTOS_HOME": str(home)})
+
+    assert result.exit_code == 0, result.output
+    assert custom.read_text(encoding="utf-8") == "user-owned\n"
 
 
 def test_setup_installs_default_skills_for_project_init(tmp_path):

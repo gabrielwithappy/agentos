@@ -64,7 +64,7 @@ def initialize_state(home: str | Path | None = None) -> Path:
     root = agentos_home(home)
     root.mkdir(parents=True, exist_ok=True)
     set_user_only_permissions(root, directory=True)
-    for dirname in ("sessions", "context", "core", "core/.agents", "core/.agents/skills"):
+    for dirname in ("sessions", "context", "core", "core/.agents", "core/.agents/agents", "core/.agents/skills"):
         child = root / dirname
         if child.exists() and child.is_symlink():
             raise StateError(f"{dirname} must not be a symlink.")
@@ -83,7 +83,7 @@ def initialize_state(home: str | Path | None = None) -> Path:
         {
             "schema_version": STATE_SCHEMA_VERSION,
             "managed_by": "agentos",
-            "directories": ["sessions", "context", "core/.agents/skills"],
+            "directories": ["sessions", "context", "core/.agents/agents", "core/.agents/skills"],
         },
     )
     return root

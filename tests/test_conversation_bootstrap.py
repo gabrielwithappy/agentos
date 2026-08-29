@@ -170,6 +170,24 @@ def test_build_bootstrap_message_for_session_loads_by_default(monkeypatch, tmp_p
     assert skipped == 0
 
 
+def test_discover_skills_prefers_project_local_and_keeps_global_fallback(tmp_path):
+    local = tmp_path / "local"
+    global_dir = tmp_path / "global"
+    (local / "shared").mkdir(parents=True)
+    (global_dir / "shared").mkdir(parents=True)
+    (global_dir / "fallback").mkdir(parents=True)
+    (local / "shared" / "SKILL.md").write_text("---\nname: shared\ndescription: local\n---\n", encoding="utf-8")
+    (global_dir / "shared" / "SKILL.md").write_text("---\nname: shared\ndescription: global\n---\n", encoding="utf-8")
+    (global_dir / "fallback" / "SKILL.md").write_text("---\nname: fallback\ndescription: global fallback\n---\n", encoding="utf-8")
+
+    skills = discover_skills((local, global_dir))
+
+    assert [(skill.name, skill.description) for skill in skills] == [
+        ("shared", "local"),
+        ("fallback", "global fallback"),
+    ]
+
+
 def test_discover_context_files_expands_at_include(tmp_path):
     (tmp_path / "included.md").write_text("included body\n", encoding="utf-8")
     (tmp_path / "CLAUDE.md").write_text("intro\n@included.md\noutro\n", encoding="utf-8")

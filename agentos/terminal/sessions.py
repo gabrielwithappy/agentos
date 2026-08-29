@@ -219,9 +219,14 @@ def resume_conversation_state(session_id: str, home: str | Path | None = None, c
             return migrate_legacy_state(sid, legacy_events)
 
     resolved_home = agentos_home(home)
+    session_cwd = cwd or Path.cwd()
+    from agentos.terminal.skills import project_skill_dirs
+
+    skill_dirs = project_skill_dirs(session_cwd, resolved_home)
+    skills_dir = skill_dirs or (resolved_home / "core" / ".agents" / "skills",)
     bootstrap_message, _files, _skills, _skipped = build_bootstrap_message_for_session(
-        cwd or Path.cwd(),
+        session_cwd,
         resolved_home / "core",
-        resolved_home / "core" / ".agents" / "skills",
+        skills_dir,
     )
     return empty_state_with_bootstrap(sid, bootstrap_message=bootstrap_message)

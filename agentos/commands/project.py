@@ -10,10 +10,35 @@ import typer
 
 from agentos.terminal.paths import StateError, agentos_home, atomic_write_json
 from agentos.terminal.skills import global_skills_dir, skill_digest
+from agentos.terminal import base_resources
 
 app = typer.Typer(help="Reflect AgentOS global resources into a project", add_completion=False)
 PROJECT_SCHEMA = "agentos.project/v1"
 MANAGED = "agentos-project"
+
+
+# Kept as narrow test/integration seams; resolution and validation remain in
+# the shared base_resources module.
+def _source_checkout_root() -> Path | None:
+    return base_resources._source_checkout_root()
+
+
+def _packaged_harness_root() -> Path | None:
+    return base_resources._packaged_harness_root()
+
+
+def _harness_sources() -> tuple[Path, Path] | None:
+    root = _source_checkout_root()
+    if root is not None:
+        candidates = (root / ".agents" / "agents" / "harness", root / ".agents" / "skills" / "harness")
+    else:
+        packaged = _packaged_harness_root()
+        if packaged is None:
+            return None
+        candidates = (packaged / "agents" / "harness", packaged / "skills" / "harness")
+    if not all(path.is_dir() for path in candidates):
+        return None
+    return candidates
 
 
 def _root(path: str | None) -> Path:
@@ -47,20 +72,33 @@ def _payload(root: Path) -> dict:
         data = json.loads(manifest.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return {"state": "invalid"}
-    if data.get("schema_version") != PROJECT_SCHEMA or not isinstance(data.get("skills"), dict):
+    if data.get("schema_version") != PROJECT_SCHEMA or not isinstance(data.get("skills"), dict) or not isinstance(data.get("agents", {}), dict):
         return {"state": "invalid"}
     skills_root = managed / "skills"
+    agents_root = managed / "agents"
     current = True
     for name, expected in data["skills"].items():
         try:
             if skill_digest(skills_root / name) != expected:
                 return {"state": "invalid"}
-            if skill_digest(global_skills_dir() / name) != expected:
+            global_skill = global_skills_dir() / name
+            if global_skill.is_dir() and skill_digest(global_skill) != expected:
                 current = False
         except StateError:
             return {"state": "invalid"}
+    for name, expected in data.get("agents", {}).items():
+        try:
+            if skill_digest(agents_root / name) != expected:
+                return {"state": "invalid"}
+        except StateError:
+            return {"state": "invalid"}
     state = "current" if current and data.get("settings_reference", {}).get("digest") == _settings_digest() else "stale_global_skills" if not current else "stale_global_settings"
-    return {"state": state, "skills": sorted(data["skills"]), "settings_activation": "global-only"}
+    return {
+        "state": state,
+        "skills": sorted(data["skills"]),
+        "agents": sorted(data.get("agents", {})),
+        "settings_activation": "project-local",
+    }
 
 
 @app.command()
@@ -72,6 +110,11 @@ def init(path: str | None = typer.Option(None, "--path"), json_output: bool = ty
             raise StateError("No skills installed. Next: agentos skill install <SKILL_DIRECTORY>")
         managed = _managed(root)
         managed.parent.mkdir(exist_ok=True)
+        project_agents = root / ".agents" / "agents"
+        project_skills = root / ".agents" / "skills"
+        for destination in (root / ".agents", project_agents, project_skills):
+            if destination.exists() and (destination.is_symlink() or not destination.is_dir()):
+                raise StateError(f"Managed project path is invalid: {destination}")
         stage = Path(tempfile.mkdtemp(prefix=f".{MANAGED}.stage-", dir=managed.parent))
         backup = managed.parent / f".{MANAGED}.backup"
         try:
@@ -84,9 +127,40 @@ def init(path: str | None = typer.Option(None, "--path"), json_output: bool = ty
                 if skill_digest(target_skills / source.name) != digest:
                     raise StateError("Project skill staging validation failed.")
                 records[source.name] = digest
-            atomic_write_json(stage / "manifest.json", {"schema_version": PROJECT_SCHEMA, "skills": records, "settings_reference": {"digest": _settings_digest(), "activation": "global-only"}})
+            target_agents = stage / "agents"
+            target_agents.mkdir()
+            agent_records = {}
+            harness = _harness_sources()
+            if harness is not None:
+                source_agents, source_skills = harness
+                shutil.copytree(source_agents, target_agents / "harness")
+                shutil.copytree(source_skills, target_skills / "harness")
+                agent_records["harness"] = skill_digest(target_agents / "harness")
+                records["harness"] = skill_digest(target_skills / "harness")
+            atomic_write_json(stage / "manifest.json", {"schema_version": PROJECT_SCHEMA, "skills": records, "agents": agent_records, "settings_reference": {"digest": _settings_digest(), "activation": "project-local"}})
             if backup.exists():
                 shutil.rmtree(backup)
+            for source, destination in ((target_skills, project_skills), (target_agents, project_agents)):
+                backup_runtime = destination.parent / f".{destination.name}.agentos-backup"
+                runtime_stage = destination.parent / f".{destination.name}.agentos-stage"
+                if backup_runtime.exists():
+                    shutil.rmtree(backup_runtime)
+                if runtime_stage.exists():
+                    shutil.rmtree(runtime_stage)
+                if destination.exists():
+                    os.replace(destination, backup_runtime)
+                try:
+                    shutil.copytree(source, runtime_stage)
+                    os.replace(runtime_stage, destination)
+                except OSError:
+                    if backup_runtime.exists() and not destination.exists():
+                        os.replace(backup_runtime, destination)
+                    raise
+                finally:
+                    if runtime_stage.exists():
+                        shutil.rmtree(runtime_stage)
+                if backup_runtime.exists():
+                    shutil.rmtree(backup_runtime)
             if managed.exists():
                 if managed.is_symlink() or not (managed / "manifest.json").is_file():
                     raise StateError("Managed project state is invalid. Next: remove only .agentos/agentos-project after inspection.")

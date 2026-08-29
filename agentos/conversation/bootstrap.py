@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -278,34 +279,30 @@ def _first_body_line(content: str) -> str:
     return ""
 
 
-def discover_skills(skills_dir: str | Path) -> list[SkillMeta]:
+def discover_skills(skills_dir: str | Path | Iterable[str | Path]) -> list[SkillMeta]:
     """Scans `skills_dir` for `<skill-name>/SKILL.md` entries and parses
     only their name/description frontmatter — never the full skill body,
     matching pi's metadata-only exposure (`formatSkillsForPrompt`)."""
-    directory = Path(skills_dir)
-    if not directory.is_dir():
-        return []
-
     results: list[SkillMeta] = []
-    for entry in sorted(directory.iterdir()):
-        if not entry.is_dir():
+    directories = (Path(skills_dir),) if isinstance(skills_dir, (str, Path)) else tuple(Path(item) for item in skills_dir)
+    seen_names: set[str] = set()
+    for directory in directories:
+        if not directory.is_dir() or directory.is_symlink():
             continue
-        skill_file = entry / "SKILL.md"
-        if not skill_file.is_file():
-            continue
-        content, error = _read_file_safely(skill_file)
-        if error is not None:
-            results.append(SkillMeta(name=entry.name, description="", path=skill_file, skipped=True, skip_reason=error))
-            continue
-        assert content is not None
-        name, description = _parse_skill_frontmatter(content)
-        results.append(
-            SkillMeta(
-                name=name or entry.name,
-                description=description or _first_body_line(content),
-                path=skill_file,
-            )
-        )
+        for entry in sorted(directory.iterdir()):
+            if entry.name in seen_names or not entry.is_dir() or entry.is_symlink():
+                continue
+            skill_file = entry / "SKILL.md"
+            if skill_file.is_symlink() or not skill_file.is_file():
+                continue
+            seen_names.add(entry.name)
+            content, error = _read_file_safely(skill_file)
+            if error is not None:
+                results.append(SkillMeta(name=entry.name, description="", path=skill_file, skipped=True, skip_reason=error))
+                continue
+            assert content is not None
+            name, description = _parse_skill_frontmatter(content)
+            results.append(SkillMeta(name=name or entry.name, description=description or _first_body_line(content), path=skill_file))
     return results
 
 
@@ -431,7 +428,7 @@ def build_bootstrap_message(
 
 
 def build_bootstrap_message_for_session(
-    cwd: str | Path, agent_home: str | Path | None, skills_dir: str | Path
+    cwd: str | Path, agent_home: str | Path | None, skills_dir: str | Path | Iterable[str | Path]
 ) -> tuple[ConversationMessage | None, int, int, int]:
     """Top-level entry point used by session creation: honors
     `AGENTOS_SKIP_CONTEXT_BOOTSTRAP` so callers never need to know about the

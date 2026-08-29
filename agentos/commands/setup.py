@@ -6,6 +6,7 @@ from rich.console import Console
 
 from agentos.terminal.paths import StateError, initialize_state
 from agentos.terminal.skills import install_bundled_skills
+from agentos.terminal.base_resources import install_harness_base
 from agentos.commands.project import _root
 from agentos.terminal.paths import atomic_write_text
 
@@ -20,6 +21,7 @@ CODEX_CONFIG = {
             {"matcher": "write_to_file|replace_file_content|multi_replace_file_content", "hooks": [{"type": "command", "command": "agentos hook bridge codex pre-write"}]},
         ],
         "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "agentos hook bridge codex post-bash"}]}],
+        "Stop": [{"hooks": [{"type": "command", "command": "agentos hook bridge codex stop", "timeout": 10}]}],
     }
 }
 CLAUDE_CONFIG = {
@@ -122,6 +124,11 @@ def main(
         )
         if summary.failed:
             raise StateError("Default skill installation failed. Next: agentos setup")
+        base_manifest = install_harness_base(dest)
+        console.print(
+            f"공통 하네스 base: agents={len(base_manifest['agents'])}, skills={len(base_manifest['skills'])}, "
+            f"schema={base_manifest['schema_version']}"
+        )
             
         target = _root(path)
         if _is_self_host_target(target):

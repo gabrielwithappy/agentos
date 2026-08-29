@@ -27,6 +27,8 @@ packages = ["agentos", "catalog"]
 ".agents/hooks/scripts/post_tool_use_review.py" = "agentos/_hooks_bundle/hooks/scripts/post_tool_use_review.py"
 ".agents/hooks/scripts/stop_review_gate.py" = "agentos/_hooks_bundle/hooks/scripts/stop_review_gate.py"
 ".agents/skills/harness/writing-plans/scripts/review_artifacts.py" = "agentos/_hooks_bundle/skills/harness/writing-plans/scripts/review_artifacts.py"
+".agents/agents/harness" = "agentos/_harness_bundle/agents/harness"
+".agents/skills/harness" = "agentos/_harness_bundle/skills/harness"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -37,6 +39,8 @@ include = [
     "/.agents/hooks/scripts/post_tool_use_review.py",
     "/.agents/hooks/scripts/stop_review_gate.py",
     "/.agents/skills/harness/writing-plans/scripts/review_artifacts.py",
+    "/.agents/agents/harness",
+    "/.agents/skills/harness",
 ]
 
 [tool.hatch.build]

@@ -61,6 +61,7 @@ app.add_typer(llm.app, name="llm", help="Inspect LLM provider status")
 app.add_typer(session.app, name="session", help="Manage sessions")
 app.add_typer(hook.app, name="hook", help="Manage hooks")
 app.add_typer(project.app, name="project", help="Reflect global AgentOS resources into a project")
+app.add_typer(project.app, name="proj", help="Alias for project")
 app.add_typer(dashboard.app, name="dashboard", help="Sync exec-plan documents to an external dashboard")
 app.add_typer(gateway.app, name="gateway", help="Manage local Gateway Core runs")
 
