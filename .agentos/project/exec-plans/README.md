@@ -3,18 +3,22 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-29T05:53:20Z
+> Generated at: 2026-08-30T14:13:21Z
 
 ## Active Plans
 - older active plans omitted=0
-- `진행 중` [공통 AgentOS 하네스 base 구조 구현 계획](.agentos/project/exec-plans/active/2026-08-29-common-agentos-base-resources.md) | reviewed | progress: 계획 리뷰 완료, 구현 실행 대기
+- `진행 중` [[Skill Catalog Viewer 생성] 구현 계획](.agentos/project/exec-plans/active/skill-catalog-viewer-plan.md) | reviewed | outcome: 사용자는 “스킬 목록을 HTML로 보여줘”라고 요청하여 현재 카탈로그의 이름·요약·트리거·설명을 한 페이지에서 확인한다. | progress: 스킬 구현과 focused 검증 완료. 기존 작업트리의 public-suite 선행 실패가 남아 있다.
+- `구현 계획 (리뷰 대기)` [하네스 스킬 계층 및 전체 Catalog 통합 구현 계획](.agentos/project/exec-plans/active/harness-skill-catalog-hierarchy-plan.md) | outcome: 사용자는 `agentos project init`으로 하네스 루트와 핵심 스킬을 적용한 뒤, 루트 `SKILL.md`의 안내를 따라 목적에 맞는 하위 하네스 스킬을 사용할 수 있으며 catalog viewer에서 전체 스킬을 한 곳에서 확인한다. | progress: 구조 조사와 요구사항 정리 완료, protected-path 계획 리뷰 대기 중.
 
 ## Archived Plans
-- archive summary: completed=11, parked=0
+- archive summary: completed=14, parked=0
 - older archived plans omitted=0
-- `완료` [project init 하네스 리소스 적용 구현 계획](.agentos/project/exec-plans/archive/2026-08-29-project-init-harness-activation.md) | reviewed_evidence=invalid | outcome: 프로젝트 초기화 후 `agentos harness --project-root .`와 AgentOS 세션이 프로젝트 로컬 하네스 리소스를 사용할 수 있다. | progress: 구현 완료, 검증 완료
-- `완료` [knowledge-curator 프로젝트 구조 정합성 구현 계획](.agentos/project/exec-plans/archive/2026-08-25-knowledge-curator-project-layout.md) | reviewed_evidence=invalid | outcome: 후속 사용자는 저장소 루트에서 스킬을 실행하고, 검토된 장기 지식은 `docs/knowledge`에, 실행별 근거는 각 skill의 `runs/YYYY-MM-DD/`에 저장할 수 있다. | progress: 계획 초안 작성, 리뷰 대기 중
-- `완료` [it-trend-report 장기지식 저장 흐름 구현 계획](.agentos/project/exec-plans/archive/2026-08-25-it-trend-report-knowledge-flow.md) | reviewed_evidence=invalid | outcome: 사용자는 저장소 루트에서 주간 파이프라인을 실행하고, 검토된 리포트를 `docs/knowledge/concepts/it-trend-reports/`에 남길 수 있으며, 실행은 자동으로 commit/push하지 않는다. | progress: 계획 초안 작성, 리뷰 대기 중
+- `완료` [독립 프로젝트용 AgentOS 핵심 운영 스킬 구현 계획](.agentos/project/exec-plans/archive/agentos-core-guidance-skill-plan.md) | reviewed_evidence=invalid | outcome: 사용자는 대상 프로젝트에 `agentos project init`을 실행한 뒤 `agentos-core-guidance`를 사용해 불확실성 중지, 계획·브랜치·검증, 데이터 경계, 복구·에스컬레이션 원칙을 안내받는다. | progress: 구현·검증·Gate 2 closeout 완료.
+- `완료` [YouTube Transcript (yt-dlp 기반) 스킬 구현 계획](.agentos/project/exec-plans/archive/2026-08-30-youtube-transcript-skill.md) | reviewed_evidence=missing | progress: 계획 초안 작성, 리뷰 대기 중
+- `완료` [project init 하네스 리소스 적용 구현 계획](.agentos/project/exec-plans/archive/2026-08-29-project-init-harness-activation.md) | reviewed_evidence=missing | outcome: 프로젝트 초기화 후 `agentos harness --project-root .`와 AgentOS 세션이 프로젝트 로컬 하네스 리소스를 사용할 수 있다. | progress: 구현 완료, 검증 완료
+- `완료` [공통 AgentOS 하네스 base 구조 구현 계획](.agentos/project/exec-plans/archive/2026-08-29-common-agentos-base-resources.md) | reviewed_evidence=missing | progress: 계획 리뷰 완료, 구현 실행 대기
+- `완료` [knowledge-curator 프로젝트 구조 정합성 구현 계획](.agentos/project/exec-plans/archive/2026-08-25-knowledge-curator-project-layout.md) | reviewed_evidence=missing | outcome: 후속 사용자는 저장소 루트에서 스킬을 실행하고, 검토된 장기 지식은 `docs/knowledge`에, 실행별 근거는 각 skill의 `runs/YYYY-MM-DD/`에 저장할 수 있다. | progress: 계획 초안 작성, 리뷰 대기 중
+- `완료` [it-trend-report 장기지식 저장 흐름 구현 계획](.agentos/project/exec-plans/archive/2026-08-25-it-trend-report-knowledge-flow.md) | reviewed_evidence=missing | outcome: 사용자는 저장소 루트에서 주간 파이프라인을 실행하고, 검토된 리포트를 `docs/knowledge/concepts/it-trend-reports/`에 남길 수 있으며, 실행은 자동으로 commit/push하지 않는다. | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [벤더 중립 대시보드 자동 동기화 훅 배선 구현 계획](.agentos/project/exec-plans/archive/2026-08-01-vendor-neutral-dashboard-sync-hook-wiring.md) | reviewed_evidence=missing | outcome: 계획 문서를 쓰거나 고치기만 하면(별도 `agentos dashboard sync-plan` 수동 실행 없이) GitHub Projects 보드 카드가 자동으로 최신 상태를 반영한다. 이는 세 벤더 CLI 어디서 작업하든 동일하게 동작한다. | progress: Gate 2 1차 리뷰(독립 서브에이전트 3명) 완료, 전원 FAIL 지적 사항 전부 반영 완료(파생 복사본 대신 어댑터 소스 수정 포함), 2차 Gate 2 리뷰 대기 중. (최초 작성 시점의 "이 세션에서는 구현하지 않는다"는 계획은 이후 세션에…
 - `완료` [장기지식 저장·검토·publish·검색 흐름 구현 계획](.agentos/project/exec-plans/archive/2026-08-01-knowledge-base-lifecycle.md) | outcome: 사용자는 `docs/knowledge`에서 승인된 지식을 찾고, 에이전트 조사 결과를 inbox에서 검토·publish한 뒤 CLI로 재검색·인용할 수 있다. | progress: 구현·검증·main 병합·로컬 feature branch 삭제 완료. Stop hook 지적으로 current checkout의 리뷰 증거를 재생성 중.
 - `완료` [AgentOS Gateway Core 구현 계획](.agentos/project/exec-plans/archive/2026-08-01-gateway-core.md) | reviewed_evidence=missing | outcome: 사용자는 AgentOS CLI에서 작업을 대기열에 넣고, 단일 worker로 실행하고, 진행 이벤트와 최종 상태를 조회하고, 실패한 작업을 명시적으로 재시도할 수 있다. 기존 `codex` 직접 사용은 그대로 유지된다. | progress: 계획 내용과 검증 계약이 독립 Gate 2 리뷰와 signed review를 통과했으며 사용자 실행 결정을 기다린다.

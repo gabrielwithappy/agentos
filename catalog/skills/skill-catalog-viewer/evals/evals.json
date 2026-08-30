@@ -1,0 +1,23 @@
+{
+  "skill_name": "skill-catalog-viewer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "스킬 카탈로그를 한눈에 볼 수 있는 HTML 파일을 만들어줘.",
+      "expected_output": "카탈로그의 등록 스킬 이름·요약·트리거·설명을 검색할 수 있는 독립 index.html이 생성된다.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "skill-catalog-viewer가 어떤 입력을 읽고 어떤 설명을 보여주는지 확인해줘.",
+      "expected_output": "catalog.json과 각 SKILL.md frontmatter description을 사용하며, 네트워크 없이 HTML을 생성한다고 설명한다.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "존재하지 않는 카탈로그로 스킬 HTML을 생성해줘.",
+      "expected_output": "명확한 오류를 stderr에 출력하고 비0 종료하며 기존 출력 파일을 덮어쓰지 않는다.",
+      "files": []
+    }
+  ]
+}

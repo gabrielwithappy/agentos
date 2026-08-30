@@ -774,6 +774,98 @@
       "upstream": {
         "source": "AgentOS standard skills"
       }
+    },
+    {
+      "name": "skill-creator",
+      "summary": "Create new skills, modify and improve existing skills, and measure skill performance.",
+      "triggers": [
+        "skill",
+        "create skill",
+        "skill creator",
+        "improve skill",
+        "eval"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "I want to make a skill for X",
+          "let's create a new skill",
+          "improve the existing skill"
+        ],
+        "negative_examples": [
+          "debug this code",
+          "write a react component"
+        ],
+        "reason_template": "skill-creator matches because the user wants to create, edit, or optimize an agent skill.",
+        "already_installed_behavior": "already installed; use the project-local skill-creator skill"
+      },
+      "source_path": "catalog/skills/skill-creator",
+      "install_path": ".agents/skills/skill-creator",
+      "license": "MIT",
+      "upstream": {
+        "url": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator/skills/skill-creator"
+      }
+    },
+    {
+      "name": "skill-catalog-viewer",
+      "summary": "Generate a searchable standalone HTML view of the AgentOS skill catalog.",
+      "triggers": [
+        "skill catalog",
+        "catalog viewer",
+        "list skills",
+        "show skill descriptions",
+        "skill documentation"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "show me all available skills in HTML",
+          "create a browsable skill catalog",
+          "compare the descriptions of the installed skills"
+        ],
+        "negative_examples": [
+          "create a new skill",
+          "run a skill",
+          "build a web application"
+        ],
+        "reason_template": "skill-catalog-viewer matches because the user wants a static, searchable view of AgentOS skill documentation.",
+        "already_installed_behavior": "already installed; run the bundled generate_html.py script"
+      },
+      "source_path": "catalog/skills/skill-catalog-viewer",
+      "install_path": ".agents/skills/skill-catalog-viewer",
+      "license": "MIT",
+      "upstream": {
+        "source": "AgentOS catalog skill"
+      }
+    },
+    {
+      "name": "agentos-core-guidance",
+      "summary": "Apply AgentOS core planning, safety, and verification discipline in projects without AGENTS.md.",
+      "triggers": [
+        "AGENTS.md missing",
+        "independent project guidance",
+        "plan before coding",
+        "verification discipline",
+        "safe agent workflow"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "apply AgentOS rules to this project without AGENTS.md",
+          "what safety rules should the coding agent follow here?",
+          "make the agent verify changes before claiming completion"
+        ],
+        "negative_examples": [
+          "edit the project's existing AGENTS.md",
+          "run a spreadsheet transformation",
+          "build a frontend page"
+        ],
+        "reason_template": "agentos-core-guidance matches because the project needs portable planning, safety, and verification behavior without relying on a local AGENTS.md.",
+        "already_installed_behavior": "already installed; use the project-local agentos-core-guidance skill"
+      },
+      "source_path": "catalog/skills/agentos-core-guidance",
+      "install_path": ".agents/skills/agentos-core-guidance",
+      "license": "MIT",
+      "upstream": {
+        "source": "AgentOS portable core operating guidance"
+      }
     }
   ]
 }

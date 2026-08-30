@@ -1,6 +1,6 @@
 # 공통 AgentOS 하네스 base 구조 구현 계획
 
-> **상태:** 진행 중<br>
+> **상태:** 완료<br>
 > **작성일:** 2026-08-29<br>
 > reviewed: true<br>
 > user_request: 사용자별 profile은 현재 단계에서 도입하지 않고, 모든 사용자가 동일한 하네스 agent와 핵심 하네스 skill 구조를 사용하도록 정리한다.<br>

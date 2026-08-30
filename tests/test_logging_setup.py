@@ -9,11 +9,13 @@ from agentos.terminal import logging_setup
 def _reset_agentos_logger():
     logger = logging.getLogger("agentos")
     original_handlers = list(logger.handlers)
+    original_propagate = logger.propagate
     yield
     for handler in logger.handlers:
         if handler not in original_handlers:
             handler.close()
     logger.handlers = original_handlers
+    logger.propagate = original_propagate
 
 
 def test_configure_logging_creates_log_file_and_writes_records(tmp_path, monkeypatch):
