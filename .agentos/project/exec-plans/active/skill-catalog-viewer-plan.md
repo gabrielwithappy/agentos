@@ -6,7 +6,7 @@
 > **usability_review_required:** true<br>
 > user_request: AgentOS 카탈로그의 각 스킬 설명을 HTML로 확인할 수 있는 `skill-catalog-viewer` 스킬을 `skill-creator` 방식으로 설계·생성하는 계획을 검토하고 수정한다.<br>
 > active_agent: codex<br>
-> active_session: /home/gabriel/agent/prj-agent/agentos-workspace/agentos<br>
+> active_session: feature/add-skill-creator checkout<br>
 > dashboard_item_id: <br>
 > implementation_started_at: <br>
 > implementation_completed_at: <br>

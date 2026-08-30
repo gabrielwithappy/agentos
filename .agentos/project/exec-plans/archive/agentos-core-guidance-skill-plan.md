@@ -6,7 +6,7 @@
 > **usability_review_required:** true<br>
 > user_request: 기존 AGENTS.md가 없는 독립 프로젝트에서도 AgentOS 핵심 운영 원칙을 적용할 수 있는 스킬을 만들고, project init으로 적용되게 계획·리뷰·구현한다.<br>
 > active_agent: codex<br>
-> active_session: /home/gabriel/agent/prj-agent/agentos-workspace/agentos (branch: feature/add-skill-creator)<br>
+> active_session: feature/add-skill-creator checkout (branch: feature/add-skill-creator)<br>
 > dashboard_item_id: <br>
 > implementation_started_at: 2026-08-30T05:20:00Z<br>
 > implementation_completed_at: 2026-08-30T05:29:12Z<br>

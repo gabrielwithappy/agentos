@@ -11,7 +11,7 @@
 
 > 계획 실행 완료 후, 아래 조건들이 자동 채점으로 통과하는가?
 
-- [ ] Run: `python3 /home/gabriel/.codex/skills/.system/skill-creator/scripts/quick_validate.py catalog/skills/agentos-core-guidance` Expected: `Skill is valid` 또는 동등한 frontmatter 검증 PASS
+- [ ] Run: `python3 <skill-creator-root>/scripts/quick_validate.py catalog/skills/agentos-core-guidance` Expected: `Skill is valid` 또는 동등한 frontmatter 검증 PASS
 - [ ] Run: `python3 -m pytest -q tests/test_project_command.py tests/test_core_guidance_skill.py` Expected: exit 0, 기본 설치·`project init` 반영·스킬 계약 회귀 PASS
 - [ ] Run: `bash .agents/skills/harness/sync-manifest/scripts/sync-manifest.sh --check && bash scripts/verify-public-test-suite.sh` Expected: 하네스 무결성 PASS 및 `PASS agentos-public-suite`
 
