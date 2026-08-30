@@ -744,6 +744,36 @@
         "use_smoke": "test -f .agents/skills/xlsx/SKILL.md && test -f .agents/skills/xlsx/scripts/recalc.py"
       },
       "skill_tree_sha256": "51d85101d96802cc764e67ed835f05152b52d612148543b723394e9177792758"
+    },
+    {
+      "name": "youtube-transcript",
+      "summary": "Extract subtitles and transcripts from YouTube videos quickly using yt-dlp.",
+      "triggers": [
+        "youtube",
+        "transcript",
+        "subtitle",
+        "video text",
+        "yt-dlp"
+      ],
+      "when_to_recommend": {
+        "positive_examples": [
+          "summarize this youtube video",
+          "get the transcript of this youtube video",
+          "what did they say in this video?"
+        ],
+        "negative_examples": [
+          "download this youtube video",
+          "extract audio from youtube video"
+        ],
+        "reason_template": "youtube-transcript matches because the user wants to analyze or extract text content from a YouTube video.",
+        "already_installed_behavior": "already installed; run the extract.py script directly."
+      },
+      "source_path": "catalog/skills/youtube-transcript",
+      "install_path": ".agents/skills/youtube-transcript",
+      "license": "MIT",
+      "upstream": {
+        "source": "AgentOS standard skills"
+      }
     }
   ]
 }
