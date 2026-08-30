@@ -21,5 +21,5 @@ test -d "$TMP_HOME/.agentos/context"
 test -f "$TMP_HOME/.agentos/core/.agents/skills/.agentos-skills.json"
 test -f "$TMP_HOME/.agentos/core/.agents/skills/xlsx/SKILL.md"
 skill_count=$(find "$TMP_HOME/.agentos/core/.agents/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -type f | wc -l | tr -d ' ')
-test "$skill_count" = 20
+test "$skill_count" = 21
 echo 'PASS agentos-clean-install'
