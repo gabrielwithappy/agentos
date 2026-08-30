@@ -1,6 +1,6 @@
 # YouTube Transcript (yt-dlp 기반) 스킬 구현 계획
 
-> **상태:** 리뷰 대기 (완료 후 '완료'로 변경)
+> **상태:** 완료
 > **작성일:** 2026-08-30<br>
 > reviewed: true<br>
 > user_request: 3번(yt-dlp 방식)의 내용을 바탕으로 openclaw가 아닌 일반 skill형태로 agentos에서 사용할 수 있도록 변경하고 적용하는 계획문서를 작성하자. agents 스킬과 스킬 카테고리에 모두 적용.<br>

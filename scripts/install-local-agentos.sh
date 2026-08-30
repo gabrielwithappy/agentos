@@ -9,4 +9,4 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 echo "Installing local AgentOS checkout: $ROOT"
-exec uv tool install --force "$ROOT"
+exec uv tool install --reinstall "$ROOT"

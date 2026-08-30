@@ -14,10 +14,11 @@ from agentos.terminal.paths import StateError, agentos_home, atomic_write_json, 
 SKILL_MANIFEST_SCHEMA = "agentos.skills/v1"
 MANIFEST_NAME = ".agentos-skills.json"
 DEFAULT_SKILL_NAMES = (
-    "architecture-diagram", "ascii-art", "baoyu-comic", "baoyu-infographic", "claude-design",
+    "architecture-diagram", "baoyu-infographic", "claude-design",
     "codebase-inspection", "design-md", "frontend-design", "future-slide", "humanizer", "p5js",
     "knowledge-curator", "popular-web-designs", "pretext", "requesting-code-review", "sketch", "spike",
-    "systematic-debugging", "xlsx", "codex-imagegen-2", "youtube-transcript",
+    "systematic-debugging", "codex-imagegen-2", "youtube-transcript", "skill-creator",
+    "skill-catalog-viewer", "agentos-core-guidance",
 )
 
 

@@ -39,7 +39,7 @@ def test_project_init_applies_harness_resources_to_runtime_surface(tmp_path):
     assert (project / ".agents" / "agents" / "harness" / "plan-reviewer.md").is_file()
     assert (project / ".agents" / "skills" / "harness" / "SKILL.md").is_file() is False
     assert (project / ".agents" / "skills" / "harness" / "brain" / "SKILL.md").is_file()
-    assert (project / ".agents" / "skills" / "xlsx" / "SKILL.md").is_file()
+    assert (project / ".agents" / "skills" / "agentos-core-guidance" / "SKILL.md").is_file()
 
 
 def test_proj_is_project_init_alias(tmp_path):
@@ -93,7 +93,7 @@ def test_setup_installs_default_skills_for_project_init(tmp_path):
     assert runner.invoke(app, ["setup"], env={"AGENTOS_HOME": str(home)}).exit_code == 0
     result = runner.invoke(app, ["project", "init", "--path", str(project)], env={"AGENTOS_HOME": str(home)})
     assert result.exit_code == 0
-    assert (home / "core" / ".agents" / "skills" / "xlsx" / "SKILL.md").is_file()
+    assert (home / "core" / ".agents" / "skills" / "agentos-core-guidance" / "SKILL.md").is_file()
 
 
 def test_project_status_detects_stale_global_skill(tmp_path):
