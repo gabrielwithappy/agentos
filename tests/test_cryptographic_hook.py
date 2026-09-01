@@ -173,6 +173,30 @@ def test_normalize_plan_text_stable_across_legitimate_closeout_edits():
         assert plan_hash(POST_CLOSEOUT_PLAN) != plan_hash(tampered)
 
 
+def test_reviewed_state_transition_keeps_artifact_valid(tmp_path):
+    import sys
+    scripts_dir = Path(".agents/skills/harness/writing-plans/scripts").resolve()
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    import review_artifacts as review
+    plan = tmp_path / "plan.md"
+    plan.write_text(PRE_CLOSEOUT_PLAN.replace("> reviewed: true", "> reviewed: false"), encoding="utf-8")
+    for role, reviewer_id, result in (("plan-reviewer", "r1", "PASS"), ("principle-auditor", "r2", "PASS/CLEAN")):
+        review.record_review(tmp_path, "plan.md", role, result, reviewer_id, "test", "ok", None)
+    plan.write_text(plan.read_text(encoding="utf-8").replace("> reviewed: false", "> reviewed: true"), encoding="utf-8")
+    assert review.check_plan(tmp_path, "plan.md").valid
+
+
+def test_usability_metadata_forms_are_consistent(tmp_path):
+    import sys
+    scripts_dir = Path(".agents/skills/harness/writing-plans/scripts").resolve()
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    import review_artifacts as review
+    assert review.required_reviewers_for_text("> **usability_review_required:** true<br>\n")[-1] == "usability-reviewer"
+    assert review.required_reviewers_for_text("> usability_review_required: true<br>\n")[-1] == "usability-reviewer"
+
+
 def test_check_plan_accepts_unresolved_relative_root(tmp_path, monkeypatch):
     """Regression test: Gate 2 review-gate hooks receive `cwd` as a possibly
     relative, unresolved path (e.g. '.', matching a Stop-hook payload with no
