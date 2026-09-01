@@ -3,11 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-09-01T13:21:32Z
+> Generated at: 2026-09-01T13:25:52Z
 
 ## Active Plans
+- 현재 실행 중인 계획 없음
 - older active plans omitted=0
-- `완료` [writing-plans 리뷰 경계 정렬 구현 계획](.agentos/project/exec-plans/active/2026-09-01-writing-plans-review-boundary.md) | reviewed | outcome: 계획 작성자는 기능 Task만 실행 목록에 넣고, reviewer가 남긴 독립 증거·승인·closeout은 각 시점의 lifecycle 절차에서 확인할 수 있다. | progress: 초안 작성 완료, Gate 2 독립 리뷰 대기
 
 ## Archived Plans
 - archive summary: completed=18, parked=0
