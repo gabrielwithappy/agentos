@@ -9,6 +9,7 @@ from pathlib import Path
 
 SECRET_KEY_PATH = ".agentos/secret.key"
 REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
+REVIEWED_META_RE = re.compile(r"^> reviewed: (?:true|false)(?:\s*<br\s*/?>)?$", re.MULTILINE)
 HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
 GATE2_RE = re.compile(r"^> gate2_[^:\n]+:.*$", re.MULTILINE)
 # Fields/sections that other harness contracts require agents to fill in
@@ -43,7 +44,7 @@ LIVING_SECTION_RE = re.compile(
 
 
 def normalize_plan_text(text: str) -> str:
-    normalized = REVIEWED_RE.sub("", text)
+    normalized = REVIEWED_META_RE.sub("", text)
     normalized = GATE2_RE.sub("", normalized)
     normalized = HEADER_STATUS_RE.sub("", normalized)
     normalized = LIVING_META_RE.sub("", normalized)
@@ -157,4 +158,3 @@ def check_alignment() -> int:
 
 if __name__ == "__main__":
     sys.exit(check_alignment())
-

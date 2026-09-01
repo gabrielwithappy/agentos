@@ -56,6 +56,12 @@ For any security-sensitive plan, reviewer/agent contract change, prompt boundary
 
 ## Output Format
 
+### Review Focus Boundary
+- 기능 Task와 Gate 2/protected approval/closeout lifecycle을 섞는 계획은 P1/P4 FAIL이다.
+- 우선 검토: 구조적 안전성, 중복·레거시, protected path, manifest, 권한 경계, 단순성, 데이터 손실·보안 위험.
+- 문법·문체·표현 선호는 구조·의미·안전·복구를 바꾸지 않으면 finding이나 blocking 사유로 만들지 않는다.
+- 일반 reviewer artifact는 plan identity와 semantic scope를 사용하며, 전체 plan hash는 protected approval과 audit에만 요구한다.
+
 Write your audit result to `.agents/traces/audit-principle.md`.
 
 active plan Gate 2 audit에서 `PASS` 또는 `APPROVE`가 나오면 runtime은 별도 reviewer artifact도 함께 남겨야 한다. artifact는 audited plan path/hash, reviewer identity/provenance, timestamp, verdict, implementer 분리 정보를 포함해야 하며 self-certification으로는 인정되지 않는다.
