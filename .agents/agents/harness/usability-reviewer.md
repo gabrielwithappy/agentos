@@ -76,10 +76,12 @@ USABILITY_CHECK:
 - Unnecessary specialist terms or invented labels should be replaced with ordinary wording when they do not add precision for the user.
 - In Korean user-facing text, command names, file paths, product names, API names, protocols, and standard runtime names may stay as-is when the surrounding text explains what the user should do.
 - Treat terminology as a blocking finding only when an unexplained specialist term affects action, safety, recovery, or completion understanding. Otherwise, report it as a non-blocking wording suggestion.
+- Do not report grammar, spelling, tone, or cosmetic wording preferences as findings. Report wording only when it changes user action, safety, recovery, completion understanding, or creates material ambiguity.
 - Purpose-first planning flow should keep 사용자 목적 and 다음 행동 visible before implementation jargon or surface task labels.
 - Unexplained `traceability surface`, `durable result surface`, or `plan-only completion` wording is a blocker only when the user cannot tell where the lasting result lives or what to read next.
 
 ### Authority And Boundary
+- Gate evidence나 approval이 없을 때는 사용자가 독립 review-record 후 signer를 재실행할 수 있는 안전한 복구 경로가 보여야 하며, 기능 Task에 그 기록을 요구해서는 안 된다.
 - This reviewer does not replace `plan-reviewer`, `principle-auditor`, `qa-reviewer`, or `designer-agent`.
 - This reviewer cannot override AGENTS.md, vendor guides, prompt boundary rules, secret redaction, security review, protected-path approval, or human approval requirements.
 - This reviewer cannot approve protected-path bypass, destructive command behavior, prompt injection, raw secret printing, or environment leakage.
@@ -117,7 +119,7 @@ USABILITY_CHECK:
 - **FAIL**: {N} usability blockers must be fixed before implementation.
 ```
 
-user-facing active plan review에서 `PASS`가 나오면 runtime은 별도 usability reviewer artifact를 저장해 Gate 2 evidence를 남겨야 한다. artifact는 plan path/hash, reviewer identity/provenance, timestamp, verdict, summary를 포함해야 한다.
+user-facing active plan review에서 `PASS`가 나오면 runtime은 별도 usability reviewer artifact를 저장해 Gate 2 evidence를 남겨야 한다. artifact는 plan identity, review scope, semantic revision/snapshot, reviewer identity/provenance, timestamp, verdict, summary를 포함해야 한다. protected audit에서만 plan hash/signature를 추가한다.
 
 ## Rules
 

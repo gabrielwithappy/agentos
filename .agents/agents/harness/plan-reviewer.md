@@ -149,6 +149,13 @@ loop mode 계획이면 아래 Ralph loop suitability conditional check도 추가
 - completed active plan에는 `implementation_started_at`, `implementation_completed_at`, `implementation_duration`, `구현 결과`, `사용 방법`, `완료 증거`, `아카이브 결정` 요구사항이 있어야 한다. 기존 계획의 `Implementation Result`, `How To Use`, `Completion Evidence`, `Archive Decision`은 legacy alias로 읽을 수 있다.
 - `.agents/mission/plan.json`과 `.agentos/project/exec-plans/README.md` refresh 및 manifest sync 검증이 누락되면 `FAIL`이다.
 
+## Review Focus Boundary
+
+- 우선 검토: 실행 가능성, 요구사항 정합성, 범위 누수, 안전·보호 경계, 의존성, 검증 가능성, 복구 가능성.
+- 문법·맞춤법·문체·표현 선호는 계획의 의미, 모호성, 안전, 복구, 완료 판단을 바꾸지 않으면 finding이나 blocking 사유로 만들지 않는다.
+- 계획 전체를 다시 읽더라도 핵심 계약 변경 여부를 먼저 판단하고, cosmetic-only 변경에는 최소한의 출력만 남긴다.
+- reviewer artifact는 plan path/hash 대신 plan identity, review scope, semantic revision, semantic snapshot을 우선 기록한다. 전체 hash와 signature는 protected approval과 audit에서만 필수다.
+
 ## 출력 형식
 
 리뷰 결과는 반드시 다음 형식을 따르십시오:
@@ -177,7 +184,9 @@ loop mode 계획에서 아래 유형은 반드시 구체적 수정 제안으로 
 - **FAIL**: {N}개의 문제점이 발견되었습니다. 수정 후 재검토가 필요합니다.
 ```
 
-active plan review에서 `PASS`가 나오면 implementer가 별도 runtime surface(`aha project plan review record` 또는 동등 command)로 reviewer artifact를 저장해 Gate 2 evidence를 남겨야 한다. 이 artifact는 plan path/hash, reviewer identity/provenance, timestamp, PASS verdict를 포함해야 한다.
+active plan review에서 `PASS`가 나오면 implementer가 별도 runtime surface(`aha project plan review record` 또는 동등 command)로 reviewer artifact를 저장해 Gate 2 evidence를 남겨야 한다. 이 artifact는 plan identity, review scope, semantic revision/snapshot, reviewer identity/provenance, timestamp, PASS verdict를 포함해야 한다. protected approval과 audit artifact만 plan hash/signature를 추가로 요구한다.
+
+기능 Task 안의 artifact 생성·self-signing·protected approval·HISTORY closeout은 FAIL이다. 이들은 `사전 실행 Gate` 또는 `구현 후 closeout` lifecycle section에서만 확인한다.
 
 ## 규칙
 1. 어떠한 소스 코드도 직접 수정하지 마십시오. 오직 리뷰 업무만 수행합니다.
