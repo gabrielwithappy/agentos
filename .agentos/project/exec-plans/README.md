@@ -3,24 +3,20 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-09-01T11:33:03Z
+> Generated at: 2026-09-01T13:21:32Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 계획 (리뷰 대기)` [계획 전 결정 게이트 사용자 surface 구현 계획](.agentos/project/exec-plans/active/2026-09-01-pre-plan-user-surface.md) | outcome: 사용자는 내부 구현 선택이 아니라 결정 내용에 답하고, 결과 문서에서 다음 행동과 완료 기준을 찾을 수 있다. | progress: 초안 / flow integration 계획 완료 후 리뷰 대기
-- `구현 계획 (리뷰 대기)` [계획 전 결정 게이트 흐름 연결 구현 계획](.agentos/project/exec-plans/active/2026-09-01-pre-plan-flow-integration.md) | outcome: 필요한 결정을 답하기 전에는 계획이 생기지 않고, 답한 뒤 기존 목표·사실을 유지한 채 다음 단계로 이어진다. | progress: 초안 / 선행 triage 계획 완료 후 리뷰 대기
-- `구현 계획 (리뷰 대기)` [계획 전 결정 triage 계약 구현 계획](.agentos/project/exec-plans/active/2026-09-01-pre-plan-decision-triage.md) | outcome: 같은 입력은 같은 상태로 판정되고, material ambiguity일 때만 다음 단계가 이해 가능한 한 질문으로 제한된다. | progress: 초안 / Gate 2 리뷰 대기
-- `구현 계획 (리뷰 대기)` [unified hook 동작 감사 및 수정 계획](.agentos/project/exec-plans/active/2026-08-31-unified-hook-audit.md) | progress: Gate 2 1차 리뷰 FAIL 반영 중, 재리뷰 대기
-- `구현 계획 (리뷰 대기)` [계획 전 결정 게이트 하네스 에이전트 분해 계획](.agentos/project/exec-plans/active/2026-08-31-pre-plan-decision-gate-agent.md) | outcome: 각 기능 단위가 짧은 계획과 좁은 파일 소유 범위를 가지므로 한 영역의 리뷰 수정이 다른 영역의 구현을 막지 않는다. | progress: 분해 초안 작성, 자식 계획 3개 리뷰 대기
+- `완료` [writing-plans 리뷰 경계 정렬 구현 계획](.agentos/project/exec-plans/active/2026-09-01-writing-plans-review-boundary.md) | reviewed | outcome: 계획 작성자는 기능 Task만 실행 목록에 넣고, reviewer가 남긴 독립 증거·승인·closeout은 각 시점의 lifecycle 절차에서 확인할 수 있다. | progress: 초안 작성 완료, Gate 2 독립 리뷰 대기
 
 ## Archived Plans
 - archive summary: completed=18, parked=0
 - older archived plans omitted=0
-- `완료` [[Skill Catalog Viewer 생성] 구현 계획](.agentos/project/exec-plans/archive/skill-catalog-viewer-plan.md) | reviewed_evidence=invalid | outcome: 사용자는 “스킬 목록을 HTML로 보여줘”라고 요청하여 현재 카탈로그의 이름·요약·트리거·설명을 한 페이지에서 확인한다.
-- `완료` [핵심 변경 중심의 계획 리뷰 개선 구현 계획](.agentos/project/exec-plans/archive/review-scope-filter-plan.md) | reviewed_evidence=invalid | outcome: agent는 계획의 핵심 실행 계약이 바뀐 경우에만 재리뷰하고, 기본 plan-reviewer와 principle-auditor는 유지하되 필요한 추가 reviewer만 실행하며, 일반 reviewer artifact는 전체 plan hash 변경으… | progress: 구현·검증·closeout 완료. 전체 legacy harness suite의 unrelated baseline 실패는 별도 기록했다.
-- `완료` [하네스 스킬 계층 및 전체 Catalog 통합 구현 계획](.agentos/project/exec-plans/archive/harness-skill-catalog-hierarchy-plan.md) | reviewed_evidence=invalid | outcome: 사용자는 `agentos project init`으로 하네스 루트와 핵심 스킬을 적용한 뒤, 루트 `SKILL.md`의 안내를 따라 목적에 맞는 하위 하네스 스킬을 사용할 수 있으며 catalog viewer에서 전체 스킬을 한 곳에서 확인한다. | progress: Gate 2 리뷰와 비보호 구현 일부 완료, protected-path architect 승인 대기 중.
-- `완료` [독립 프로젝트용 AgentOS 핵심 운영 스킬 구현 계획](.agentos/project/exec-plans/archive/agentos-core-guidance-skill-plan.md) | reviewed_evidence=invalid | outcome: 사용자는 대상 프로젝트에 `agentos project init`을 실행한 뒤 `agentos-core-guidance`를 사용해 불확실성 중지, 계획·브랜치·검증, 데이터 경계, 복구·에스컬레이션 원칙을 안내받는다. | progress: 구현·검증·Gate 2 closeout 완료.
-- `완료` [`project init` 프로젝트 문서 bootstrap 구현 계획](.agentos/project/exec-plans/archive/2026-08-31-project-init-project-documents.md) | reviewed | outcome: 사용자는 한 번의 `agentos project init`으로 런타임 하네스와 장기 프로젝트 문서의 starter 구조를 얻고, 부분·충돌 상태에서는 무엇이 부족한지와 다음 행동을 명확히 확인한다. | progress: 구현·검증·Gate 2 closeout 완료
+- `완료` [[Skill Catalog Viewer 생성] 구현 계획](.agentos/project/exec-plans/archive/skill-catalog-viewer-plan.md) | reviewed_evidence=missing | outcome: 사용자는 “스킬 목록을 HTML로 보여줘”라고 요청하여 현재 카탈로그의 이름·요약·트리거·설명을 한 페이지에서 확인한다.
+- `완료` [핵심 변경 중심의 계획 리뷰 개선 구현 계획](.agentos/project/exec-plans/archive/review-scope-filter-plan.md) | reviewed_evidence=missing | outcome: agent는 계획의 핵심 실행 계약이 바뀐 경우에만 재리뷰하고, 기본 plan-reviewer와 principle-auditor는 유지하되 필요한 추가 reviewer만 실행하며, 일반 reviewer artifact는 전체 plan hash 변경으… | progress: 구현·검증·closeout 완료. 전체 legacy harness suite의 unrelated baseline 실패는 별도 기록했다.
+- `완료` [하네스 스킬 계층 및 전체 Catalog 통합 구현 계획](.agentos/project/exec-plans/archive/harness-skill-catalog-hierarchy-plan.md) | reviewed_evidence=missing | outcome: 사용자는 `agentos project init`으로 하네스 루트와 핵심 스킬을 적용한 뒤, 루트 `SKILL.md`의 안내를 따라 목적에 맞는 하위 하네스 스킬을 사용할 수 있으며 catalog viewer에서 전체 스킬을 한 곳에서 확인한다. | progress: Gate 2 리뷰와 비보호 구현 일부 완료, protected-path architect 승인 대기 중.
+- `완료` [독립 프로젝트용 AgentOS 핵심 운영 스킬 구현 계획](.agentos/project/exec-plans/archive/agentos-core-guidance-skill-plan.md) | reviewed_evidence=missing | outcome: 사용자는 대상 프로젝트에 `agentos project init`을 실행한 뒤 `agentos-core-guidance`를 사용해 불확실성 중지, 계획·브랜치·검증, 데이터 경계, 복구·에스컬레이션 원칙을 안내받는다. | progress: 구현·검증·Gate 2 closeout 완료.
+- `완료` [`project init` 프로젝트 문서 bootstrap 구현 계획](.agentos/project/exec-plans/archive/2026-08-31-project-init-project-documents.md) | reviewed_evidence=missing | outcome: 사용자는 한 번의 `agentos project init`으로 런타임 하네스와 장기 프로젝트 문서의 starter 구조를 얻고, 부분·충돌 상태에서는 무엇이 부족한지와 다음 행동을 명확히 확인한다. | progress: 구현·검증·Gate 2 closeout 완료
 - `완료` [YouTube Transcript (yt-dlp 기반) 스킬 구현 계획](.agentos/project/exec-plans/archive/2026-08-30-youtube-transcript-skill.md) | reviewed_evidence=missing | progress: 계획 초안 작성, 리뷰 대기 중
 - `완료` [project init 하네스 리소스 적용 구현 계획](.agentos/project/exec-plans/archive/2026-08-29-project-init-harness-activation.md) | reviewed_evidence=missing | outcome: 프로젝트 초기화 후 `agentos harness --project-root .`와 AgentOS 세션이 프로젝트 로컬 하네스 리소스를 사용할 수 있다. | progress: 구현 완료, 검증 완료
 - `완료` [공통 AgentOS 하네스 base 구조 구현 계획](.agentos/project/exec-plans/archive/2026-08-29-common-agentos-base-resources.md) | reviewed_evidence=missing | progress: 계획 리뷰 완료, 구현 실행 대기
