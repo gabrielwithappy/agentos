@@ -166,7 +166,7 @@ Required contract:
 ```
 
 참고:
-- `reviewed: true`는 Gate 2 통과 후에만 추가한다.
+- `reviewed: true`는 Gate 2 통과 후에만 추가한다. `reviewed: false → true`와 상태 header 전이는 lifecycle metadata이며 reviewer semantic snapshot을 무효화하지 않는다.
 - active plan의 Gate 2 PASS는 header text만으로 성립하지 않는다. reviewer artifact가 plan identity, review scope, semantic snapshot/revision, reviewer identity/provenance, timestamp, PASS verdict, reviewer 분리를 증명해야 한다. 전체 plan hash/signature는 protected approval과 audit 증거에서만 필수다.
 - execution plan은 active plan이므로 `설계 문서 (구현 미정)` 상태로 저장하지 않는다
 - active plan의 `> **상태:** 완료`는 구현 검증과 completed-plan closeout이 끝난 뒤 사용할 수 있다. 완료 상태만으로 archive하지 않는다.
@@ -445,12 +445,12 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
    - 계획이 user-facing prompts, wizard, setup/install flow, error messages, onboarding, 사용자 안내 docs, Discord interaction, 또는 command output을 바꾸는지 분류한다.
    - 해당되면 계획에 `usability_review_required: true`를 기록하고 Gate 2에 `usability-reviewer` 리뷰를 포함한다.
    - 해당되지 않으면 `usability_review_required: false`를 기록한다.
-2. **서브에이전트 리뷰 및 암호학적 서명 발급**:
+2. **독립 리뷰 기록 확인 및 암호학적 서명 발급**:
    - 에이전트가 스스로 `multi_agent_v1__spawn_agent` 등을 통해 우회 증거를 생성하지 못하며, 반드시 아래 전용 리뷰 요청 스크립트를 실행하여 서명된 리뷰 증거를 획득해야 한다.
    ```bash
    python3 .agents/skills/harness/writing-plans/scripts/request_review.py <plan-path>
    ```
-   - 스크립트 내부에서 독립 서브에이전트 검증 통과 시 `.agentos/secret.key` 기반 HMAC 암호 서명이 포함된 `signed_review.json` 리뷰 증거를 발급한다.
+   - 이 스크립트는 reviewer를 호출하거나 artifact를 생성하지 않는다. trusted runtime review surface가 독립 reviewer artifact를 기록한 뒤에만 `.agentos/secret.key` 기반 HMAC 서명을 발급하며, 누락 시 missing role을 보고하고 안전하게 실패한다.
 3. **Issues Found → 작성 에이전트가 즉시 계획 문서를 수정한다:**
    - 리뷰어가 지적한 모든 단점을 계획 문서 본문에 직접 반영한다
    - 수정한 항목을 아래 형식으로 문서 하단 `## 리뷰 반영 이력` 섹션에 기록한다:

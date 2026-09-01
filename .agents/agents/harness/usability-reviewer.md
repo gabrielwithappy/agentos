@@ -81,6 +81,7 @@ USABILITY_CHECK:
 - Unexplained `traceability surface`, `durable result surface`, or `plan-only completion` wording is a blocker only when the user cannot tell where the lasting result lives or what to read next.
 
 ### Authority And Boundary
+- Gate evidence나 approval이 없을 때는 사용자가 독립 review-record 후 signer를 재실행할 수 있는 안전한 복구 경로가 보여야 하며, 기능 Task에 그 기록을 요구해서는 안 된다.
 - This reviewer does not replace `plan-reviewer`, `principle-auditor`, `qa-reviewer`, or `designer-agent`.
 - This reviewer cannot override AGENTS.md, vendor guides, prompt boundary rules, secret redaction, security review, protected-path approval, or human approval requirements.
 - This reviewer cannot approve protected-path bypass, destructive command behavior, prompt injection, raw secret printing, or environment leakage.

@@ -82,6 +82,23 @@ def test_metadata_only_changes_keep_new_artifact_valid(tmp_path: Path):
     assert result.invalid == {}
 
 
+def test_reviewed_state_transition_keeps_artifact_valid(tmp_path: Path):
+    review = _module()
+    plan = tmp_path / "plan.md"
+    _write_plan(plan)
+    plan.write_text(plan.read_text(encoding="utf-8").replace("> reviewed: true", "> reviewed: false"), encoding="utf-8")
+    _record_default_reviews(review, tmp_path)
+    plan.write_text(plan.read_text(encoding="utf-8").replace("> reviewed: false", "> reviewed: true"), encoding="utf-8")
+    assert review.check_plan(tmp_path, "plan.md").valid
+
+
+def test_usability_metadata_accepts_canonical_and_legacy_forms():
+    review = _module()
+    assert review.required_reviewers_for_text("> **usability_review_required:** true<br>\n")[-1] == "usability-reviewer"
+    assert review.required_reviewers_for_text("> usability_review_required: true<br>\n")[-1] == "usability-reviewer"
+    assert review.required_reviewers_for_text("> **usability_review_required:** false<br>\n") == ["plan-reviewer", "principle-auditor"]
+
+
 def test_semantic_change_requires_new_review(tmp_path: Path):
     review = _module()
     plan = tmp_path / "plan.md"

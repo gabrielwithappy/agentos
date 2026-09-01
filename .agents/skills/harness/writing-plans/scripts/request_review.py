@@ -56,7 +56,11 @@ def create_signed_review(root: Path, plan_path_str: str) -> Path:
     if not check_result.valid:
         missing_str = f" missing={','.join(check_result.missing)}" if check_result.missing else ""
         invalid_str = f" invalid={check_result.invalid}" if check_result.invalid else ""
-        raise ValueError(f"Gate 2 review artifacts check failed.{missing_str}{invalid_str}")
+        raise ValueError(
+            f"Gate 2 review artifacts check failed.{missing_str}{invalid_str} "
+            "Request each missing independent reviewer through the runtime review surface, "
+            "record its artifact, then safely rerun this signing command."
+        )
 
     secret_key = get_or_create_secret_key(root)
     text = load_text(plan_file)

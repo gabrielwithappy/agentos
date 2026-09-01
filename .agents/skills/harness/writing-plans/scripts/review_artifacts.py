@@ -12,9 +12,11 @@ from typing import Any
 
 
 REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
+REVIEWED_META_RE = re.compile(r"^> reviewed: (?:true|false)(?:\s*<br\s*/?>)?$", re.MULTILINE)
 STATUS_RE = re.compile(r"^> \*\*상태:\*\* (.+?)(?:\s*<br\s*/?>)?$", re.MULTILINE)
-USABILITY_REQUIRED_RE = re.compile(
-    r"^> \*\*usability_review_required:\*\* true(?:\s*<br\s*/?>)?$", re.MULTILINE
+USABILITY_HEADER_RE = re.compile(
+    r"^> (?:\*\*usability_review_required:\*\*|usability_review_required:) (true|false)(?:\s*<br\s*/?>)?$",
+    re.MULTILINE,
 )
 GATE2_RE = re.compile(r"^> gate2_[^:\n]+:.*$", re.MULTILINE)
 HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
@@ -93,7 +95,10 @@ def load_text(path: Path) -> str:
 
 
 def normalize_plan_text(text: str) -> str:
-    normalized = REVIEWED_RE.sub("", text)
+    # Gate state is lifecycle bookkeeping in both directions.  Treating only
+    # `true` as living metadata invalidates the just-recorded review when the
+    # normal state transition flips `false` to `true`.
+    normalized = REVIEWED_META_RE.sub("", text)
     normalized = GATE2_RE.sub("", normalized)
     normalized = HEADER_STATUS_RE.sub("", normalized)
     normalized = LIVING_META_RE.sub("", normalized)
@@ -138,7 +143,10 @@ def review_dir(root: Path, plan_path: str) -> Path:
 
 def required_reviewers_for_text(text: str) -> list[str]:
     reviewers = list(REQUIRED_REVIEWERS)
-    if USABILITY_REQUIRED_RE.search(text):
+    values = USABILITY_HEADER_RE.findall(text)
+    if values and (len(set(values)) != 1 or len(values) > 1):
+        raise ValueError("invalid-usability-metadata")
+    if values and values[0] == "true":
         reviewers.append("usability-reviewer")
     return reviewers
 

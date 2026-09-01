@@ -3,6 +3,8 @@
 > **상태:** 리뷰 대기 (완료 후 '완료'로 변경)
 > **작성일:** YYYY-MM-DD<br>
 > reviewed: false (리뷰 증거 파일 생성 전까지 절대 true로 변경 불가)<br>
+> **usability_review_required:** false<br>
+> **protected_change:** false<br>
 > user_request: <사용자 요청 요약 1-2문장 (계획 작성 시작 시점에 작성)><br>
 > active_agent: <br>
 > active_session: <br>
@@ -57,6 +59,14 @@
 ## 리뷰 반영 이력
 - 리뷰어 피드백 또는 수정 내역을 기록합니다.
 - Gate 2 리뷰가 완료되면, 반드시 별도의 Trace 파일(`.agents/traces/audit-plan-review.md` 등)을 생성해야 합니다.
+
+## 사전 실행 Gate와 closeout 경계
+
+Gate 2 artifact, protected approval, signature는 구현 Task가 아니라 이 lifecycle section에서 확인한다. 기능 Task 안에 reviewer artifact 생성·self-signing·approval·closeout 기록을 넣지 않는다. `protected_change: true`이면 File Structure와 Task의 `.agents/**` 변경 경로를 `## 보호 변경 범위`에 선언하고 authorized architect approval을 먼저 확인한다.
+
+## 보호 변경 범위
+
+- declared protected paths: (없으면 `없음`)
 
 ## 구현 결과
 (구현 후 작성)
