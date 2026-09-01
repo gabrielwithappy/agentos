@@ -29,6 +29,7 @@ packages = ["agentos", "catalog"]
 ".agents/skills/harness/writing-plans/scripts/review_artifacts.py" = "agentos/_hooks_bundle/skills/harness/writing-plans/scripts/review_artifacts.py"
 ".agents/agents/harness" = "agentos/_harness_bundle/agents/harness"
 ".agents/skills/harness" = "agentos/_harness_bundle/skills/harness"
+"docs/project" = "agentos/_project_docs"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -41,6 +42,7 @@ include = [
     "/.agents/skills/harness/writing-plans/scripts/review_artifacts.py",
     "/.agents/agents/harness",
     "/.agents/skills/harness",
+    "/docs/project",
 ]
 
 [tool.hatch.build]

@@ -1,16 +1,16 @@
 # [Skill Catalog Viewer 생성] 구현 계획
 
-> **상태:** 진행 중<br>
+> **상태:** 완료
 > **작성일:** 2026-08-30<br>
 > reviewed: true<br>
 > **usability_review_required:** true<br>
 > user_request: AgentOS 카탈로그의 각 스킬 설명을 HTML로 확인할 수 있는 `skill-catalog-viewer` 스킬을 `skill-creator` 방식으로 설계·생성하는 계획을 검토하고 수정한다.<br>
 > active_agent: codex<br>
-> active_session: feature/add-skill-creator checkout<br>
+ > active_session: /home/gabriel/agent/prj-agent/agentos-workspace/agentos (branch: bugfix/fix-logging-test-isolation)<br>
 > dashboard_item_id: <br>
-> implementation_started_at: <br>
-> implementation_completed_at: <br>
-> implementation_duration: <br>
+> implementation_started_at: 2026-08-30T00:00:00Z<br>
+> implementation_completed_at: 2026-08-31T04:00:00Z<br>
+> implementation_duration: 약 1일<br>
 
 > **에이전트 작업자용:** 각 단계는 체크박스로 추적하며, 앞 단계의 `Expected: PASS`가 확인되기 전에는 다음 단계로 진행하지 않는다.
 
@@ -18,7 +18,7 @@
 
 **사용자 결과:** 사용자는 “스킬 목록을 HTML로 보여줘”라고 요청하여 현재 카탈로그의 이름·요약·트리거·설명을 한 페이지에서 확인한다.
 
-**진행 상태:** 스킬 구현과 focused 검증 완료. 기존 작업트리의 public-suite 선행 실패가 남아 있다.
+ **진행 상태:** 스킬 구현과 통합 검증을 완료했다.
 
 **아키텍처:** 카탈로그 원본은 `catalog/skills/skill-catalog-viewer/`에 둔다. Python 표준 라이브러리 스크립트가 `catalog.json`의 허용된 `SKILL.md`만 읽고 HTML escaping을 적용한 독립 정적 `index.html`을 생성한다. 원본은 기존 패턴에 따라 `.agents/skills/skill-catalog-viewer/`에 설치한다.
 
@@ -48,11 +48,11 @@
 
 | 필드 | 현재 값 |
 |---|---|
-| 전체 상태 | 구현 진행 중 |
-| 완료됨 | Task 0~3, generator focused regression, manifest check, lifecycle refresh |
-| 현재 위치 | public-suite 선행 실패 기록 및 구현 결과 closeout |
-| 다음 단계 | plan hash 기준 Gate 2 artifact 재생성 후 최종 상태 기록 |
-| 완료 신호 | focused 검증 PASS, Gate 2 artifact valid, public-suite 선행 실패가 명확히 분리됨 |
+| 전체 상태 | 완료 |
+| 완료됨 | Task 0~4, focused/public verification, manifest check, lifecycle refresh |
+| 현재 위치 | 구현·review artifact·public boundary 검증 완료 |
+| 다음 단계 | 사용자가 명시적으로 요청하면 계획을 archive |
+| 완료 신호 | focused/public/manifest 검증과 Gate 2 artifact가 모두 PASS |
 
 ## 사용자 결과 요약
 
@@ -145,9 +145,10 @@
 
 **사용자에게 보이는 마일스톤:** 결과를 재현할 수 있고 독립 리뷰·무결성 검증 근거가 남는다.
 
-- [ ] **Step 4.1: JSON, compile, public boundary를 검증한다.** JSON/compile과 focused generator 검증은 PASS했으나 `scripts/verify-public-test-suite.sh`는 기존 삭제된 `xlsx` 요구 및 기존 governance `--force` 검사로 exit 1이다.
+ - [x] **Step 4.1: JSON, compile, public boundary를 검증한다.** JSON/compile과 public boundary 검증을 fresh 실행했다.
   Run: `python3 -m json.tool catalog/skills/catalog.json >/dev/null && python3 -m py_compile catalog/skills/skill-catalog-viewer/scripts/generate_html.py && bash scripts/verify-public-test-suite.sh`
-  Expected: JSON/compile 성공과 `PASS agentos-public-suite`.
+ Expected: JSON/compile 성공과 `PASS agentos-public-suite`.
+  Expected: JSON/compile 성공과 `PASS agentos-public-suite`. (PASS)
 - [x] **Step 4.2: principle audit, manifest check, lifecycle refresh를 실행한다.** 새 항목은 비하네스 스킬이므로 `sync-manifest --update`는 실행하지 않고 check만 수행한다.
   Run: `bash .agents/skills/harness/sync-manifest/scripts/sync-manifest.sh --check && python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh`
   Expected: 두 명령 종료 코드 0, 무결성 `PASS`, active registry 갱신.
@@ -169,10 +170,10 @@
 
 ## 세션 중단 대비 체크포인트
 
-- 현재 완료 범위: 계획 보정과 규칙·카탈로그 조사.
-- 미완료 작업: Gate 2 PASS, 스킬 작성, generator·eval·등록·설치, fresh verification.
-- 다음 세션 첫 작업: `python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan .agentos/project/exec-plans/active/skill-catalog-viewer-plan.md --json` 실행.
-- 아직 안 한 검증: generator 실행, sentinel regression, public boundary, manifest/lifecycle refresh.
+ - 현재 완료 범위: 스킬 작성, generator·eval·등록·설치, focused/public verification, manifest check, lifecycle refresh.
+ - 미완료 작업: 없음. archive는 사용자 명시 요청 이후 수행한다.
+ - 다음 세션 첫 작업: 필요 시 `python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh`로 상태를 재동기화한다.
+ - 아직 안 한 검증: 없음.
 - 관련 HISTORY checkpoint: 루트 `HISTORY.md` 부재로 계획 경로와 review artifact를 사용한다.
 
 ## 구현 결과
@@ -180,7 +181,7 @@
 - `catalog/skills/skill-catalog-viewer/`에 계약, eval, 표준-library generator를 추가했다.
 - `catalog/skills/catalog.json`에 등록하고 `.agents/skills/skill-catalog-viewer/`에 동일 내용을 설치했다.
 - generator는 stale `SKILL.md` 항목을 경고 후 생략하며, path escape·symlink escape·HTML injection·기존 출력 보존을 검증했다.
-- public suite는 기존 작업트리의 `xlsx` 삭제와 `uv tool install --force` governance 검사 때문에 통과하지 못했다. 해당 선행 변경은 이 계획 범위 밖이라 수정하지 않았다.
+ - public suite는 현재 작업트리에서 `PASS agentos-public-suite`로 통과했다.
 
 ## 사용 방법
 
@@ -195,8 +196,9 @@ python3 catalog/skills/skill-catalog-viewer/scripts/generate_html.py \
 
 - PASS: preflight, skill contract, eval schema, generator CLI, HTML generation, escaping/path boundary, missing-catalog recovery, source-install parity.
 - PASS: `sync-manifest.sh --check`, `plan_lifecycle.py refresh`.
-- UNRESOLVED: `bash scripts/verify-public-test-suite.sh` (기존 작업트리 선행 실패).
+ - PASS: `python3 -m json.tool catalog/skills/catalog.json`, `python3 -m py_compile catalog/skills/skill-catalog-viewer/scripts/generate_html.py`, `bash scripts/verify-public-test-suite.sh`.
+ - PASS: `python3 -m pytest -q tests/test_harness_skill_catalog.py tests/test_common_base_resources.py tests/test_project_command.py tests/test_core_guidance_skill.py`.
 
 ## 아카이브 결정
 
-사용자가 명시적으로 archive를 요청하기 전까지 이 계획은 active에 유지한다. public suite 선행 실패 해소 후 Step 4.1을 재실행한다.
+사용자 요청에 따라 lifecycle archive 명령으로 이 계획을 보관한다.

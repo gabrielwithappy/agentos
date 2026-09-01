@@ -11,7 +11,7 @@ agentos run --once "Prompt" [--provider mock|codex|codex-cli|claude] [--json]  #
 agentos setup [--home PATH] [--path PROJECT_DIRECTORY]
 agentos skill install SKILL_DIRECTORY
 agentos skill status [--json]
-agentos project init [--path PATH] [--json]
+agentos project init [--path PATH] [--json]  # runtime resources + starter project documents
 agentos project status [--path PATH] [--json]
 agentos gateway doctor [--provider PROVIDER] [--json]
 agentos gateway submit --provider PROVIDER "Prompt" [--cwd PATH] [--record-policy metadata|full] [--json]
@@ -32,6 +32,11 @@ agentos llm status|login|logout --provider mock|codex|codex-cli|claude [--json]
 agentos harness --project-root PATH [engine args...]
 python -m agentos.runtime.bench --prompt "Prompt" [--provider mock|codex] [--format json] [--assert-warm-faster]
 ```
+
+`agentos project init` creates `.agentos/project/` from the bundled starter
+documents when that directory does not exist. Existing or partial project
+documents are preserved; JSON output reports `project_documents.state` as
+`current`, `partial`, or `not_initialized` and lists missing files.
 
 ## Gateway Core
 

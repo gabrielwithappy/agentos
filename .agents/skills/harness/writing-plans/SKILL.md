@@ -56,8 +56,8 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 
 - canonical execution-contract SSOT는 `Intent Sheet`다.
 - `Requirement Brief`는 discovery artifact이며, 직접 실행 계획 SSOT가 되지 않는다.
-- `docs/project/00-project-index.md`와 채워진 `docs/project` root 문서는 프로젝트 컨텍스트와 근거 입력이다. 계획에 반영하되, 실행 계약 SSOT는 계속 `Intent Sheet`다.
-- `docs/project`가 없거나 root 문서가 starter 상태라면 먼저 `aha project init/check`, `requirement-discovery`, 또는 `intent-clarification`으로 되돌려 문서 준비 상태를 닫는다.
+- `.agentos/project/00-project-index.md`와 채워진 `.agentos/project` root 문서는 프로젝트 컨텍스트와 근거 입력이다. 계획에 반영하되, 실행 계약 SSOT는 계속 `Intent Sheet`다. `docs/project/template/`는 package-owned 원본 template 경로다.
+- `.agentos/project`가 없거나 root 문서가 starter 상태라면 먼저 `agentos project init`, `requirement-discovery`, 또는 `intent-clarification`으로 되돌려 문서 준비 상태를 닫는다. `docs/project/template/`는 package-owned 원본이다.
 - Architecture analysis artifact나 adoption analysis는 backlog filter 입력일 뿐이며 not implementation approval이다.
 - `No-Op Baseline`, rejected/deferred candidate, future opportunity는 separate reviewed plan이 있기 전까지 실행 범위에 넣지 않는다.
 - Intent Sheet에서 목적과 완료 기준이 이미 정리된 경우, 표면적인 작업 방식 질문은 필수 핵심 질문이 부족할 때만 보완한다.
@@ -92,7 +92,7 @@ Every new plan must distinguish progress-tracking surfaces from the place where 
 Required contract:
 - Add a `## 장기 적용 표면` section near the reader-first area.
 - Name the `traceability surface` entries that track progress only, such as the active plan, `HISTORY.md`, lifecycle board, or evolution status.
-- Name the `durable result surface` entries where the completed result must remain, such as `docs/project`, `docs/knowledge`, `README`/help text, or an approved AHA 운영 표면.
+- Name the `durable result surface` entries where the completed result must remain, such as `.agentos/project`, `docs/knowledge`, `README`/help text, or an approved AHA 운영 표면.
 - If the work is documentation-only, say so explicitly and explain why the documentation itself is the durable result surface.
 - Do not treat `HISTORY.md`, generated board text, or lifecycle metadata as the durable result surface for user-facing or operator-facing work.
 
@@ -167,7 +167,7 @@ Required contract:
 
 참고:
 - `reviewed: true`는 Gate 2 통과 후에만 추가한다.
-- active plan의 Gate 2 PASS는 header text만으로 성립하지 않는다. `aha project plan review record` 또는 동등 runtime surface가 남긴 reviewer artifact가 plan path/hash, reviewer identity/provenance, timestamp, PASS verdict, reviewer 분리를 증명해야 한다.
+- active plan의 Gate 2 PASS는 header text만으로 성립하지 않는다. reviewer artifact가 plan identity, review scope, semantic snapshot/revision, reviewer identity/provenance, timestamp, PASS verdict, reviewer 분리를 증명해야 한다. 전체 plan hash/signature는 protected approval과 audit 증거에서만 필수다.
 - execution plan은 active plan이므로 `설계 문서 (구현 미정)` 상태로 저장하지 않는다
 - active plan의 `> **상태:** 완료`는 구현 검증과 completed-plan closeout이 끝난 뒤 사용할 수 있다. 완료 상태만으로 archive하지 않는다.
 - `통합됨`, `보관됨` 상태는 archive 이동 직전 또는 archive 내부 문서에만 사용한다
@@ -427,7 +427,15 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
 - `contrarian`: 숨은 가정, 반대 가설, no-op 대안을 점검한다
 - `simplifier`: 불필요한 파일, 단계, 추상화를 줄이고 최소 경로를 제안한다
 
-이 helper들은 **optional**이며, 최종 mandatory review gate를 대체하지 않는다. 필수 gate는 계속 `plan-reviewer` + `principle-auditor`다. user-facing prompts, wizard, setup/install flow, error messages, onboarding, docs that instruct users, Discord interaction, or command output을 바꾸는 계획은 `usability_review_required: true`로 분류하고 `usability-reviewer=PASS`도 필수다.
+이 helper들은 **optional**이며, 최종 mandatory review gate를 대체하지 않는다. 필수 gate는 계속 `plan-reviewer` + `principle-auditor`다. user-facing prompts, wizard, setup/install flow, error messages, onboarding, docs that instruct users, Discord interaction, or command output을 바꾸는 계획은 `usability_review_required: true`로 분류하고 `usability-reviewer=PASS`도 필수다. 관련 없는 추가 reviewer는 실행하지 않는다.
+
+### Review Scope and Hash Boundary
+
+- 일반 reviewer artifact validity는 전체 plan hash mismatch로 무효화하지 않는다.
+- 도구는 header 상태/점유 metadata, task checkbox, 지정된 progress·closeout section, whitespace와 line-ending만 metadata-only로 취급한다. 그 밖의 변경과 metadata/semantic 혼합 변경은 semantic으로 분류한다.
+- 일반 reviewer artifact에는 plan identity, review scope, semantic revision, semantic snapshot을 기록하고 snapshot이 달라질 때만 재리뷰한다.
+- reviewer는 실행 가능성, 정합성, 안전, 범위, 검증, 의미를 우선한다. 문법·어휘·문체는 의미·모호성·복구 가능성·안전에 영향을 줄 때만 finding으로 올리며 cosmetic rewrite는 blocking finding이 아니다.
+- 전체 plan hash와 HMAC signature는 protected-path approval과 audit artifact에만 요구한다.
 
 ### Gate 2: 서브에이전트 리뷰
 
