@@ -79,6 +79,7 @@ def _load_entries(root: Path, catalog_path: Path) -> list[dict[str, Any]]:
             "name": entry["name"],
             "summary": entry.get("summary", ""),
             "triggers": entry.get("triggers", []),
+            "category": entry.get("category", "optional"),
             "source_path": source,
             "description": _frontmatter_description(skill_file),
         })
@@ -97,6 +98,7 @@ def _render(entries: list[dict[str, Any]]) -> str:
         cards.append(
             '<article class="skill" data-search="{search}">'
             "<h2>{name}</h2><p class=\"summary\">{summary}</p>"
+            "<p><strong>Category:</strong> {category}</p>"
             "<p><strong>Triggers:</strong> {triggers}</p>"
             "<p><strong>Source:</strong> <code>{source}</code></p>"
             "<details><summary>Description</summary><p>{description}</p></details>"
@@ -104,6 +106,7 @@ def _render(entries: list[dict[str, Any]]) -> str:
                 search=html.escape(" ".join(str(v) for v in item.values()).casefold(), quote=True),
                 name=html.escape(_text(item["name"])),
                 summary=html.escape(_text(item["summary"])),
+                category=html.escape(_text(item["category"])),
                 triggers=html.escape(_text(item["triggers"])),
                 source=html.escape(_text(item["source_path"])),
                 description=html.escape(_text(item["description"])),

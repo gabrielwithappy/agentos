@@ -74,4 +74,4 @@ agentos project status
 agentos doctor --json
 ```
 
-`setup`은 사용자 상태와 기본 전역 카탈로그 스킬, package-owned 공통 하네스 base(agent와 핵심 skill)를 설치합니다. LLM 로그인은 별도입니다. 추가 외부 스킬이 필요할 때만 `agentos skill install /path/to/my-skill`을 사용합니다. `project init`은 현재 프로젝트의 `.agentos/agentos-project/`에 추적용 snapshot을 만들고, 동일한 공통 base와 실제 런타임이 읽는 `.agents/skills` 및 `.agents/agents/harness`를 프로젝트에 적용합니다. 기존 `.agents/README.md` 같은 관리되지 않는 파일은 보존합니다. 초기화 후 `agentos project status`로 상태를 확인할 수 있습니다. 사용자별 profile/override 설정은 현재 지원하지 않습니다.
+`setup`은 사용자 상태와 기본 전역 카탈로그 스킬, package-owned 공통 하네스 base(agent와 핵심 skill)를 설치합니다. LLM 로그인은 별도입니다. 추가 외부 스킬이 필요할 때만 `agentos skill install /path/to/my-skill`을 사용합니다. `project init`은 현재 프로젝트의 `.agentos/agentos-project/`에 추적용 snapshot과 `.agentos/project/`의 starter project documents를 만들고, 동일한 공통 base와 실제 런타임이 읽는 `.agents/skills` 및 `.agents/agents/harness`를 프로젝트에 적용합니다. 기존 project 문서, `AGENTS.md`, `CLAUDE.md`, vendor 설정, `.agents/README.md` 같은 관리되지 않는 파일은 보존합니다. 문서가 이미 있거나 일부만 있으면 덮어쓰지 않고 JSON 결과의 `project_documents`에 상태와 누락 목록을 표시합니다. 초기화 후 `agentos project status`로 상태를 확인할 수 있습니다. 사용자별 profile/override 설정은 현재 지원하지 않습니다.

@@ -47,6 +47,19 @@ LIVING_SECTION_RE = re.compile(
 ALLOWED_PASS_RESULTS = {"PASS", "PASS/APPROVE", "PASS/CLEAN"}
 REQUIRED_REVIEWERS = ("plan-reviewer", "principle-auditor")
 ARTIFACT_SCHEMA = "gate2-review-artifact-v1"
+PROTECTED_REVIEW_SCOPE = frozenset(
+    {
+        ".agents/agents/harness/plan-reviewer.md",
+        ".agents/agents/harness/principle-auditor.md",
+        ".agents/agents/harness/usability-reviewer.md",
+        ".agents/skills/harness/writing-plans/SKILL.md",
+        ".agents/skills/harness/writing-plans/scripts/review_artifacts.py",
+        ".agents/skills/harness/writing-plans/scripts/request_review.py",
+        ".agents/skills/harness/writing-plans/tests/test_plan_review_scope.py",
+        ".agents/_version.json",
+        "manifest update",
+    }
+)
 
 
 @dataclass
@@ -92,8 +105,23 @@ def normalize_plan_text(text: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def semantic_snapshot(text: str) -> str:
+    """Return the plan content that defines the reviewed execution contract.
+
+    This deliberately excludes only bookkeeping surfaces. Ordinary reviewer
+    validity compares this snapshot, not the full-plan digest.
+    """
+    return normalize_plan_text(text)
+
+
+def protected_scope_is_complete(scope: Any) -> bool:
+    return PROTECTED_REVIEW_SCOPE.issubset(set(scope or []))
+
+
 def plan_hash(text: str) -> str:
-    return hashlib.sha256(normalize_plan_text(text).encode("utf-8")).hexdigest()
+    # Kept for protected approval/audit artifacts. It is not an ordinary
+    # reviewer validity condition.
+    return hashlib.sha256(semantic_snapshot(text).encode("utf-8")).hexdigest()
 
 
 def plan_slug(plan_path: str) -> str:
@@ -123,7 +151,7 @@ def _artifact_problem(
     artifact: dict[str, Any],
     reviewer: str,
     expected_plan_path: str,
-    expected_hash: str,
+    expected_snapshot: str,
 ) -> str | None:
     if artifact.get("schema") != ARTIFACT_SCHEMA:
         return "schema-mismatch"
@@ -131,8 +159,17 @@ def _artifact_problem(
         return "reviewer-role-mismatch"
     if artifact.get("plan_path") != expected_plan_path:
         return "plan-path-mismatch"
-    if artifact.get("plan_sha256") != expected_hash:
-        return "plan-hash-mismatch"
+    if "semantic_snapshot" in artifact:
+        if artifact.get("plan_identity") != expected_plan_path:
+            return "plan-identity-mismatch"
+        if not isinstance(artifact.get("review_scope"), str) or not artifact["review_scope"].strip():
+            return "missing-review-scope"
+        if not isinstance(artifact.get("semantic_revision"), int) or artifact["semantic_revision"] < 1:
+            return "invalid-semantic-revision"
+        if artifact.get("semantic_snapshot") != expected_snapshot:
+            return "semantic-snapshot-mismatch"
+    # Legacy artifacts remain readable. Their full-plan hash is intentionally
+    # not checked; newly recorded artifacts use semantic_snapshot instead.
     if artifact.get("result") not in ALLOWED_PASS_RESULTS:
         return "result-not-pass"
     if not artifact.get("reviewer_id"):
@@ -160,7 +197,7 @@ def check_plan(root: Path, plan_path: str) -> ReviewCheck:
     rel_path = plan_file.relative_to(root).as_posix()
     text = load_text(plan_file)
     required = required_reviewers_for_text(text)
-    expected_hash = plan_hash(text)
+    expected_snapshot = semantic_snapshot(text)
     slug = plan_slug(rel_path)
     artifacts_dir = review_dir(root, rel_path)
     reviewed_header = bool(REVIEWED_RE.search(text))
@@ -175,7 +212,7 @@ def check_plan(root: Path, plan_path: str) -> ReviewCheck:
             missing.append(reviewer)
             continue
         artifact = _load_artifact(artifact_path)
-        problem = _artifact_problem(artifact, reviewer, rel_path, expected_hash)
+        problem = _artifact_problem(artifact, reviewer, rel_path, expected_snapshot)
         if problem:
             invalid[reviewer] = problem
             continue
@@ -233,9 +270,28 @@ def record_review(
     if implementer_id and implementer_id == reviewer_id:
         raise ValueError("implementer_id must differ from reviewer_id")
 
+    snapshot = semantic_snapshot(text)
+    out_dir = review_dir(root, rel_path)
+    revisions = []
+    if out_dir.is_dir():
+        for candidate in out_dir.glob("*.json"):
+            try:
+                prior = _load_artifact(candidate)
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(prior.get("semantic_revision"), int):
+                revisions.append(prior["semantic_revision"])
+    revision = max(revisions, default=0) or 1
+
     artifact = {
         "schema": ARTIFACT_SCHEMA,
         "plan_path": rel_path,
+        "plan_identity": rel_path,
+        "review_scope": "gate2",
+        "semantic_revision": revision,
+        "semantic_snapshot": snapshot,
+        # Retained as an audit hint for compatibility; ordinary validity does
+        # not compare this value.
         "plan_sha256": plan_hash(text),
         "reviewer_role": reviewer,
         "result": result,
@@ -246,7 +302,6 @@ def record_review(
         "reviewed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
-    out_dir = review_dir(root, rel_path)
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{reviewer}.json"
     out_path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

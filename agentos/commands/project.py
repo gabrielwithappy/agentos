@@ -15,6 +15,19 @@ from agentos.terminal import base_resources
 app = typer.Typer(help="Reflect AgentOS global resources into a project", add_completion=False)
 PROJECT_SCHEMA = "agentos.project/v1"
 MANAGED = "agentos-project"
+PROJECT_DOCUMENT_FILES = (
+    "00-project-index.md",
+    "01-project-charter.md",
+    "02-product-scope-and-requirements.md",
+    "03-system-contract.md",
+    "04-safety-risk-verification.md",
+    "05-agent-operating-contract.md",
+    "06-decisions-progress-change-log.md",
+    "reference/README.md",
+    "reference/implementation/README.md",
+    "reference/decisions/README.md",
+    "reference/operations/README.md",
+)
 
 
 # Kept as narrow test/integration seams; resolution and validation remain in
@@ -41,6 +54,29 @@ def _harness_sources() -> tuple[Path, Path] | None:
     return candidates
 
 
+def _project_template_root() -> Path | None:
+    root = _source_checkout_root()
+    if root is not None:
+        candidate = root / "docs" / "project" / "template"
+    else:
+        packaged = _packaged_harness_root()
+        candidate = None
+        if packaged is not None:
+            candidates = (packaged / "_project_docs" / "template", packaged.parent / "_project_docs" / "template")
+            candidate = next((item for item in candidates if item.is_dir()), None)
+    return candidate if candidate is not None and candidate.is_dir() else None
+
+
+def _project_documents_payload(root: Path) -> dict:
+    target = root / ".agentos" / "project"
+    if not target.exists():
+        return {"state": "not_initialized", "missing": list(PROJECT_DOCUMENT_FILES)}
+    if target.is_symlink() or not target.is_dir():
+        return {"state": "invalid", "missing": list(PROJECT_DOCUMENT_FILES)}
+    missing = [name for name in PROJECT_DOCUMENT_FILES if not (target / name).is_file()]
+    return {"state": "current" if not missing else "partial", "missing": missing}
+
+
 def _root(path: str | None) -> Path:
     candidate = Path(path).expanduser() if path else Path.cwd()
     if not candidate.exists() or not candidate.is_dir() or candidate.is_symlink():
@@ -64,16 +100,17 @@ def _settings_digest() -> str:
 
 
 def _payload(root: Path) -> dict:
+    documents = _project_documents_payload(root)
     managed = _managed(root)
     manifest = managed / "manifest.json"
     if not manifest.is_file() or manifest.is_symlink():
-        return {"state": "not_initialized"}
+        return {"state": "not_initialized", "project_documents": documents}
     try:
         data = json.loads(manifest.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
-        return {"state": "invalid"}
+        return {"state": "invalid", "project_documents": documents}
     if data.get("schema_version") != PROJECT_SCHEMA or not isinstance(data.get("skills"), dict) or not isinstance(data.get("agents", {}), dict):
-        return {"state": "invalid"}
+        return {"state": "invalid", "project_documents": documents}
     skills_root = managed / "skills"
     agents_root = managed / "agents"
     current = True
@@ -98,6 +135,7 @@ def _payload(root: Path) -> dict:
         "skills": sorted(data["skills"]),
         "agents": sorted(data.get("agents", {})),
         "settings_activation": "project-local",
+        "project_documents": documents,
     }
 
 
@@ -105,11 +143,25 @@ def _payload(root: Path) -> dict:
 def init(path: str | None = typer.Option(None, "--path"), json_output: bool = typer.Option(False, "--json")) -> None:
     try:
         root = _root(path)
-        skills = [entry for entry in global_skills_dir().iterdir() if entry.is_dir() and not entry.is_symlink() and (entry / "SKILL.md").is_file()]
+        # The harness root is projected as one nested tree below. Exclude it
+        # from the flat optional-skill copy to avoid a duplicate destination
+        # and preserve the canonical `.agents/skills/harness/<child>` layout.
+        skills = [
+            entry
+            for entry in global_skills_dir().iterdir()
+            if entry.name != "harness"
+            and entry.is_dir()
+            and not entry.is_symlink()
+            and (entry / "SKILL.md").is_file()
+        ]
         if not skills:
             raise StateError("No skills installed. Next: agentos skill install <SKILL_DIRECTORY>")
         managed = _managed(root)
         managed.parent.mkdir(exist_ok=True)
+        documents_target = root / ".agentos" / "project"
+        documents_template = _project_template_root()
+        if not documents_target.exists() and documents_template is None:
+            raise StateError("Project document template is unavailable. Next: reinstall AgentOS")
         project_agents = root / ".agents" / "agents"
         project_skills = root / ".agents" / "skills"
         for destination in (root / ".agents", project_agents, project_skills):
@@ -173,6 +225,14 @@ def init(path: str | None = typer.Option(None, "--path"), json_output: bool = ty
                 raise
             if backup.exists():
                 shutil.rmtree(backup)
+            if not documents_target.exists() and documents_template is not None:
+                documents_stage = Path(tempfile.mkdtemp(prefix=".project-documents.stage-", dir=managed.parent))
+                try:
+                    shutil.copytree(documents_template, documents_stage / "project")
+                    os.replace(documents_stage / "project", documents_target)
+                finally:
+                    if documents_stage.exists():
+                        shutil.rmtree(documents_stage)
         finally:
             if stage.exists():
                 shutil.rmtree(stage)

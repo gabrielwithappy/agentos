@@ -19,6 +19,15 @@ CORE_KNOWLEDGE_PATHS = (
     ".agents/vendors/claude.md",
     ".agents/vendors/gemini.md",
 )
+PROJECT_DOCUMENT_PATHS = (
+    ".agentos/project/00-project-index.md",
+    ".agentos/project/01-project-charter.md",
+    ".agentos/project/02-product-scope-and-requirements.md",
+    ".agentos/project/03-system-contract.md",
+    ".agentos/project/04-safety-risk-verification.md",
+    ".agentos/project/05-agent-operating-contract.md",
+    ".agentos/project/06-decisions-progress-change-log.md",
+)
 
 SKIP_ENV_VAR = "AGENTOS_SKIP_CONTEXT_BOOTSTRAP"
 
@@ -117,6 +126,18 @@ def _is_within(path: Path, root: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _find_project_document_root(cwd: Path) -> Path | None:
+    current = cwd
+    while True:
+        index = current / PROJECT_DOCUMENT_PATHS[0]
+        if index.is_file() and not index.is_symlink():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
 
 
 def _expand_includes(
@@ -237,9 +258,12 @@ def discover_context_files(cwd: str | Path, agent_home: str | Path | None = None
     # A repository's root AGENTS.md defines mandatory operating knowledge.
     # Load the bounded, versioned knowledge graph explicitly rather than
     # following arbitrary prose links from untrusted project context files.
-    project_root = next((item.path.parent for item in results if item.path.name.lower() == "agents.md"), None)
+    project_root = _find_project_document_root(resolved_cwd)
+    if project_root is None:
+        project_root = next((item.path.parent for item in results if item.path.name.lower() == "agents.md"), None)
     if project_root is not None:
-        for relative in CORE_KNOWLEDGE_PATHS:
+        paths = PROJECT_DOCUMENT_PATHS + CORE_KNOWLEDGE_PATHS
+        for relative in paths:
             candidate = project_root / relative
             if candidate in seen_paths or candidate.is_symlink() or not candidate.is_file():
                 continue

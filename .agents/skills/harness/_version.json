@@ -1,7 +1,9 @@
 {
   "version": "4.3.1",
   "skills": [
+    "2026-08-31-project-init-project-documents",
     "agent-token-info",
+    "agentos-core-guidance",
     "brain",
     "brainstorm",
     "careful",
@@ -11,7 +13,6 @@
     "git-worktree-parallel",
     "harness-loop",
     "intent-clarification",
-    "knowledge-curator",
     "mcp",
     "pm",
     "principle-auditor",

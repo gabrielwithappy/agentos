@@ -60,10 +60,10 @@ Karpathy autoresearch의 핵심: 에이전트는 `program.md`(가설 정의서)�
 - 코드베이스에서 답할 수 있으면 먼저 확인하고, 같은 내용을 사용자에게 다시 묻지 않는다.
 - 이미 답이 명확한 질문은 건너뛴다.
 - `Requirement Brief`가 있으면 이를 먼저 읽고, discovery 단계에서 이미 확정된 항목은 다시 묻지 않는다.
-- `docs/project/00-project-index.md`가 있으면 프로젝트 문서 컨텍스트로 읽고, 특히 `docs/project/01-project-charter.md`와 `docs/project/02-product-scope-and-requirements.md`에서 이미 답한 목표/범위/완료 기준은 다시 묻지 않는다.
-- `docs/project` root 문서가 없거나 비어 있어 실행계획 준비 상태를 판단할 수 없으면 인터뷰를 확장하기 전에 `aha project init/check` 또는 `requirement-discovery` 문서 준비 상태 확인으로 되돌린다.
-- user-facing frontend 또는 visual quality critical 작업이면 현재 `docs/project/reference/wireframes/` 아래 current wireframe pair와 관련 root summary 문서를 먼저 읽는다.
-- current wireframe pair, 최신 update 시각, 관련 reference가 비어 있으면 인터뷰를 확장하지 말고 `requirement-discovery`의 `docs/project bundle readiness`로 되돌린다.
+- `.agentos/project/00-project-index.md`가 있으면 프로젝트 문서 컨텍스트로 읽고, 특히 `.agentos/project/01-project-charter.md`와 `.agentos/project/02-product-scope-and-requirements.md`에서 이미 답한 목표/범위/완료 기준은 다시 묻지 않는다.
+- `.agentos/project` root 문서가 없거나 비어 있어 실행계획 준비 상태를 판단할 수 없으면 인터뷰를 확장하기 전에 `agentos project init` 또는 `requirement-discovery` 문서 준비 상태 확인으로 되돌린다.
+- user-facing frontend 또는 visual quality critical 작업이면 현재 `.agentos/project/reference/wireframes/` 아래 current wireframe pair와 관련 root summary 문서를 먼저 읽는다.
+- current wireframe pair, 최신 update 시각, 관련 reference가 비어 있으면 인터뷰를 확장하지 말고 `requirement-discovery`의 `.agentos/project bundle readiness`로 되돌린다.
 
 ### Role Boundary
 
@@ -90,7 +90,7 @@ frontend UI intent가 구현 품질을 좌우하는 작업이면, 일반 객관�
   - `시각적 위계`
   - `꼭 지켜야 할 톤`
   - `실패로 볼 화면 특성`
-- 이 체크리스트가 비어 있으면 discovery 없이 추정하지 말고 `docs/project bundle readiness` reroute 또는 current wireframe 문서 보강을 먼저 요구한다.
+- 이 체크리스트가 비어 있으면 discovery 없이 추정하지 말고 `.agentos/project bundle readiness` reroute 또는 current wireframe 문서 보강을 먼저 요구한다.
 
 **Q1. 작업의 주 목적 (Hypothesis)**
 > 에이전트가 문맥을 분석하여 가장 가능성 높은 목적 후보 3~4개를 객관식으로 제시한다.

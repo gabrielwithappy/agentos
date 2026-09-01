@@ -14,7 +14,7 @@
 - runtime shape: CLI shell은 TTY terminal-only Textual TUI mode와 non-TTY JSONL mode를 제공한다. provider credential 처리에는 기존 승인 경계를 적용하고 AgentOS-owned OAuth/API key/direct credential parsing은 금지한다. structured bridge는 vendor capability가 명시적으로 확인될 때만 선택 사항으로 추가되며, 화면 파싱이나 숨은 fallback을 두지 않는다.
 - data flow: terminal input -> input normalization -> allowed hooks -> provider-independent turn -> typed events -> text renderer or JSONL renderer. Raw secret values never flow back to UI, hooks, or logs.
 - persistence: session/history, hook observability, and Gateway run registry/event ledger는 `AGENTOS_HOME`의 versioned user data에만 저장하며, credential data를 저장하지 않는다. AgentOS session/evidence와 vendor session은 서로 다른 소유자로 구분한다.
-- global skill/project reflection: canonical skills는 `AGENTOS_HOME/core/.agents/skills`에서만 조회한다. bootstrap이 표시한 전역 skill은 read tool로 해당 regular `SKILL.md` 파일만 읽을 수 있으며 manifest, companion file, symlink, 임의 전역 경로는 읽을 수 없다. `agentos project init`은 `.agentos/agentos-project/`에 skill snapshot과 `config.toml` digest-only reference를 명시적으로 export하며, 이 export는 bootstrap input, global install source, hook configuration source가 아니다.
+- global skill/project reflection: canonical skills는 `AGENTOS_HOME/core/.agents/skills`에서만 조회한다. 핵심 harness는 그 아래 `harness/` root/child tree로 관리하고 catalog는 category·source/install path metadata만 제공한다. bootstrap이 표시한 전역 skill은 read tool로 해당 regular `SKILL.md` 파일만 읽을 수 있으며 manifest, companion file, symlink, 임의 전역 경로는 읽을 수 없다. `agentos project init`은 `.agentos/agentos-project/`에 skill snapshot과 `config.toml` digest-only reference를 명시적으로 export하며, 이 export는 bootstrap input, global install source, hook configuration source가 아니다.
 - deployment/operation:
 
 ## 아키텍처 요약
@@ -108,6 +108,13 @@ endpoint-level, file-level, environment-specific detail이 이 root contract를 
 - Use `reference/decisions/` when detailed ADR-style records would make this root contract too long.
 
 root docs는 architecture intent와 decision boundary를 담는다. 상세 API와 implementation example은 supporting doc에 둔다.
+
+## 계획 reviewer 운영 계약
+
+- 일반 계획 리뷰는 핵심 실행 가능성·정합성·안전·범위·검증을 우선하며 cosmetic 문법·문체 지적은 blocking finding으로 만들지 않는다.
+- 기본 `plan-reviewer`와 `principle-auditor`는 유지하고 user-facing 계획에만 `usability-reviewer`를 추가한다. 일반 reviewer validity는 전체 plan hash에 종속되지 않는다.
+- 전체 plan hash/signature와 protected approval은 protected path와 감사 추적에만 사용하며, manifest update 전에는 승인 범위를 exact path로 검증한다.
+- 계획 작성 질문으로 확정한 사용자 의도는 Intent Sheet에 고정하고, unresolved ambiguity가 있을 때만 사용자에게 재질문한다.
 
 - `.agentos/project/reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md`
 - `.agentos/project/reference/decisions/0004-agentos-llm-credential-strategy.md`

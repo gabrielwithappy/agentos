@@ -170,6 +170,17 @@ def test_build_bootstrap_message_for_session_loads_by_default(monkeypatch, tmp_p
     assert skipped == 0
 
 
+def test_discover_context_files_loads_project_documents_without_agents_file(tmp_path):
+    project_docs = tmp_path / ".agentos" / "project"
+    project_docs.mkdir(parents=True)
+    (project_docs / "00-project-index.md").write_text("project index\n", encoding="utf-8")
+    (project_docs / "01-project-charter.md").write_text("project charter\n", encoding="utf-8")
+
+    results = discover_context_files(tmp_path)
+
+    assert [item.path for item in results] == [project_docs / "00-project-index.md", project_docs / "01-project-charter.md"]
+
+
 def test_discover_skills_prefers_project_local_and_keeps_global_fallback(tmp_path):
     local = tmp_path / "local"
     global_dir = tmp_path / "global"
