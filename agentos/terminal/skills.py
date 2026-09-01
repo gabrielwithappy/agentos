@@ -18,7 +18,7 @@ DEFAULT_SKILL_NAMES = (
     "codebase-inspection", "design-md", "frontend-design", "future-slide", "humanizer", "p5js",
     "knowledge-curator", "popular-web-designs", "pretext", "requesting-code-review", "sketch", "spike",
     "systematic-debugging", "codex-imagegen-2", "youtube-transcript", "skill-creator",
-    "skill-catalog-viewer", "agentos-core-guidance",
+    "skill-catalog-viewer",
 )
 
 

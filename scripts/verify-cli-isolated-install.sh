@@ -67,11 +67,16 @@ printf '%s\n' '---' 'name: isolated-skill' 'description: isolated install skill'
 "$TMP/venv/bin/agentos" skill install "$TMP/skill" | grep -q "Successfully installed skill"
 "$TMP/venv/bin/agentos" skill status --json | "$TMP/venv/bin/python" -m json.tool >/dev/null
 "$TMP/venv/bin/agentos" project init --path "$TMP/outside" --json | "$TMP/venv/bin/python" -m json.tool >/dev/null
+test -f "$TMP/outside/.agentos/project/00-project-index.md"
+test -f "$TMP/outside/.agentos/project/06-decisions-progress-change-log.md"
 "$TMP/venv/bin/agentos" project status --path "$TMP/outside" --json > "$TMP/project-status.json"
 "$TMP/venv/bin/python" - <<'PY' "$TMP/project-status.json"
 import json
 import sys
-assert json.load(open(sys.argv[1], encoding="utf-8"))["state"] == "current"
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+assert payload["state"] == "current"
+assert payload["project_documents"]["state"] == "current"
+assert payload["project_documents"]["missing"] == []
 PY
 "$TMP/venv/bin/agentos" doctor --json | "$TMP/venv/bin/python" -m json.tool >/dev/null
 "$TMP/venv/bin/agentos" doctor --json >"$TMP/doctor.json"

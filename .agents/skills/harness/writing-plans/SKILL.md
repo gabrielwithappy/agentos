@@ -167,6 +167,7 @@ Required contract:
 
 참고:
 - `reviewed: true`는 Gate 2 통과 후에만 추가한다. `reviewed: false → true`와 상태 header 전이는 lifecycle metadata이며 reviewer semantic snapshot을 무효화하지 않는다.
+- `reviewed: true`는 Gate 2 통과 후에만 추가한다. `reviewed: false → true`와 상태 header 전이는 lifecycle metadata이며 reviewer semantic snapshot을 무효화하지 않는다.
 - active plan의 Gate 2 PASS는 header text만으로 성립하지 않는다. reviewer artifact가 plan identity, review scope, semantic snapshot/revision, reviewer identity/provenance, timestamp, PASS verdict, reviewer 분리를 증명해야 한다. 전체 plan hash/signature는 protected approval과 audit 증거에서만 필수다.
 - execution plan은 active plan이므로 `설계 문서 (구현 미정)` 상태로 저장하지 않는다
 - active plan의 `> **상태:** 완료`는 구현 검증과 completed-plan closeout이 끝난 뒤 사용할 수 있다. 완료 상태만으로 archive하지 않는다.
