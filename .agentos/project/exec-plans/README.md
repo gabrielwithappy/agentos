@@ -3,12 +3,15 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-08-31T23:01:47Z
+> Generated at: 2026-09-01T11:33:03Z
 
 ## Active Plans
 - older active plans omitted=0
+- `구현 계획 (리뷰 대기)` [계획 전 결정 게이트 사용자 surface 구현 계획](.agentos/project/exec-plans/active/2026-09-01-pre-plan-user-surface.md) | outcome: 사용자는 내부 구현 선택이 아니라 결정 내용에 답하고, 결과 문서에서 다음 행동과 완료 기준을 찾을 수 있다. | progress: 초안 / flow integration 계획 완료 후 리뷰 대기
+- `구현 계획 (리뷰 대기)` [계획 전 결정 게이트 흐름 연결 구현 계획](.agentos/project/exec-plans/active/2026-09-01-pre-plan-flow-integration.md) | outcome: 필요한 결정을 답하기 전에는 계획이 생기지 않고, 답한 뒤 기존 목표·사실을 유지한 채 다음 단계로 이어진다. | progress: 초안 / 선행 triage 계획 완료 후 리뷰 대기
+- `구현 계획 (리뷰 대기)` [계획 전 결정 triage 계약 구현 계획](.agentos/project/exec-plans/active/2026-09-01-pre-plan-decision-triage.md) | outcome: 같은 입력은 같은 상태로 판정되고, material ambiguity일 때만 다음 단계가 이해 가능한 한 질문으로 제한된다. | progress: 초안 / Gate 2 리뷰 대기
 - `구현 계획 (리뷰 대기)` [unified hook 동작 감사 및 수정 계획](.agentos/project/exec-plans/active/2026-08-31-unified-hook-audit.md) | progress: Gate 2 1차 리뷰 FAIL 반영 중, 재리뷰 대기
-- `구현 계획 (리뷰 대기)` [계획 전 결정 게이트 하네스 에이전트 구현 계획](.agentos/project/exec-plans/active/2026-08-31-pre-plan-decision-gate-agent.md) | outcome: 위 결과를 기존 계획 문서 호환 필드로도 고정한다. | progress: Gate 2 재리뷰를 위한 계획 수정 중
+- `구현 계획 (리뷰 대기)` [계획 전 결정 게이트 하네스 에이전트 분해 계획](.agentos/project/exec-plans/active/2026-08-31-pre-plan-decision-gate-agent.md) | outcome: 각 기능 단위가 짧은 계획과 좁은 파일 소유 범위를 가지므로 한 영역의 리뷰 수정이 다른 영역의 구현을 막지 않는다. | progress: 분해 초안 작성, 자식 계획 3개 리뷰 대기
 
 ## Archived Plans
 - archive summary: completed=18, parked=0
