@@ -13,8 +13,6 @@
 
 - `SessionStart`: load `AGENTS.md` and the runtime vendor guide.
 - `PreToolUse`: run the existing Bash guard at `.agents/skills/harness/careful/bin/check-careful.sh`.
-- `PostToolUse`: run `scripts/post_tool_use_review.py` to block failed Bash commands and remind completion-adjacent commands to use `verification-before-completion`.
-- `Stop`: run `scripts/stop_review_gate.py` to block ending while `loop-state.md` is execution-locked, while dirty-worktree completion claims lack verification evidence, or while an active plan claims `reviewed: true` without valid independent review artifacts.
 
 ## Adapters
 

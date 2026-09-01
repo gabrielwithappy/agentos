@@ -32,10 +32,11 @@ def test_bootstrap_creates_only_bridge_owned_configs(tmp_path):
     assert "enabled=codex,claude-code" in result.output
     codex = json.loads((project / ".codex" / "hooks.json").read_text())
     claude = json.loads((project / ".claude" / "settings.json").read_text())
-    assert "Stop" in codex["hooks"]
-    assert "Stop" in claude["hooks"]
     assert "agentos hook bridge codex pre-bash" in json.dumps(codex)
-    assert "agentos hook bridge claude-code stop" in json.dumps(claude)
+    assert "PostToolUse" not in codex["hooks"]
+    assert "Stop" not in codex["hooks"]
+    assert "PostToolUse" not in claude["hooks"]
+    assert "Stop" not in claude["hooks"]
     assert ".agents/hooks" not in json.dumps(codex) + json.dumps(claude)
     assert (project / "AGENTS.md").is_file()
 
@@ -95,8 +96,8 @@ def test_bootstrap_preflights_config_symlink_before_any_write(tmp_path):
 
 def test_bridge_allowlist_complete_mapping_is_closed():
     assert set(BRIDGE_MAP) == {
-        ("codex", "pre-bash"), ("codex", "pre-write"), ("codex", "post-bash"), ("codex", "stop"),
-        ("claude-code", "pre-bash"), ("claude-code", "pre-write"), ("claude-code", "post-bash"), ("claude-code", "stop"),
+        ("codex", "pre-bash"), ("codex", "pre-write"),
+        ("claude-code", "pre-bash"), ("claude-code", "pre-write"),
     }
 
 
@@ -123,13 +124,12 @@ def test_hook_bundle_allows_only_manifest_regular_files(tmp_path, monkeypatch):
         raise AssertionError("expected symlink rejection")
 
 
-def test_hook_bundle_review_artifacts_import_contract():
+def test_hook_bundle_review_artifacts_resource_contract():
     root = Path(__file__).resolve().parents[1]
-    readme = (root / "README.md").read_text(encoding="utf-8")
     pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
-    stop_script = (root / ".agents" / "hooks" / "scripts" / "stop_review_gate.py").read_text(encoding="utf-8")
     assert 'review_artifacts.py" = "agentos/_hooks_bundle/skills/harness/writing-plans/scripts/review_artifacts.py"' in pyproject
-    assert 'from review_artifacts import REVIEWED_RE, check_plan' in stop_script
+    assert "post_tool_use_review.py" not in pyproject
+    assert "stop_review_gate.py" not in pyproject
 
 
 def test_bridge_rejects_project_local_or_unlisted_mapping(tmp_path):

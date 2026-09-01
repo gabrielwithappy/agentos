@@ -9,8 +9,6 @@ from agentos.terminal.paths import StateError
 BUNDLE_SCRIPTS = {
     "check-careful.sh",
     "check-alignment.py",
-    "post_tool_use_review.py",
-    "stop_review_gate.py",
 }
 
 

@@ -20,12 +20,8 @@ TIMEOUT_SECONDS = 10
 BRIDGE_MAP = {
     ("codex", "pre-bash"): "check-careful.sh",
     ("codex", "pre-write"): "check-alignment.py",
-    ("codex", "post-bash"): "post_tool_use_review.py",
-    ("codex", "stop"): "stop_review_gate.py",
     ("claude-code", "pre-bash"): "check-careful.sh",
     ("claude-code", "pre-write"): "check-alignment.py",
-    ("claude-code", "post-bash"): "post_tool_use_review.py",
-    ("claude-code", "stop"): "stop_review_gate.py",
 }
 
 

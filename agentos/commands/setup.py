@@ -20,8 +20,6 @@ CODEX_CONFIG = {
             {"matcher": "Bash", "hooks": [{"type": "command", "command": "agentos hook bridge codex pre-bash"}]},
             {"matcher": "write_to_file|replace_file_content|multi_replace_file_content", "hooks": [{"type": "command", "command": "agentos hook bridge codex pre-write"}]},
         ],
-        "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "agentos hook bridge codex post-bash"}]}],
-        "Stop": [{"hooks": [{"type": "command", "command": "agentos hook bridge codex stop", "timeout": 10}]}],
     }
 }
 CLAUDE_CONFIG = {
@@ -30,8 +28,6 @@ CLAUDE_CONFIG = {
             {"matcher": "Bash", "hooks": [{"type": "command", "command": "agentos hook bridge claude-code pre-bash"}]},
             {"matcher": "Replace|Edit|Write.*", "hooks": [{"type": "command", "command": "agentos hook bridge claude-code pre-write"}]},
         ],
-        "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "agentos hook bridge claude-code post-bash"}]}],
-        "Stop": [{"hooks": [{"type": "command", "command": "agentos hook bridge claude-code stop", "timeout": 10}]}],
     }
 }
 AGENTS_TEMPLATE = "# AGENTS.md\n\nThis project is initialized for AgentOS. Run `agentos --help` for commands.\n"

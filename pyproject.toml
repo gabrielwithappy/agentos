@@ -24,8 +24,6 @@ packages = ["agentos", "catalog"]
 [tool.hatch.build.targets.wheel.force-include]
 ".agents/hooks/scripts/check-careful.sh" = "agentos/_hooks_bundle/hooks/scripts/check-careful.sh"
 ".agents/hooks/scripts/check-alignment.py" = "agentos/_hooks_bundle/hooks/scripts/check-alignment.py"
-".agents/hooks/scripts/post_tool_use_review.py" = "agentos/_hooks_bundle/hooks/scripts/post_tool_use_review.py"
-".agents/hooks/scripts/stop_review_gate.py" = "agentos/_hooks_bundle/hooks/scripts/stop_review_gate.py"
 ".agents/skills/harness/writing-plans/scripts/review_artifacts.py" = "agentos/_hooks_bundle/skills/harness/writing-plans/scripts/review_artifacts.py"
 ".agents/agents/harness" = "agentos/_harness_bundle/agents/harness"
 ".agents/skills/harness" = "agentos/_harness_bundle/skills/harness"
@@ -37,8 +35,6 @@ include = [
     "/catalog",
     "/.agents/hooks/scripts/check-careful.sh",
     "/.agents/hooks/scripts/check-alignment.py",
-    "/.agents/hooks/scripts/post_tool_use_review.py",
-    "/.agents/hooks/scripts/stop_review_gate.py",
     "/.agents/skills/harness/writing-plans/scripts/review_artifacts.py",
     "/.agents/agents/harness",
     "/.agents/skills/harness",

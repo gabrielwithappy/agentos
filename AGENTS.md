@@ -134,17 +134,6 @@
 | 중(Medium) | 90% | 70% | 기능 구현, 설정 변경 |
 | 저(Low) | 80% | 90% | 문서 작성, 탐색 |
 
-### 3.2 루프 제어값
-
-| 파라미터 | 기본값 | 의미 |
-|---------|--------|------|
-| `repeat_error_threshold` | 3 | 같은 오류 N회 시 Rule 2 발동 |
-| `max_loop_iterations` | 30 | 루프 최대 횟수 |
-| `cd_score_limit` | 30 | CD 한계 |
-| `repetitive_feedback_threshold` | 0.70 | 중복 질문 70% 시 Rule 2 발동 |
-| `oscillation_cycle` | 2 | 주기-2 반복 감지 시 루프 중지 |
-| `heartbeat_interval` | 5 | 5 루프마다 `[HEARTBEAT]` 기록 |
-
 ### 3.3 재사용 가능한 장기 지식 저장 기준 (Durable Knowledge Gate)
 
 단순성 원칙(§핵심 우선순위 4)의 예외 조건이다. 아래 중 하나라도 해당하면, 계획 문서에 압축 요약만 남기지 말고 결과를 별도 파일로 영속화하라:
@@ -171,10 +160,7 @@
 
 | 트리거 | 하라 |
 |--------|------|
-| Rule 2 발동 | `[ERROR_ANALYSIS]` → `[ROOT_CAUSE]` → `[EVOLUTION_PROPOSAL]` 기록 → 승인 후 `[EVOLUTION_APPLIED]` + AGENTS.md 업데이트 |
-| 세션 종료 | HISTORY.md 패턴 분석 기준: (1) `[LOOP_STOP]` ≥ 2건 또는 (2) `Rule 2` 발동 ≥ 1건 또는 (3) `[SKILL_STAT] outcome=FAIL` ≥ 2건 → 해당 조건 태그를 `[EVOLUTION_PROPOSAL]`에 명시하여 제안 |
 | 규칙·스킬 위반 발견 | 즉시 `[EVOLUTION_PROPOSAL]` 기록 → 인간 승인 요청 |
-| HISTORY.md 500줄 초과 | 패턴 분석 먼저(`grep -c "\[LOOP_STOP\]"`, `grep -c "Rule 2"`) → 지식 압축 → `.agents/skills/harness/brain/lessons-learned.md`로 이관 |
 | lessons-learned.md 항목 추가 시 | AGENTS.md 원칙 승격 가능 여부 즉시 검토 → 가능하면 `[EVOLUTION_PROPOSAL]` → 승인 후 해당 항목 삭제 + AGENTS.md 업데이트 |
 | **구조적 변경 감지 시** | `.agents/` 하위(파일/폴더/스킬/에이전트)에 변경이 생기면 즉시 `principle-auditor`를 호출하여 중복·레거시 오디트를 수행하고 정비를 제안하라. (P4 단순성 준수) |
 | **미션 최초 시작 시** | 새로운 과업(`plan.json`) 수립 직후, 전체 구조가 하네스 원칙에 맞게 세밀하게 구성되었는지 오디트하라. |
