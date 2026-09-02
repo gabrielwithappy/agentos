@@ -7,7 +7,7 @@ import pytest
 from agentos.observability.plan_parser import parse_exec_plan
 
 
-def test_request_review_creates_secret_key_and_signed_review(tmp_path):
+def test_review_artifacts_do_not_require_secret_key(tmp_path):
     # Setup test plan
     plan_dir = tmp_path / ".agentos" / "project" / "exec-plans" / "active"
     plan_dir.mkdir(parents=True)
@@ -29,7 +29,6 @@ def test_request_review_creates_secret_key_and_signed_review(tmp_path):
         sys.path.insert(0, str(scripts_dir))
 
     from review_artifacts import record_review
-    from request_review import create_signed_review, get_or_create_secret_key
 
     # Record mock reviews required for Gate 2
     record_review(
@@ -40,7 +39,7 @@ def test_request_review_creates_secret_key_and_signed_review(tmp_path):
         reviewer_id="rev-1",
         reviewer_source="subagent",
         summary="OK",
-        implementer_id=None,
+        implementer_id="implementer",
     )
     record_review(
         root=tmp_path,
@@ -50,15 +49,10 @@ def test_request_review_creates_secret_key_and_signed_review(tmp_path):
         reviewer_id="rev-2",
         reviewer_source="subagent",
         summary="OK",
-        implementer_id=None,
+        implementer_id="implementer",
     )
 
-    # Create signed review
-    out_path = create_signed_review(tmp_path, ".agentos/project/exec-plans/active/2026-07-31-test-hook.md")
-    assert out_path.is_file()
-
-    secret_key_file = tmp_path / ".agentos" / "secret.key"
-    assert secret_key_file.is_file()
+    assert not (tmp_path / ".agentos" / "secret.key").exists()
 
 
 def _load_check_alignment_module():
@@ -182,7 +176,7 @@ def test_reviewed_state_transition_keeps_artifact_valid(tmp_path):
     plan = tmp_path / "plan.md"
     plan.write_text(PRE_CLOSEOUT_PLAN.replace("> reviewed: true", "> reviewed: false"), encoding="utf-8")
     for role, reviewer_id, result in (("plan-reviewer", "r1", "PASS"), ("principle-auditor", "r2", "PASS/CLEAN")):
-        review.record_review(tmp_path, "plan.md", role, result, reviewer_id, "test", "ok", None)
+        review.record_review(tmp_path, "plan.md", role, result, reviewer_id, "subagent", "ok", "implementer")
     plan.write_text(plan.read_text(encoding="utf-8").replace("> reviewed: false", "> reviewed: true"), encoding="utf-8")
     assert review.check_plan(tmp_path, "plan.md").valid
 

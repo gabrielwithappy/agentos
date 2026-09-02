@@ -445,12 +445,12 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
    - 계획이 user-facing prompts, wizard, setup/install flow, error messages, onboarding, 사용자 안내 docs, Discord interaction, 또는 command output을 바꾸는지 분류한다.
    - 해당되면 계획에 `usability_review_required: true`를 기록하고 Gate 2에 `usability-reviewer` 리뷰를 포함한다.
    - 해당되지 않으면 `usability_review_required: false`를 기록한다.
-2. **독립 리뷰 기록 확인 및 암호학적 서명 발급**:
-   - 에이전트가 스스로 `multi_agent_v1__spawn_agent` 등을 통해 우회 증거를 생성하지 못하며, 반드시 아래 전용 리뷰 요청 스크립트를 실행하여 서명된 리뷰 증거를 획득해야 한다.
+2. **독립 리뷰 기록과 recovery 확인**:
+   - 에이전트가 스스로 우회 증거를 생성하지 못하며, independent reviewer artifact가 기록된 뒤 아래 검사를 실행한다.
    ```bash
-   python3 .agents/skills/harness/writing-plans/scripts/request_review.py <plan-path>
+   python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <plan-path>
    ```
-   - 이 스크립트는 reviewer를 호출하거나 artifact를 생성하지 않는다. trusted runtime review surface가 독립 reviewer artifact를 기록한 뒤에만 `.agentos/secret.key` 기반 HMAC 서명을 발급하며, 누락 시 missing role을 보고하고 안전하게 실패한다.
+   - `protected_change: true`이면 independent `harness-architect` approval도 요청한 뒤 같은 명령으로 재검증한다.
 3. **Issues Found → 작성 에이전트가 즉시 계획 문서를 수정한다:**
    - 리뷰어가 지적한 모든 단점을 계획 문서 본문에 직접 반영한다
    - 수정한 항목을 아래 형식으로 문서 하단 `## 리뷰 반영 이력` 섹션에 기록한다:

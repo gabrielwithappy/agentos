@@ -186,6 +186,8 @@ loop mode 계획에서 아래 유형은 반드시 구체적 수정 제안으로 
 
 active plan review에서 `PASS`가 나오면 implementer가 별도 runtime surface(`aha project plan review record` 또는 동등 command)로 reviewer artifact를 저장해 Gate 2 evidence를 남겨야 한다. 이 artifact는 plan identity, review scope, semantic revision/snapshot, reviewer identity/provenance, timestamp, PASS verdict를 포함해야 한다. protected approval과 audit artifact만 plan hash/signature를 추가로 요구한다.
 
+Review evidence가 없거나 오래되면 독립 reviewer를 다시 요청하고 `python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <plan-path>`로 확인한다. `protected_change: true`이면 independent `harness-architect` approval도 다시 요청한다.
+
 기능 Task 안의 artifact 생성·self-signing·protected approval·HISTORY closeout은 FAIL이다. 이들은 `사전 실행 Gate` 또는 `구현 후 closeout` lifecycle section에서만 확인한다.
 
 ## 규칙
