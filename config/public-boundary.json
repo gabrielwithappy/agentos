@@ -4,6 +4,7 @@
     ".agents/mcp/",
     ".agents/plugins/",
     ".agents/traces/",
+    ".agents/hooks/scripts/",
     ".claude/",
     ".codex/",
     ".obsidian/",
