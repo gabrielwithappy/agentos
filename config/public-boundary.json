@@ -5,6 +5,7 @@
     ".agents/plugins/",
     ".agents/traces/",
     ".agents/hooks/scripts/",
+    ".agents/skills/",
     ".claude/",
     ".codex/",
     ".obsidian/",
