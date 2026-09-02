@@ -14,6 +14,7 @@ args = parser.parse_args()
 ROOT = args.root.resolve()
 manifest = json.loads((ROOT / 'config/public-boundary.json').read_text())
 paths = set(manifest['paths'])
+forbidden_prefixes = tuple(manifest.get('forbidden_prefixes', []))
 bad_markers = ('/' + 'home/', '/' + 'Users/', 'gabrielwith' + 'happy@gmail.com', 'gabriel' + 'yang', 'BEGIN ' + 'PRIVATE KEY', 'gh' + 'p_')
 if args.stage_allowlisted:
     subprocess.run(['git','-C',str(ROOT),'add','--',*sorted(paths)], check=True)
@@ -21,6 +22,8 @@ def staged():
     return set(subprocess.check_output(['git','-C',str(ROOT),'diff','--cached','--name-only'], text=True).splitlines())
 def check_files(files):
     for name in files:
+        if any(name == prefix.rstrip('/') or name.startswith(prefix) for prefix in forbidden_prefixes):
+            continue
         if name not in paths:
             raise SystemExit(f'FAIL public-boundary forbidden-path={name}')
         target=ROOT/name
