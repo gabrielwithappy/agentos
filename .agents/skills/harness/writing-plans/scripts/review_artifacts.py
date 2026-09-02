@@ -47,6 +47,7 @@ LIVING_SECTION_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 ALLOWED_PASS_RESULTS = {"PASS", "PASS/APPROVE", "PASS/CLEAN"}
+ALLOWED_REVIEWER_SOURCES = {"subagent"}
 REQUIRED_REVIEWERS = ("plan-reviewer", "principle-auditor")
 ARTIFACT_SCHEMA = "gate2-review-artifact-v1"
 PROTECTED_REVIEW_SCOPE = frozenset(
@@ -56,7 +57,6 @@ PROTECTED_REVIEW_SCOPE = frozenset(
         ".agents/agents/harness/usability-reviewer.md",
         ".agents/skills/harness/writing-plans/SKILL.md",
         ".agents/skills/harness/writing-plans/scripts/review_artifacts.py",
-        ".agents/skills/harness/writing-plans/scripts/request_review.py",
         ".agents/skills/harness/writing-plans/tests/test_plan_review_scope.py",
         ".agents/_version.json",
         "manifest update",
@@ -194,7 +194,11 @@ def _artifact_problem(
     except ValueError:
         return "invalid-reviewed-at"
     implementer_id = artifact.get("implementer_id")
-    if implementer_id and implementer_id == artifact.get("reviewer_id"):
+    if not implementer_id:
+        return "missing-implementer-id"
+    if artifact.get("reviewer_source") not in ALLOWED_REVIEWER_SOURCES:
+        return "unsupported-reviewer-source"
+    if implementer_id == artifact.get("reviewer_id"):
         return "reviewer-equals-implementer"
     return None
 
@@ -275,8 +279,12 @@ def record_review(
         raise ValueError("reviewer_source is required")
     if not summary:
         raise ValueError("summary is required")
-    if implementer_id and implementer_id == reviewer_id:
+    if not implementer_id:
+        raise ValueError("implementer_id is required")
+    if implementer_id == reviewer_id:
         raise ValueError("implementer_id must differ from reviewer_id")
+    if reviewer_source not in ALLOWED_REVIEWER_SOURCES:
+        raise ValueError("reviewer_source must be subagent")
 
     snapshot = semantic_snapshot(text)
     out_dir = review_dir(root, rel_path)

@@ -178,6 +178,10 @@ After all tasks complete and verified:
 - Never start implementation on main/master branch without explicit user consent
 - Check worktree vs. main-checkout with real git commands before recording `active_session` — never assume or copy a stale value
 
+## Review-evidence recovery
+
+If review evidence is missing or out of date, do not execute. Request the required independent reviews and run `python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <plan-path>`. For `protected_change: true`, also request independent `harness-architect` approval before retrying.
+
 ## Integration
 
 **Required workflow skills:**

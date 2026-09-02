@@ -3,11 +3,12 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-09-01T22:26:00Z
+> Generated at: 2026-09-02T13:06:18Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 계획 (리뷰 대기)` [계획 리뷰 게이트 단순화 및 반복 block 제거 구현 계획](.agentos/project/exec-plans/active/2026-09-01-simplify-plan-review-gates.md) | outcome: 사용자는 초안 계획을 저장하고 필요한 reviewer만 거쳐 실행 대기로 전환할 수 있으며, block 시에는 대상 계획과 다음 복구 명령을 명확히 알 수 있다. | progress: 원인 분석 완료, 구현 계획 리뷰 대기
+- `구현 계획 (리뷰 대기)` [프로젝트별 스킬 선택 및 동기화 구현 계획](.agentos/project/exec-plans/active/2026-09-02-project-skill-selection.md) | outcome: 사용자는 `agentos project init`의 TTY 체크 메뉴 또는 `agentos project skills select`에서 코드 개발·문서/지식·디자인/시각화·생산성 등 목적별 스킬과 사용 목적을 확인해 고른다. 자동화 환경에서는 `--… | progress: Intent Sheet 작성 및 구현 계획 초안 완료, Gate 2 리뷰 대기 중
+- `구현 계획 (리뷰 대기)` [하네스 기준선 정렬 및 로컬 리뷰 서명 제거 구현 계획](.agentos/project/exec-plans/active/2026-09-02-harness-baseline-and-review-signing.md) | outcome: 사용자는 사라진 AHA/routine/MCP 구현을 요구하는 오래된 테스트 때문에 전체 검증이 실패하지 않으며, `.agentos/secret.key`를 만들거나 복구하지 않아도 리뷰된 계획을 안전하게 실행할 수 있다. | progress: 기준선 실패 재현 및 원인군 분류 완료, protected 변경 Gate 2 리뷰 대기
 
 ## Archived Plans
 - archive summary: completed=18, parked=0

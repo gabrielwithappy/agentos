@@ -1,13 +1,10 @@
 import glob
 import hashlib
-import hmac
-import json
 import os
 import re
 import sys
 from pathlib import Path
 
-SECRET_KEY_PATH = ".agentos/secret.key"
 REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
 REVIEWED_META_RE = re.compile(r"^> reviewed: (?:true|false)(?:\s*<br\s*/?>)?$", re.MULTILINE)
 HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
@@ -68,11 +65,6 @@ def plan_slug(plan_path: str) -> str:
     return slug or "plan"
 
 
-def verify_signature(secret_key: bytes, message: str, signature: str) -> bool:
-    expected = hmac.new(secret_key, message.encode("utf-8"), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature)
-
-
 def get_target_plans(root: Path) -> list[str]:
     loop_state_file = root / ".agents" / "traces" / "harness" / "loop-state.md"
     if loop_state_file.is_file():
@@ -101,54 +93,19 @@ def check_alignment() -> int:
         )
         return 0
 
-    key_file = root / SECRET_KEY_PATH
-    if not key_file.is_file():
-        print(
-            "AgentOS Unified Hook [Alignment]: Active plan signature is invalid or missing.",
-            file=sys.stderr,
-        )
-        return 1
-
-    secret_key = key_file.read_bytes()
+    scripts_dir = root / ".agents" / "skills" / "harness" / "writing-plans" / "scripts"
+    sys.path.insert(0, str(scripts_dir))
+    from review_artifacts import check_plan
 
     for plan_str in target_plans:
         plan_path = Path(plan_str)
         rel_path = plan_path.relative_to(root).as_posix() if plan_path.is_absolute() else plan_str
-        slug = plan_slug(rel_path)
-        signed_file = root / ".agents" / "traces" / "reviews" / slug / "signed_review.json"
-
-        if not signed_file.is_file():
-            print(
-                f"AgentOS Unified Hook [Alignment]: Active plan signature is invalid or missing for {rel_path}.",
-                file=sys.stderr,
-            )
-            return 1
-
         try:
-            signed_data = json.loads(signed_file.read_text(encoding="utf-8"))
-            content = plan_path.read_text(encoding="utf-8")
-            current_hash = plan_hash(content)
-
-            if signed_data.get("plan_sha256") != current_hash:
-                print(
-                    f"AgentOS Unified Hook [Alignment]: Active plan signature is invalid or missing for {rel_path}.",
-                    file=sys.stderr,
-                )
-                return 1
-
-            reviewed_at = signed_data.get("reviewed_at", "")
-            signature = signed_data.get("signature", "")
-            message = f"{rel_path}:{current_hash}:{reviewed_at}"
-
-            if not verify_signature(secret_key, message, signature):
-                print(
-                    f"AgentOS Unified Hook [Alignment]: Active plan signature is invalid or missing for {rel_path}.",
-                    file=sys.stderr,
-                )
-                return 1
+            if not check_plan(root, rel_path).valid:
+                raise ValueError("invalid review evidence")
         except Exception:
             print(
-                f"AgentOS Unified Hook [Alignment]: Active plan signature is invalid or missing for {rel_path}.",
+                f"AgentOS Unified Hook [Alignment]: Review evidence for {rel_path} is missing or out of date; do not execute. Request the required independent reviews and, for a protected change, independent architect approval; then run python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan {rel_path}.",
                 file=sys.stderr,
             )
             return 1

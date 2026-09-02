@@ -234,7 +234,6 @@
     ".agents/skills/harness/writing-plans/plan-review-checklist.md",
     ".agents/skills/harness/writing-plans/scripts/evolution_status.py",
     ".agents/skills/harness/writing-plans/scripts/plan_lifecycle.py",
-    ".agents/skills/harness/writing-plans/scripts/request_review.py",
     ".agents/skills/harness/writing-plans/scripts/review_artifacts.py",
     ".agents/skills/youtube-transcript/SKILL.md",
     ".agents/skills/youtube-transcript/scripts/extract.py",

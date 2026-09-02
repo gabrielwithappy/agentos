@@ -1,12 +1,13 @@
 # Harness Evolution Status
 
-_Generated: 2026-09-01T13:51:00Z_
+_Generated: 2026-09-02T13:34:16Z_
 
 This Markdown file is the v1 user-facing status surface for harness evolution. It summarizes evidence from `HISTORY.md` and execution plan registries; it does not approve changes or override governance.
 
 ## Current Evolution Triggers
 
 - `[2026-09-01T00:20:00Z] [EVOLUTION_TRIGGER] trigger_id=pre-plan-plan-split-20260901 trigger_source=repeated Gate 2 review scope failures user_problem=계획 전 결정 게이트의 핵심 계약·흐름 연결·사용자 문서가 한 계획에 묶여 리뷰 수정이 반복됨 classification=local-fix plan=.agentos/project/exec-plans/active/2026-08-31-pre-plan-decision-gate-agent.md result=부모 조정 계획과 세 독립 자식 계획으로 책임·파일·검증 범위를 분리 artifact=.agentos/project/exec-plans/active/2026-09-01-pre-plan-decision-triage.md,.agentos/project/exec-plans/active/2026-09-01-pre-plan-flow-integration.md,.agentos/project/exec-plans/active/2026-09-01-pre-plan-user-surface.md verification=각 자식 계획에 단일 책임, 선행 조건, Run/Expected PASS, 계획별 Gate 2 경계를 명시 next_action=자식 계획별 독립 Gate 2 리뷰 후 승인된 순서로 구현`
+- `[2026-09-02T00:00:00Z] [EVOLUTION_TRIGGER] trigger_id=project-skill-selection-20260902 trigger_source=user-reported-project-init-UX user_problem=새 프로젝트 초기화에서 관리 문서가 누락되고 전체 스킬 복사로 프로젝트 surface가 복잡함 classification=harness-evolution plan=.agentos/project/exec-plans/active/2026-09-02-project-skill-selection.md result=전체 harness 유지, 목적별 optional skill selection과 managed-only sync를 계획 artifact=.agentos/project/exec-plans/archive/reference/intent/intent-20260902-project-skill-selection.md verification=focused regression + isolated install + pseudo-TTY planned next_action=Gate 2 review와 사용자 실행 승인 후 구현`
 
 Known trigger example: PMBOK open dossier confusion, where the user said `계획의 결과가 무엇인지 모르겠다` and needed a visible result/use guide.
 

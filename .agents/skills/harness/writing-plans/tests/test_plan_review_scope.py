@@ -58,9 +58,9 @@ def _record_default_reviews(review, root: Path) -> None:
             role,
             "PASS" if role == "plan-reviewer" else "PASS/CLEAN",
             reviewer_id,
-            "test",
+            "subagent",
             "scope reviewed",
-            None,
+            "implementer",
         )
 
 
@@ -114,7 +114,7 @@ def test_semantic_change_requires_new_review(tmp_path: Path):
     assert result.invalid["plan-reviewer"] == "semantic-snapshot-mismatch"
 
 
-def test_legacy_artifact_does_not_fail_on_full_hash_change(tmp_path: Path):
+def test_legacy_artifact_without_implementer_is_rejected(tmp_path: Path):
     review = _module()
     plan = tmp_path / "plan.md"
     _write_plan(plan)
@@ -154,7 +154,8 @@ def test_legacy_artifact_does_not_fail_on_full_hash_change(tmp_path: Path):
     plan.write_text(plan.read_text(encoding="utf-8") + "\n", encoding="utf-8")
 
     result = review.check_plan(tmp_path, "plan.md")
-    assert result.valid
+    assert not result.valid
+    assert result.invalid["plan-reviewer"] == "missing-implementer-id"
 
 
 def test_protected_approval_scope_requires_every_declared_file():
