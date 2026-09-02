@@ -1,0 +1,43 @@
+{
+  "categories": [
+    {
+      "name": "Dev Tools",
+      "servers": [
+        {
+          "key": "github",
+          "label": "GitHub",
+          "description": "Issues, PRs, and repositories",
+          "requires_env": ["GITHUB_TOKEN"],
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-github"]
+        }
+      ]
+    },
+    {
+      "name": "Data Storage",
+      "servers": [
+        {
+          "key": "sqlite",
+          "label": "SQLite",
+          "description": "Local database management",
+          "requires_env": [],
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db", "<path-to-db>"]
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "servers": [
+        {
+          "key": "google-search",
+          "label": "Google Search",
+          "description": "Real-time web search",
+          "requires_env": ["GOOGLE_SEARCH_API_KEY", "GOOGLE_SEARCH_CX"],
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-google-search"]
+        }
+      ]
+    }
+  ]
+}
