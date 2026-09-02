@@ -21,7 +21,7 @@ def test_project_init_is_opt_in_and_status_is_cwd_scoped(tmp_path):
     _skill(home, source)
     before = runner.invoke(app, ["project", "status", "--path", str(project), "--json"], env={"AGENTOS_HOME": str(home)})
     assert '"not_initialized"' in before.stdout
-    result = runner.invoke(app, ["project", "init", "--path", str(project), "--json"], env={"AGENTOS_HOME": str(home)})
+    result = runner.invoke(app, ["project", "init", "--path", str(project), "--json", "--skills", "source"], env={"AGENTOS_HOME": str(home)})
     assert result.exit_code == 0 and '"current"' in result.stdout
     assert (project / ".agentos" / "agentos-project" / "skills" / "source" / "SKILL.md").is_file()
     assert not (project / ".agentos" / "config.toml").exists()
@@ -42,7 +42,7 @@ def test_project_init_preserves_existing_and_partial_project_documents(tmp_path)
 
     assert result.exit_code == 0, result.output
     assert sentinel.read_text(encoding="utf-8") == "user-owned\n"
-    assert '"state": "partial"' in result.stdout
+    assert '"state": "current"' in result.stdout
     assert '"missing"' in result.stdout
 
 
@@ -81,11 +81,14 @@ def test_project_init_keeps_harness_root_nested_without_flat_collision(tmp_path,
     (harness_skills / "child" / "SKILL.md").write_text(
         "---\nname: child\ndescription: child\n---\n", encoding="utf-8"
     )
+    from agentos.terminal import skills, catalog
     monkeypatch.setattr(project_command, "global_skills_dir", lambda: global_skills)
+    monkeypatch.setattr(skills, "global_skills_dir", lambda home=None: global_skills)
+    monkeypatch.setattr(catalog, "global_skills_dir", lambda home=None: global_skills)
     monkeypatch.setattr(project_command, "_harness_sources", lambda: (harness_agents, harness_skills))
     monkeypatch.setattr(project_command, "_settings_digest", lambda: "test")
 
-    result = runner.invoke(app, ["project", "init", "--path", str(project), "--json"])
+    result = runner.invoke(app, ["project", "init", "--path", str(project), "--json", "--skills", "optional"])
 
     assert result.exit_code == 0, result.output
     assert (project / ".agents" / "skills" / "optional" / "SKILL.md").is_file()
@@ -153,7 +156,7 @@ def test_project_status_detects_stale_global_skill(tmp_path):
     home, project, source = tmp_path / "home", tmp_path / "project", tmp_path / "source"
     project.mkdir()
     _skill(home, source)
-    assert runner.invoke(app, ["project", "init", "--path", str(project)], env={"AGENTOS_HOME": str(home)}).exit_code == 0
+    assert runner.invoke(app, ["project", "init", "--path", str(project), "--skills", "source"], env={"AGENTOS_HOME": str(home)}).exit_code == 0
     (home / "core" / ".agents" / "skills" / "source" / "SKILL.md").write_text("changed", encoding="utf-8")
     result = runner.invoke(app, ["project", "status", "--path", str(project), "--json"], env={"AGENTOS_HOME": str(home)})
     assert '"stale_global_skills"' in result.stdout

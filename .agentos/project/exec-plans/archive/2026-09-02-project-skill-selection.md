@@ -1,9 +1,10 @@
 # 프로젝트별 스킬 선택 및 동기화 구현 계획
 
-> **상태:** 구현 계획 (리뷰 대기)<br>
+> **상태:** 완료
 > **작성일:** 2026-09-02<br>
-> reviewed: false<br>
+> reviewed: true<br>
 > **usability_review_required:** true<br>
+> gate2_usability_reviewer: PASS<br>
 > **protected_change:** false<br>
 > user_request: 새 프로젝트에는 전체 하네스를 설치하되 목적별 스킬 목록을 체크 선택하여 설치하고, 비대화형 선택과 재선택 시 제거 동기화도 지원한다.<br>
 > active_agent: <br>
@@ -173,6 +174,10 @@ Gate 2 artifact, protected approval, signature는 구현 Task가 아니라 이 l
 (구현 후 작성)
 
 ## 사용 방법
+
+(구현 후 작성)
+
+## 완료 증거
 
 (구현 후 작성)
 

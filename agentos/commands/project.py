@@ -4,15 +4,22 @@ import json
 import os
 import shutil
 import tempfile
+import sys
 from pathlib import Path
 
 import typer
+from rich.console import Console
+from rich.prompt import Prompt
 
 from agentos.terminal.paths import StateError, agentos_home, atomic_write_json
 from agentos.terminal.skills import global_skills_dir, skill_digest
 from agentos.terminal import base_resources
+from agentos.terminal.catalog import load_available_optional_skills, validate_selection, parse_skills_input
 
 app = typer.Typer(help="Reflect AgentOS global resources into a project", add_completion=False)
+skills_app = typer.Typer(help="Manage project skills", add_completion=False)
+app.add_typer(skills_app, name="skills")
+
 PROJECT_SCHEMA = "agentos.project/v1"
 MANAGED = "agentos-project"
 PROJECT_DOCUMENT_FILES = (
@@ -30,8 +37,6 @@ PROJECT_DOCUMENT_FILES = (
 )
 
 
-# Kept as narrow test/integration seams; resolution and validation remain in
-# the shared base_resources module.
 def _source_checkout_root() -> Path | None:
     return base_resources._source_checkout_root()
 
@@ -134,113 +139,258 @@ def _payload(root: Path) -> dict:
         "state": state,
         "skills": sorted(data["skills"]),
         "agents": sorted(data.get("agents", {})),
+        "optional_skills": data.get("optional_skills", []),
         "settings_activation": "project-local",
         "project_documents": documents,
     }
 
 
-@app.command()
-def init(path: str | None = typer.Option(None, "--path"), json_output: bool = typer.Option(False, "--json")) -> None:
-    try:
-        root = _root(path)
-        # The harness root is projected as one nested tree below. Exclude it
-        # from the flat optional-skill copy to avoid a duplicate destination
-        # and preserve the canonical `.agents/skills/harness/<child>` layout.
-        skills = [
-            entry
-            for entry in global_skills_dir().iterdir()
-            if entry.name != "harness"
-            and entry.is_dir()
-            and not entry.is_symlink()
-            and (entry / "SKILL.md").is_file()
-        ]
-        if not skills:
-            raise StateError("No skills installed. Next: agentos skill install <SKILL_DIRECTORY>")
-        managed = _managed(root)
-        managed.parent.mkdir(exist_ok=True)
-        documents_target = root / ".agentos" / "project"
-        documents_template = _project_template_root()
-        if not documents_target.exists() and documents_template is None:
-            raise StateError("Project document template is unavailable. Next: reinstall AgentOS")
-        project_agents = root / ".agents" / "agents"
-        project_skills = root / ".agents" / "skills"
-        for destination in (root / ".agents", project_agents, project_skills):
-            if destination.exists() and (destination.is_symlink() or not destination.is_dir()):
-                raise StateError(f"Managed project path is invalid: {destination}")
-        stage = Path(tempfile.mkdtemp(prefix=f".{MANAGED}.stage-", dir=managed.parent))
-        backup = managed.parent / f".{MANAGED}.backup"
+def _run_tty_selector(available: list, current_selection: list[str]) -> list[str]:
+    console = Console()
+    selection = set(current_selection)
+    
+    while True:
+        console.print("\n[bold]AgentOS Optional Skills[/bold]")
+        groups = {}
+        for s in available:
+            groups.setdefault(s.group_kr, []).append(s)
+            
+        idx = 1
+        idx_to_skill = {}
+        for group, items in groups.items():
+            console.print(f"\n[cyan]{group}[/cyan]")
+            for s in items:
+                mark = "\\[x]" if s.name in selection else "\\[ ]"
+                console.print(f"  {idx}. {mark} {s.name} - {s.summary}")
+                idx_to_skill[str(idx)] = s.name
+                idx += 1
+                
+        console.print("\nType a number to toggle, 'c' to confirm, or 'q' to cancel.")
+        choice = Prompt.ask("Action").strip().lower()
+        if choice == 'c':
+            return list(selection)
+        elif choice == 'q':
+            console.print("Cancelled.")
+            raise typer.Exit(2)
+        elif choice in idx_to_skill:
+            name = idx_to_skill[choice]
+            if name in selection:
+                selection.remove(name)
+            else:
+                selection.add(name)
+        else:
+            console.print("[red]Invalid choice[/red]")
+
+
+def _sync_project_skills(root: Path, selected_optional: list[str]) -> None:
+    managed = _managed(root)
+    managed.parent.mkdir(exist_ok=True)
+    
+    manifest_path = managed / "manifest.json"
+    prior_manifest = {}
+    prior_optional = []
+    if manifest_path.is_file() and not manifest_path.is_symlink():
         try:
-            target_skills = stage / "skills"
-            target_skills.mkdir()
-            records = {}
-            for source in skills:
-                digest = skill_digest(source)
-                shutil.copytree(source, target_skills / source.name)
-                if skill_digest(target_skills / source.name) != digest:
-                    raise StateError("Project skill staging validation failed.")
-                records[source.name] = digest
-            target_agents = stage / "agents"
-            target_agents.mkdir()
-            agent_records = {}
-            harness = _harness_sources()
-            if harness is not None:
-                source_agents, source_skills = harness
-                shutil.copytree(source_agents, target_agents / "harness")
-                shutil.copytree(source_skills, target_skills / "harness")
-                agent_records["harness"] = skill_digest(target_agents / "harness")
-                records["harness"] = skill_digest(target_skills / "harness")
-            atomic_write_json(stage / "manifest.json", {"schema_version": PROJECT_SCHEMA, "skills": records, "agents": agent_records, "settings_reference": {"digest": _settings_digest(), "activation": "project-local"}})
-            if backup.exists():
-                shutil.rmtree(backup)
-            for source, destination in ((target_skills, project_skills), (target_agents, project_agents)):
-                backup_runtime = destination.parent / f".{destination.name}.agentos-backup"
-                runtime_stage = destination.parent / f".{destination.name}.agentos-stage"
-                if backup_runtime.exists():
-                    shutil.rmtree(backup_runtime)
+            prior_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if "optional_skills" in prior_manifest:
+                prior_optional = prior_manifest["optional_skills"]
+            else:
+                # If no optional_skills field, assume all managed skills except harness are optional
+                prior_optional = [k for k in prior_manifest.get("skills", {}) if k != "harness"]
+        except Exception:
+            pass
+
+    project_agents = root / ".agents" / "agents"
+    project_skills = root / ".agents" / "skills"
+    
+    for destination in (root / ".agents", project_agents, project_skills):
+        if destination.exists() and (destination.is_symlink() or not destination.is_dir()):
+            raise StateError(f"Managed project path is invalid: {destination}")
+
+    stage = Path(tempfile.mkdtemp(prefix=f".{MANAGED}.stage-", dir=managed.parent))
+    backup = managed.parent / f".{MANAGED}.backup"
+    
+    try:
+        target_skills = stage / "skills"
+        target_skills.mkdir()
+        target_agents = stage / "agents"
+        target_agents.mkdir()
+        
+        records = {}
+        agent_records = {}
+
+        # 1. Copy unmanaged existing things
+        if project_agents.is_dir():
+            for item in project_agents.iterdir():
+                if item.name == "harness":
+                    continue
+                shutil.copytree(item, target_agents / item.name)
+        
+        if project_skills.is_dir():
+            for item in project_skills.iterdir():
+                if item.name == "harness" or item.name in prior_optional or item.name in selected_optional:
+                    continue
+                shutil.copytree(item, target_skills / item.name)
+
+        # 2. Copy harness
+        harness = _harness_sources()
+        if harness is not None:
+            source_agents, source_skills = harness
+            shutil.copytree(source_agents, target_agents / "harness")
+            shutil.copytree(source_skills, target_skills / "harness")
+            agent_records["harness"] = skill_digest(target_agents / "harness")
+            records["harness"] = skill_digest(target_skills / "harness")
+            
+        # 3. Copy selected optional skills
+        for name in selected_optional:
+            source = global_skills_dir() / name
+            if not source.is_dir():
+                raise StateError(f"Selected skill '{name}' is not installed globally.")
+            dest = target_skills / name
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(source, dest)
+            digest = skill_digest(source)
+            if skill_digest(dest) != digest:
+                raise StateError("Project skill staging validation failed.")
+            records[name] = digest
+
+        atomic_write_json(stage / "manifest.json", {
+            "schema_version": PROJECT_SCHEMA,
+            "skills": records,
+            "agents": agent_records,
+            "optional_skills": selected_optional,
+            "settings_reference": {"digest": _settings_digest(), "activation": "project-local"}
+        })
+
+        if backup.exists():
+            shutil.rmtree(backup)
+            
+        for source_dir, destination in ((target_skills, project_skills), (target_agents, project_agents)):
+            backup_runtime = destination.parent / f".{destination.name}.agentos-backup"
+            runtime_stage = destination.parent / f".{destination.name}.agentos-stage"
+            
+            if backup_runtime.exists():
+                shutil.rmtree(backup_runtime)
+            if runtime_stage.exists():
+                shutil.rmtree(runtime_stage)
+            if destination.exists():
+                os.replace(destination, backup_runtime)
+            try:
+                shutil.copytree(source_dir, runtime_stage)
+                os.replace(runtime_stage, destination)
+            except OSError:
+                if backup_runtime.exists() and not destination.exists():
+                    os.replace(backup_runtime, destination)
+                raise
+            finally:
                 if runtime_stage.exists():
                     shutil.rmtree(runtime_stage)
-                if destination.exists():
-                    os.replace(destination, backup_runtime)
-                try:
-                    shutil.copytree(source, runtime_stage)
-                    os.replace(runtime_stage, destination)
-                except OSError:
-                    if backup_runtime.exists() and not destination.exists():
-                        os.replace(backup_runtime, destination)
-                    raise
-                finally:
-                    if runtime_stage.exists():
-                        shutil.rmtree(runtime_stage)
-                if backup_runtime.exists():
-                    shutil.rmtree(backup_runtime)
-            if managed.exists():
-                if managed.is_symlink() or not (managed / "manifest.json").is_file():
-                    raise StateError("Managed project state is invalid. Next: remove only .agentos/agentos-project after inspection.")
-                os.replace(managed, backup)
+            if backup_runtime.exists():
+                shutil.rmtree(backup_runtime)
+                
+        if managed.exists():
+            if managed.is_symlink() or not (managed / "manifest.json").is_file():
+                raise StateError("Managed project state is invalid. Next: remove only .agentos/agentos-project after inspection.")
+            os.replace(managed, backup)
+        try:
+            os.replace(stage, managed)
+        except OSError:
+            if backup.exists() and not managed.exists():
+                os.replace(backup, managed)
+            raise
+        if backup.exists():
+            shutil.rmtree(backup)
+            
+    finally:
+        if stage.exists():
+            shutil.rmtree(stage)
+
+
+def _bootstrap_docs(root: Path) -> None:
+    documents_target = root / ".agentos" / "project"
+    documents_template = _project_template_root()
+    if not documents_target.exists() and documents_template is None:
+        raise StateError("Project document template is unavailable. Next: reinstall AgentOS")
+        
+    if documents_template is not None:
+        if not documents_target.exists():
+            documents_stage = Path(tempfile.mkdtemp(prefix=".project-documents.stage-", dir=documents_target.parent))
             try:
-                os.replace(stage, managed)
-            except OSError:
-                if backup.exists() and not managed.exists():
-                    os.replace(backup, managed)
-                raise
-            if backup.exists():
-                shutil.rmtree(backup)
-            if not documents_target.exists() and documents_template is not None:
-                documents_stage = Path(tempfile.mkdtemp(prefix=".project-documents.stage-", dir=managed.parent))
-                try:
-                    shutil.copytree(documents_template, documents_stage / "project")
-                    os.replace(documents_stage / "project", documents_target)
-                finally:
-                    if documents_stage.exists():
-                        shutil.rmtree(documents_stage)
-        finally:
-            if stage.exists():
-                shutil.rmtree(stage)
-        payload = _payload(root)
+                shutil.copytree(documents_template, documents_stage / "project")
+                os.replace(documents_stage / "project", documents_target)
+            finally:
+                if documents_stage.exists():
+                    shutil.rmtree(documents_stage)
+        else:
+            # no-overwrite partial copy
+            for name in PROJECT_DOCUMENT_FILES:
+                src = documents_template / name
+                dst = documents_target / name
+                if src.is_file() and not dst.is_file():
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, dst)
+
+
+def _do_init_or_select(path: str | None, skills_input: str | None, json_output: bool) -> dict:
+    root = _root(path)
+    available = load_available_optional_skills()
+    
+    managed = _managed(root)
+    manifest_path = managed / "manifest.json"
+    
+    current_selection = []
+    if manifest_path.is_file():
+        try:
+            prior_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if "optional_skills" in prior_manifest:
+                current_selection = prior_manifest["optional_skills"]
+            else:
+                current_selection = [k for k in prior_manifest.get("skills", {}) if k != "harness"]
+        except Exception:
+            pass
+            
+    parsed = parse_skills_input(skills_input)
+    if parsed is not None:
+        selected = validate_selection(parsed, available)
+    else:
+        if sys.stdout.isatty():
+            selected = _run_tty_selector(available, current_selection)
+        else:
+            selected = current_selection
+
+    _sync_project_skills(root, selected)
+    _bootstrap_docs(root)
+    
+    return _payload(root)
+
+
+@app.command()
+def init(
+    path: str | None = typer.Option(None, "--path"), 
+    json_output: bool = typer.Option(False, "--json"),
+    skills: str | None = typer.Option(None, "--skills", help="Comma-separated skill names, or 'none' to skip optional skills")
+) -> None:
+    try:
+        payload = _do_init_or_select(path, skills, json_output)
     except (StateError, OSError) as exc:
         typer.echo(json.dumps({"state": "invalid", "message": str(exc)}) if json_output else str(exc), err=True)
         raise typer.Exit(2)
     typer.echo(json.dumps(payload, sort_keys=True) if json_output else "Project resources initialized. Next: agentos project status")
+
+
+@skills_app.command("select")
+def select(
+    path: str | None = typer.Option(None, "--path"), 
+    json_output: bool = typer.Option(False, "--json"),
+    skills: str | None = typer.Option(None, "--skills", help="Comma-separated skill names, or 'none' to skip optional skills")
+) -> None:
+    try:
+        payload = _do_init_or_select(path, skills, json_output)
+    except (StateError, OSError) as exc:
+        typer.echo(json.dumps({"state": "invalid", "message": str(exc)}) if json_output else str(exc), err=True)
+        raise typer.Exit(2)
+    typer.echo(json.dumps(payload, sort_keys=True) if json_output else "Project skills updated. Next: agentos project status")
 
 
 @app.command()

@@ -671,3 +671,12 @@ AGENTOS_CLAUDE_INTEGRATION=1 uv run pytest tests/test_claude_session_integration
 표시합니다. 오류 본문, 인증 토큰, 원본 header 값은 복구 안내에 표시하지 않습니다.
 
 Without `AGENTOS_CODEX_INTEGRATION=1`, these real-network checks do not run.
+
+## `agentos project init` and `agentos project skills select`
+
+Initialize a project with optional skills or reselect them.
+Interactive selection uses a TTY checkbox menu.
+
+Non-TTY usage:
+`agentos project init --skills name1,name2`
+`agentos project skills select --skills none`

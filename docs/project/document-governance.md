@@ -17,3 +17,6 @@
 ## 런타임 경계
 
 생성된 상태는 template source가 아니다. Agent Harness 소유 supporting material과 대상 프로젝트의 user-owned 문서를 분리하며, 통제된 확장이 촉발될 때만 supporting reference를 추가한다. 이 문서는 project document set의 소유권과 실행 경계를 정의한다.
+
+## Document Governance
+When `agentos project init` runs, it performs a no-overwrite partial document template copy. This preserves your customized project documents while safely adding any missing standard governance documents from the template.

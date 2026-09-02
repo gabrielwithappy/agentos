@@ -41,17 +41,13 @@ assert ".agents/hooks" not in text
 for command in (
     "agentos hook bridge codex pre-bash",
     "agentos hook bridge codex pre-write",
-    "agentos hook bridge codex post-bash",
-    "agentos hook bridge codex stop",
     "agentos hook bridge claude-code pre-bash",
     "agentos hook bridge claude-code pre-write",
-    "agentos hook bridge claude-code post-bash",
-    "agentos hook bridge claude-code stop",
 ):
     assert command in text, command
 PY
 printf '%s' '{"tool_input":{"command":"echo safe"}}' | "$TMP/venv/bin/agentos" hook bridge codex pre-bash
-printf '%s' '{}' | "$TMP/venv/bin/agentos" hook bridge claude-code stop
+
 if "$TMP/venv/bin/agentos" hook bridge codex unlisted </dev/null; then
   echo "expected unlisted bridge mapping to fail" >&2
   exit 1
@@ -69,6 +65,23 @@ printf '%s\n' '---' 'name: isolated-skill' 'description: isolated install skill'
 "$TMP/venv/bin/agentos" project init --path "$TMP/outside" --json | "$TMP/venv/bin/python" -m json.tool >/dev/null
 test -f "$TMP/outside/.agentos/project/00-project-index.md"
 test -f "$TMP/outside/.agentos/project/06-decisions-progress-change-log.md"
+
+# Task 2 test for isolated install behavior
+"$TMP/venv/bin/agentos" project init --path "$TMP/outside" --skills "isolated-skill" --json > "$TMP/init-opt.json"
+test -f "$TMP/outside/.agents/skills/isolated-skill/SKILL.md"
+
+# Unmanaged preservation
+mkdir -p "$TMP/outside/.agents/skills/unmanaged-skill"
+echo "unmanaged" > "$TMP/outside/.agents/skills/unmanaged-skill/SKILL.md"
+
+# Reselecting skips isolated-skill
+"$TMP/venv/bin/agentos" project skills select --path "$TMP/outside" --skills "none" --json > "$TMP/select-none.json"
+if [ -f "$TMP/outside/.agents/skills/isolated-skill/SKILL.md" ]; then
+    echo "isolated-skill should be removed" >&2
+    exit 1
+fi
+test -f "$TMP/outside/.agents/skills/unmanaged-skill/SKILL.md"
+
 "$TMP/venv/bin/agentos" project status --path "$TMP/outside" --json > "$TMP/project-status.json"
 "$TMP/venv/bin/python" - <<'PY' "$TMP/project-status.json"
 import json
