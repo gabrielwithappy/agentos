@@ -372,6 +372,8 @@
     "catalog/skills/baoyu-comic/SKILL.md",
     "catalog/skills/baoyu-infographic/SKILL.md",
     "catalog/skills/catalog.json",
+    "catalog/skills/agentos-core-guidance/SKILL.md",
+    "catalog/skills/agentos-core-guidance/evals/evals.json",
     "catalog/skills/claude-design/SKILL.md",
     "catalog/skills/codebase-inspection/SKILL.md",
     "catalog/skills/codex-imagegen-2/README.en.md",
