@@ -251,3 +251,215 @@ def test_approval_pending_output_for_missing_artifact(tmp_path: Path, monkeypatc
     captured = capsys.readouterr()
     assert "APPROVAL_PENDING gate2-review-check" in captured.out
 
+
+def test_record_fail_artifact_preserves_findings(tmp_path: Path):
+    review = _module()
+    plan = tmp_path / "plan.md"
+    _write_plan(plan)
+    findings = [
+        {
+            "id": "F-001",
+            "severity": "blocking",
+            "finding": "Missing preflight",
+            "recovery": "Add preflight",
+            "rereview": "Check preflight",
+        }
+    ]
+    out_path = review.record_review(
+        tmp_path,
+        "plan.md",
+        "plan-reviewer",
+        "FAIL",
+        "rev-1",
+        "subagent",
+        "failed review",
+        "implementer",
+        findings=findings,
+    )
+    loaded = review._load_artifact(out_path)
+    assert loaded["result"] == "FAIL"
+    assert loaded["findings"] == findings
+
+
+def test_fail_artifact_is_non_approving(tmp_path: Path):
+    review = _module()
+    plan = tmp_path / "plan.md"
+    _write_plan(plan)
+    findings = [
+        {
+            "id": "F-001",
+            "severity": "blocking",
+            "finding": "issue",
+            "recovery": "fix",
+            "rereview": "verify",
+        }
+    ]
+    review.record_review(
+        tmp_path,
+        "plan.md",
+        "plan-reviewer",
+        "FAIL",
+        "rev-1",
+        "subagent",
+        "failed review",
+        "implementer",
+        findings=findings,
+    )
+    result = review.check_plan(tmp_path, "plan.md")
+    assert not result.valid
+    assert result.invalid.get("plan-reviewer") in {"result-failed", "result-not-pass"}
+
+
+def test_complete_pass_sequence_is_approving(tmp_path: Path):
+    review = _module()
+    plan = tmp_path / "plan.md"
+    _write_plan(plan)
+    _record_default_reviews(review, tmp_path)
+    result = review.check_plan(tmp_path, "plan.md")
+    assert result.valid
+
+
+def _setup_closeout_plan(tmp_path: Path):
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        "\n".join(
+            [
+                "# Plan",
+                "> **상태:** 진행 중<br>",
+                "> reviewed: true<br>",
+                "- declared protected paths: `.agents/agents/harness/plan-reviewer.md`",
+                "",
+                "## 구현 결과",
+                "변경 파일: `.agents/agents/harness/plan-reviewer.md` 가 성공적으로 구현되었습니다.",
+                "",
+                "## 사용 방법",
+                "실행 명령: `python3 --version`",
+                "",
+                "## 완료 증거",
+                "검증 명령: `python3 -c 'print(\"PASS\")'` 검증 결과: PASS review_artifacts.py run_harness_tests.sh",
+                "",
+                "## 아카이브 결정",
+                "사용자 요청 시까지 active에 유지하고 archive --status 완료를 수행한다.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return plan
+
+
+def test_closeout_accepts_concrete_result(tmp_path: Path):
+    review = _module()
+    plan = _setup_closeout_plan(tmp_path)
+    receipt_file = tmp_path / "receipt.json"
+    receipt = {
+        "schema": "closeout-verification-v1",
+        "plan_path": "plan.md",
+        "plan_sha256": review.plan_hash(plan.read_text(encoding="utf-8")),
+        "generated_at": "2026-09-04T00:00:00Z",
+        "changed_paths": [".agents/agents/harness/plan-reviewer.md"],
+        "usage_command": "python3 --version",
+        "usage_exit_code": 0,
+        "verifiers": [{"command": "pytest", "exit_code": 0, "result": "PASS"}],
+    }
+    receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
+    assert review.closeout_check(tmp_path, "plan.md", "receipt.json") == 0
+
+
+def test_closeout_rejects_filler(tmp_path: Path):
+    review = _module()
+    plan = tmp_path / "plan.md"
+    plan.write_text("# Plan\n## 구현 결과\n(구현 후 작성)\n", encoding="utf-8")
+    receipt_file = tmp_path / "receipt.json"
+    receipt_file.write_text(json.dumps({"schema": "closeout-verification-v1"}), encoding="utf-8")
+    assert review.closeout_check(tmp_path, "plan.md", "receipt.json") == 1
+
+
+def test_closeout_rejects_missing_usage(tmp_path: Path):
+    review = _module()
+    plan = _setup_closeout_plan(tmp_path)
+    receipt_file = tmp_path / "receipt.json"
+    receipt = {
+        "schema": "closeout-verification-v1",
+        "plan_path": "plan.md",
+        "plan_sha256": review.plan_hash(plan.read_text(encoding="utf-8")),
+        "generated_at": "2026-09-04T00:00:00Z",
+        "changed_paths": [".agents/agents/harness/plan-reviewer.md"],
+        "usage_command": "",
+        "usage_exit_code": 1,
+        "verifiers": [{"command": "pytest", "exit_code": 0, "result": "PASS"}],
+    }
+    receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
+    assert review.closeout_check(tmp_path, "plan.md", "receipt.json") == 1
+
+
+def test_closeout_rejects_missing_fresh(tmp_path: Path):
+    review = _module()
+    plan = _setup_closeout_plan(tmp_path)
+    receipt_file = tmp_path / "receipt.json"
+    receipt = {
+        "schema": "closeout-verification-v1",
+        "plan_path": "plan.md",
+        "plan_sha256": review.plan_hash(plan.read_text(encoding="utf-8")),
+        "generated_at": "2026-09-04T00:00:00Z",
+        "changed_paths": [".agents/agents/harness/plan-reviewer.md"],
+        "usage_command": "python3 --version",
+        "usage_exit_code": 0,
+        "verifiers": [{"command": "pytest", "exit_code": 1, "result": "FAIL"}],
+    }
+    receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
+    assert review.closeout_check(tmp_path, "plan.md", "receipt.json") == 1
+
+
+def test_closeout_rejects_stale_receipt(tmp_path: Path):
+    review = _module()
+    plan = _setup_closeout_plan(tmp_path)
+    receipt_file = tmp_path / "receipt.json"
+    receipt = {
+        "schema": "closeout-verification-v1",
+        "plan_path": "plan.md",
+        "plan_sha256": "stale-hash",
+        "generated_at": "2026-09-04T00:00:00Z",
+        "changed_paths": [".agents/agents/harness/plan-reviewer.md"],
+        "usage_command": "python3 --version",
+        "usage_exit_code": 0,
+        "verifiers": [{"command": "pytest", "exit_code": 0, "result": "PASS"}],
+    }
+    receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
+    assert review.closeout_check(tmp_path, "plan.md", "receipt.json") == 1
+
+
+def test_closeout_rejects_unscoped_changed_path(tmp_path: Path):
+    review = _module()
+    plan = _setup_closeout_plan(tmp_path)
+    receipt_file = tmp_path / "receipt.json"
+    receipt = {
+        "schema": "closeout-verification-v1",
+        "plan_path": "plan.md",
+        "plan_sha256": review.plan_hash(plan.read_text(encoding="utf-8")),
+        "generated_at": "2026-09-04T00:00:00Z",
+        "changed_paths": ["some/unscoped/file.py"],
+        "usage_command": "python3 --version",
+        "usage_exit_code": 0,
+        "verifiers": [{"command": "pytest", "exit_code": 0, "result": "PASS"}],
+    }
+    receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
+    assert review.closeout_check(tmp_path, "plan.md", "receipt.json") == 1
+
+
+def test_receipt_requires_all_verifiers(tmp_path: Path):
+    review = _module()
+    plan = _setup_closeout_plan(tmp_path)
+    receipt_file = tmp_path / "receipt.json"
+    receipt = {
+        "schema": "closeout-verification-v1",
+        "plan_path": "plan.md",
+        "plan_sha256": review.plan_hash(plan.read_text(encoding="utf-8")),
+        "generated_at": "2026-09-04T00:00:00Z",
+        "changed_paths": [".agents/agents/harness/plan-reviewer.md"],
+        "usage_command": "python3 --version",
+        "usage_exit_code": 0,
+        "verifiers": [],
+    }
+    receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
+    assert review.closeout_check(tmp_path, "plan.md", "receipt.json") == 1

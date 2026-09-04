@@ -63,6 +63,7 @@
 ## 사전 실행 Gate와 closeout 경계
 
 Gate 2 artifact, protected approval, signature는 구현 Task가 아니라 이 lifecycle section에서 확인한다. 기능 Task 안에 reviewer artifact 생성·self-signing·approval·closeout 기록을 넣지 않는다. `protected_change: true`이면 File Structure와 Task의 `.agents/**` 변경 경로를 `## 보호 변경 범위`에 선언하고 authorized architect approval을 먼저 확인한다.
+※ 주의 (Bootstrap Safety): 하네스/체커/리뷰어 자체를 변경하는 계획일 경우, Task 0(사전 게이트)에 아직 구현되지 않은 미래의 스키마나 필드를 assertion 조건으로 포함하지 마라. (현재 환경의 유효성만 검증하고, 새 스키마/기능 검증은 반드시 구현 후 Task에서 수행할 것)
 
 ## 보호 변경 범위
 

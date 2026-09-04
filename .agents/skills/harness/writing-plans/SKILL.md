@@ -317,6 +317,22 @@ fallback이 있는 경우에는 아래 형식을 사용한다:
 - MCP는 `mcp` dependency type으로 선언한다. 계획 또는 loop가 MCP를 자동 enable 하거나 provider detector/runtime config mutation으로 확장해서는 안 된다.
 - Network, plugin, credential, live-runtime, nonstandard-local-tool 사용이 계획 명령 또는 runtime assumption에 보이면 누락 없이 선언한다.
 
+## 부트스트랩 안전 게이트 (Bootstrap Safety Gate)
+
+하네스 자체(리뷰어 규칙, 체커 스크립트 `review_artifacts.py`, Gate 2 검증 로직, 아티팩트 스키마 등)를 변경·확장하는 계획을 작성할 때 반드시 다음 경계를 준수해야 한다:
+
+1. **사전 검증(Task 0 / Preflight)의 한계**:
+   - Task 0은 **구현 시작 전 현재 런타임 상태**를 검증하는 단계다.
+   - 따라서 Task 0의 Preflight 명령에서는 **현재 존재하는 레거시 체커/스키마 및 기존 의존성의 정상 동작 여부만 검증**해야 한다.
+   - **절대 금지**: 이번 계획에서 새로 구현하고자 하는 신규 아티팩트 필드(`review_round_id`, `triage_surface`, 새로운 schema 버전 등)나 아직 구현되지 않은 체커 옵션을 Task 0 사전 검증의 assertion 조건으로 걸어서는 안 된다. 이는 미구현 상태로 인해 사전 검증이 실패하고, 사전 검증 실패로 구현이 차단되는 **부트스트랩 순환 의존성(닭과 달걀 데드락)**을 발생시킨다.
+
+2. **미래 스키마/기능의 검증 위치**:
+   - 신규 아티팩트 스키마, 추가 필드, 새 플래그 및 체커 기능의 동작 검증은 반드시 **해당 기능이 구현된 후의 단계(Task 1~2 완료 후의 검증 Step 또는 단위 테스트)**에서 수행해야 한다.
+
+3. **리뷰어 아티팩트 작성 규칙 (Dynamic Hash & Fresh Read)**:
+   - 리뷰 에이전트는 계획 리뷰 시 반드시 파일시스템의 실제 최신 계획 파일(`.agentos/project/exec-plans/active/...`)을 읽고 그 시점의 `plan_hash` 및 `semantic_snapshot`을 동적으로 계산하여 아티팩트를 기록해야 한다.
+   - 캐시되거나 이전 턴의 stale한 해시를 재사용하여 발생하는 해시 불일치 루프를 방지한다.
+
 ## HISTORY Checkpoint Tagging Contract
 
 계획이 `HISTORY.md` evidence를 요구하거나 closeout checkpoint 예시를 제시할 때는 아래 규약을 함께 적는다:
@@ -442,8 +458,10 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
 계획 작성 완료 후 아래 절차를 수행한다:
 
 1. Gate 0, Gate 1 자기 검토 완료 후 **First-pass Review Triage**:
-   - 계획 type/surface를 한 번 분류하되 모든 계획에는 `plan-reviewer`와 `principle-auditor` independent review를 항상 실행한다.
-   - 계획이 user-facing surface를 바꾸면 `usability_review_required: true`를 기록하고 `usability-reviewer`를 추가한다. 해당되지 않으면 `usability_review_required: false`를 기록한다.
+   - `plan-reviewer`는 항상 첫 번째(first triage)로 계획을 분류하고 마지막(final adjudication)으로 최종 판정을 기록한다.
+   - `principle-auditor`는 항상 필수 두 번째 독립 reviewer로 실행한다. 이 두 mandatory core reviewer를 조건부로 바꾸지 않는다.
+   - 계획이 user-facing surface를 바꾸면 `usability_review_required: true`를 기록하고 `usability-reviewer`를 세 번째로 추가한다. 해당되지 않으면 `usability_review_required: false`를 기록한다.
+   - 충돌 finding은 `blocking`, `required-follow-up`, `non-blocking`으로 분류한다. unresolved blocking/required-follow-up는 구현을 차단한다.
    - UI/runtime/loop/dependency/lifecycle 전문 검토는 해당 surface가 존재할 때만 조건부로 routing한다.
 2. **독립 리뷰 기록과 recovery 확인**:
    - 에이전트가 스스로 우회 증거를 생성하지 못하며, independent reviewer artifact가 기록된 뒤 아래 검사를 실행한다.
