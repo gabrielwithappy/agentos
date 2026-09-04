@@ -3,11 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-09-04T08:45:28Z
+> Generated at: 2026-09-04T10:34:21Z
 
 ## Active Plans
-- 현재 실행 중인 계획 없음
 - older active plans omitted=0
+- `완료` [프로젝트 문서 최신화 구현 계획](.agentos/project/exec-plans/active/2026-09-04-update-project-docs.md) | reviewed | outcome: 최신 변경 사항과 의사 결정 내용이 `06-decisions-change-log.md` 문서에 깔끔하게 기록되어, 다음 작업 시 헷갈리지 않고 정확한 프로젝트 히스토리를 파악할 수 있다. | progress: 실행 대기
 
 ## Archived Plans
 - archive summary: completed=23, parked=0
