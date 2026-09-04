@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import pty
+import re
 import select
 import shlex
 import shutil
@@ -13,6 +15,13 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+
+
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def _plain(transcript: str) -> str:
+    return ANSI_RE.sub("", transcript)
 
 
 def _run_pty(args: list[str], writes: list[bytes], env: dict[str, str], timeout: float = 5.0) -> tuple[int, str]:
@@ -43,7 +52,13 @@ def _run_pty(args: list[str], writes: list[bytes], env: dict[str, str], timeout:
                     break
                 output.extend(chunk)
                 prompt_buffer.extend(chunk)
-                prompt_markers = (b"Type a message or / for commands", b"agentos[", b"[y/N]:", b"Action: ")
+                prompt_markers = (
+                    b"Type a message or / for commands",
+                    b"agentos[",
+                    b"[y/N]:",
+                    b"Action: ",
+                    b"Space to select",
+                )
                 if write_index < len(writes) and any(marker in prompt_buffer for marker in prompt_markers):
                     os.write(master, writes[write_index])
                     write_index += 1
@@ -220,7 +235,13 @@ def _run_pty_with_cwd(args: list[str], writes: list[bytes], env: dict[str, str],
                     break
                 output.extend(chunk)
                 prompt_buffer.extend(chunk)
-                prompt_markers = (b"Type a message or / for commands", b"agentos[", b"[y/N]:", b"Action: ")
+                prompt_markers = (
+                    b"Type a message or / for commands",
+                    b"agentos[",
+                    b"[y/N]:",
+                    b"Action: ",
+                    b"Space to select",
+                )
                 if write_index < len(writes) and any(marker in prompt_buffer for marker in prompt_markers):
                     os.write(master, writes[write_index])
                     write_index += 1
@@ -272,41 +293,68 @@ def _assert_delete_confirmation(root: Path) -> None:
 def _assert_project_skill_selection(command: str) -> None:
     tmp = Path(tempfile.mkdtemp(prefix="agentos-pty-skill-"))
     try:
+        command_path = str(Path(command).resolve())
         env = os.environ.copy()
         env["AGENTOS_HOME"] = str(tmp / "home")
-        
-        # Fake install
-        skill_dest = tmp / "home" / "core" / ".agents" / "skills" / "codebase-inspection"
-        skill_dest.mkdir(parents=True)
-        (skill_dest / "SKILL.md").write_text("---\nname: codebase-inspection\n---\n", encoding="utf-8")
-        
-        # 1. project init
-        # We need to simulate running agentos project init
-        # It will show the menu
-        # writes:
-        # b"1\n" (toggle skill 1)
-        # b"c\n" (confirm)
+
+        from agentos.terminal.catalog import load_available_optional_skills
+
+        available = load_available_optional_skills(home=tmp / "home")
+        assert len(available) >= 2
+        skills_root = tmp / "home" / "core" / ".agents" / "skills"
+        for skill in available:
+            skill_dest = skills_root / skill.name
+            skill_dest.mkdir(parents=True)
+            (skill_dest / "SKILL.md").write_text(
+                f"---\nname: {skill.name}\ndescription: {skill.summary}\n---\n",
+                encoding="utf-8",
+            )
+
+        first_skill = available[0].name
+        second_skill = available[1].name
+
         code, transcript = _run_pty_with_cwd(
-            [command, "project", "init"],
-            [b"1\n", b"c\n"],
+            [command_path, "project", "init"],
+            [b" ", b"\r"],
             env,
             tmp,
         )
         assert code == 0, transcript
-        assert "AgentOS Optional Skills" in transcript
-        assert "[ ]" in transcript  # Unchecked initially
-        assert "[x]" in transcript, f"Missing [x] in:\n{transcript}"
-        
-        # 2. project skills select
-        # Uncheck everything and confirm
+        plain = _plain(transcript)
+        assert "AgentOS Optional Skills" in plain
+        assert "[ ]" in plain  # Unchecked initially
+        assert "[x]" in plain, f"Missing [x] in:\n{transcript}"
+        assert "Use Up/Down or j/k to move, Space to select, Enter to confirm, q to cancel." in plain
+        assert "Type a number" not in plain
+        manifest = json.loads((tmp / ".agentos" / "agentos-project" / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["optional_skills"] == [first_skill]
+
         code, transcript = _run_pty_with_cwd(
-            [command, "project", "skills", "select"],
-            [b"1\n", b"c\n"],
+            [command_path, "project", "skills", "select"],
+            [b"j", b" ", b"\r"],
             env,
             tmp,
         )
         assert code == 0, transcript
-        # Should now be empty managed optional
+        plain = _plain(transcript)
+        assert f"> [ ] {second_skill}" in plain or f"> [x] {second_skill}" in plain
+        manifest = json.loads((tmp / ".agentos" / "agentos-project" / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["optional_skills"] == [first_skill, second_skill]
+
+        code, transcript = _run_pty_with_cwd(
+            [command_path, "project", "skills", "select"],
+            [b"?", b"q"],
+            env,
+            tmp,
+        )
+        assert code == 2, transcript
+        plain = _plain(transcript)
+        assert "Invalid key. Use Up/Down or j/k to move" in plain
+        assert "Space to select, Enter to confirm, q to" in plain
+        assert "Cancelled. No project skill changes were applied." in plain
+        assert "Next: rerun this command when" in plain
+        manifest = json.loads((tmp / ".agentos" / "agentos-project" / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["optional_skills"] == [first_skill, second_skill]
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
