@@ -29,6 +29,7 @@
 | LLM credential strategy 승인 | root project docs, implementation evidence note, and ADR approval fields updated | 후속 real provider implementation plan 작성 가능 | billing owner: project owner; API-key billing path excluded | approved |
 | REPL 중단 결정 취소 및 독립 CLI 방향 승인 | root docs, ADR, 후속 CLI implementation plan | 즉시 계획 작성 가능 | existing Python/Typer CLI를 기반으로 하며, provider credential safety boundary는 유지 | approved |
 | Gateway Core managed execution 추가 | root docs, ADR 0007, CLI/docs/tests/verifier | 구현 진행 중 | SQLite는 stdlib local registry로 제한; 외부 broker/network listener/credential store 없음 | approved |
+| 2026-09-04 안정화 개선 (Skill Catalog 정합성 수정, Reviewer Semantic 효율성 강화, TUI Selector UX 버그 수정) | CLI, TUI, Harness 리뷰 프롬프트 | 즉시 완료 | 없음 | 승인 및 구현 완료 |
 
 ## 지원 문서
 
