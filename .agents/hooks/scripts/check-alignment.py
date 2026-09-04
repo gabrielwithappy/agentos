@@ -95,12 +95,15 @@ def check_alignment() -> int:
 
     scripts_dir = root / ".agents" / "skills" / "harness" / "writing-plans" / "scripts"
     sys.path.insert(0, str(scripts_dir))
-    from review_artifacts import check_plan
+    from review_artifacts import check_plan, dispatch
 
     for plan_str in target_plans:
         plan_path = Path(plan_str)
         rel_path = plan_path.relative_to(root).as_posix() if plan_path.is_absolute() else plan_str
         try:
+            # Enforce dispatch --stage final with plan-reviewer-final adjudication before execution
+            if dispatch(root, rel_path, "final") != 0:
+                raise ValueError("dispatch --stage final failed: missing handoff or plan-reviewer-final adjudication")
             if not check_plan(root, rel_path).valid:
                 raise ValueError("invalid review evidence")
         except Exception:

@@ -101,6 +101,18 @@ Lesson candidates that do not yet have approval should remain in `HISTORY.md` or
 
 > Referenced by all agents.
 
+### 2026-09-05: coordinator - stale reviewer evidence must be hash-guarded
+- **Problem**: 독립 reviewer가 최신 plan을 검토한 뒤에도 이전 semantic hash의 artifact를 남겨 fresh Gate를 판정할 수 없었다.
+- **Cause**: artifact 작성 전후에 shared filesystem의 current hash를 원자적으로 확인하는 경계가 없었다.
+- **Solution**: 승인 전에는 stale artifact를 근거로 사용하지 않고 반복 오류를 HISTORY에 기록한 뒤 루프를 중지했다. Human approval pending.
+- **Prevention**: reviewer artifact write 전 current hash capture, write 후 hash 재검증, 불일치 시 quarantine을 필수화한다.
+
+### 2026-09-05: orchestrator - Bootstrap circular dependency between preflight and future schema
+- **Problem**: 하네스 리뷰어/체커 개편 계획 수립 시 사전 Gate(Task 0) 검증이 지속적으로 실패하여 무한 리뷰 루프가 발생함.
+- **Cause**: 계획 작성 에이전트가 아직 구현되지 않은 미래의 아티팩트 필드/스키마(`review_round_id`, `triage_surface` 등)를 Task 0 사전 검증의 assertion 조건으로 요구함. 리뷰어는 현재 규칙대로 아티팩트를 작성하므로 영원히 사전 게이트를 통과하지 못하는 부트스트랩 모순 발생.
+- **Solution**: `writing-plans/SKILL.md`, `TEMPLATE.md`, `plan-reviewer.md`에 `Bootstrap Safety Gate`를 신설하여 사전 검증(현재 상태만 검증)과 구현 후 검증(새 스키마 검증)의 경계를 명확히 분리함.
+- **Prevention**: 하네스/체커 자체 변경 시 Task 0 사전 게이트에 미래 스키마 assert 금지, 리뷰 시 파일시스템 최신 계획 직접 읽기 및 동적 해시 계산 강제.
+
 ### Initial Lessons
 - **API contract mismatch**: Parsing fails when backend uses `snake_case` but frontend expects `camelCase`. Casing must be specified in contract.
 - **Timezone issues**: Backend stores in UTC, frontend displays in local timezone. Unify on ISO 8601 format.
