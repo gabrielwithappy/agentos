@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import select as select_module
 import shutil
 import tempfile
 import sys
@@ -9,7 +10,6 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
-from rich.prompt import Prompt
 
 from agentos.terminal.paths import StateError, agentos_home, atomic_write_json
 from agentos.terminal.skills import global_skills_dir, skill_digest
@@ -145,41 +145,93 @@ def _payload(root: Path) -> dict:
     }
 
 
+def _read_selector_key() -> str:
+    char = sys.stdin.read(1)
+    if char == "\x1b":
+        sequence = char
+        while True:
+            ready, _, _ = select_module.select([sys.stdin], [], [], 0.01)
+            if not ready:
+                break
+            sequence += sys.stdin.read(1)
+            if len(sequence) >= 3:
+                break
+        if sequence == "\x1b[A":
+            return "up"
+        if sequence == "\x1b[B":
+            return "down"
+        return "cancel" if sequence == "\x1b" else "invalid"
+    if char in ("\r", "\n"):
+        return "confirm"
+    if char == " ":
+        return "toggle"
+    if char.lower() == "j":
+        return "down"
+    if char.lower() == "k":
+        return "up"
+    if char.lower() == "q":
+        return "cancel"
+    return "invalid"
+
+
 def _run_tty_selector(available: list, current_selection: list[str]) -> list[str]:
     console = Console()
     selection = set(current_selection)
-    
-    while True:
+    cursor_index = 0
+    if not available:
+        return []
+
+    import termios
+    import tty
+
+    stdin_fd = sys.stdin.fileno()
+    original_attrs = termios.tcgetattr(stdin_fd)
+
+    def render(message: str | None = None) -> None:
         console.print("\n[bold]AgentOS Optional Skills[/bold]")
         groups = {}
         for s in available:
             groups.setdefault(s.group_kr, []).append(s)
-            
-        idx = 1
-        idx_to_skill = {}
+
+        index = 0
         for group, items in groups.items():
             console.print(f"\n[cyan]{group}[/cyan]")
             for s in items:
+                cursor = ">" if index == cursor_index else " "
                 mark = "\\[x]" if s.name in selection else "\\[ ]"
-                console.print(f"  {idx}. {mark} {s.name} - {s.summary}")
-                idx_to_skill[str(idx)] = s.name
-                idx += 1
-                
-        console.print("\nType a number to toggle, 'c' to confirm, or 'q' to cancel.")
-        choice = Prompt.ask("Action").strip().lower()
-        if choice == 'c':
-            return list(selection)
-        elif choice == 'q':
-            console.print("Cancelled.")
-            raise typer.Exit(2)
-        elif choice in idx_to_skill:
-            name = idx_to_skill[choice]
-            if name in selection:
-                selection.remove(name)
+                console.print(f" {cursor} {mark} {s.name} - {s.summary}")
+                index += 1
+
+        console.print("\nUse Up/Down or j/k to move, Space to select, Enter to confirm, q to cancel.")
+        if message:
+            console.print(message)
+
+    try:
+        tty.setcbreak(stdin_fd)
+        message = None
+        while True:
+            render(message)
+            message = None
+            key = _read_selector_key()
+            if key == "confirm":
+                return [s.name for s in available if s.name in selection]
+            if key == "cancel":
+                console.print("Cancelled. No project skill changes were applied. Next: rerun this command when ready.")
+                raise typer.Exit(2)
+            if key == "toggle":
+                name = available[cursor_index].name
+                if name in selection:
+                    selection.remove(name)
+                else:
+                    selection.add(name)
+            elif key == "down":
+                cursor_index = (cursor_index + 1) % len(available)
+            elif key == "up":
+                cursor_index = (cursor_index - 1) % len(available)
             else:
-                selection.add(name)
-        else:
-            console.print("[red]Invalid choice[/red]")
+                message = "[red]Invalid key. Use Up/Down or j/k to move, Space to select, Enter to confirm, q to cancel.[/red]"
+    finally:
+        termios.tcsetattr(stdin_fd, termios.TCSADRAIN, original_attrs)
 
 
 def _sync_project_skills(root: Path, selected_optional: list[str]) -> None:
