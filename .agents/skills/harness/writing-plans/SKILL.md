@@ -441,10 +441,10 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
 
 계획 작성 완료 후 아래 절차를 수행한다:
 
-1. Gate 0, Gate 1 자기 검토 완료
-   - 계획이 user-facing prompts, wizard, setup/install flow, error messages, onboarding, 사용자 안내 docs, Discord interaction, 또는 command output을 바꾸는지 분류한다.
-   - 해당되면 계획에 `usability_review_required: true`를 기록하고 Gate 2에 `usability-reviewer` 리뷰를 포함한다.
-   - 해당되지 않으면 `usability_review_required: false`를 기록한다.
+1. Gate 0, Gate 1 자기 검토 완료 후 **First-pass Review Triage**:
+   - 계획 type/surface를 한 번 분류하되 모든 계획에는 `plan-reviewer`와 `principle-auditor` independent review를 항상 실행한다.
+   - 계획이 user-facing surface를 바꾸면 `usability_review_required: true`를 기록하고 `usability-reviewer`를 추가한다. 해당되지 않으면 `usability_review_required: false`를 기록한다.
+   - UI/runtime/loop/dependency/lifecycle 전문 검토는 해당 surface가 존재할 때만 조건부로 routing한다.
 2. **독립 리뷰 기록과 recovery 확인**:
    - 에이전트가 스스로 우회 증거를 생성하지 못하며, independent reviewer artifact가 기록된 뒤 아래 검사를 실행한다.
    ```bash
@@ -452,13 +452,14 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
    ```
    - `protected_change: true`이면 independent `harness-architect` approval도 요청한 뒤 같은 명령으로 재검증한다.
 3. **Issues Found → 작성 에이전트가 즉시 계획 문서를 수정한다:**
-   - 리뷰어가 지적한 모든 단점을 계획 문서 본문에 직접 반영한다
+   - 리뷰어가 지적한 모든 단점을 계획 문서 본문에 직접 반영한다.
+   - FAIL finding에는 finding ID, 영향 surface, 최소 수정 방향, 재검토가 필요한 reviewer 목록을 기록한다.
+   - cosmetic-only change는 재검토를 생략하고 existing semantic artifact를 재사용(targeted re-review)한다.
    - 수정한 항목을 아래 형식으로 문서 하단 `## 리뷰 반영 이력` 섹션에 기록한다:
      ```
      - [Gate 2 1차] <지적 내용> → <반영 내용> (예: "Task 없음 → Task 0/1 추가")
      ```
-   - 수정 완료 후 Gate 0 재검토 → 통과하면 Gate 2 재수행
-   - 사람에게 "수정하자"고 요청하지 마라 — 수정은 작성 에이전트의 책임이다
+   - 수정 완료 후 Gate 0 재검토 → 통과하면 Gate 2 재수행. 사람에게 "수정하자"고 요청하지 마라.
 4. **Approved** → `plan-reviewer=PASS`와 `principle-auditor=PASS|CLEAN`이 모두 확보되고, `usability_review_required: true`이면 `usability-reviewer=PASS`까지 확보되며, corresponding reviewer artifact가 runtime review surface에 기록되면 계획 파일 헤더에 `reviewed: true`, `> **상태:** 구현 계획 (실행 대기)` 반영 후 저장
 5. **[계획 작성 시작 즉시] 대시보드 발행 (대시보드 연동 설정 시):**
    계획 파일(`.agentos/project/exec-plans/active/<날짜>-<이름>.md`)을 생성하거나 제목이 확정된 직후, 아래 명령을 실행한다. 대시보드가 설정되지 않은 경우 이 명령은 안전하게 스킵되어 계획 작성을 막지 않는다.

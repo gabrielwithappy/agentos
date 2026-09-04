@@ -232,6 +232,7 @@
     ".agents/skills/harness/run-all-tests/tests/harness/test_dependency_gate_contract.sh",
     ".agents/skills/harness/run-all-tests/tests/harness/test_evolution_visibility_contract.sh",
     ".agents/skills/harness/run-all-tests/tests/harness/test_frontend_ui_intent_routing_contract.sh",
+    ".agents/skills/harness/run-all-tests/tests/harness/test_harness_pass_protocol.sh",
     ".agents/skills/harness/run-all-tests/tests/harness/test_harness_portability_contract.sh",
     ".agents/skills/harness/run-all-tests/tests/harness/test_harness_skill_suitability_contract.sh",
     ".agents/skills/harness/run-all-tests/tests/harness/test_history_checkpoint_contract.sh",

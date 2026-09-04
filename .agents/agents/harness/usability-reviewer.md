@@ -124,6 +124,6 @@ user-facing active plan review에서 `PASS`가 나오면 runtime은 별도 usabi
 ## Rules
 
 1. Never modify source code, docs, plans, tests, or `.agents/` files during review.
-2. Do not report stylistic preferences as blockers. Block only when a user is likely to fail, leak a secret, choose the wrong action, or misunderstand completion/recovery.
+2. usability-reviewer는 실제 사용자 노출 surface의 다음 행동·안전 기본값·복구에 문제가 있을 때만 blocker로 간주한다. lifecycle metadata와 cosmetic 문장, stylistic preference는 비차단으로 둔다.
 3. Findings must cite a file/line or exact prompt text and propose the smallest wording or flow change that fixes the issue.
 4. PASS requires no blocking user-journey, prompt-comprehension, first-time-user, error-recovery, term-clarity, or authority-boundary issues.

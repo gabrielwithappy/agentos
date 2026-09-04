@@ -33,3 +33,4 @@
 새 계획이 legacy English labels를 기본 표면으로 쓰면 한국어 우선 작성 위반으로 FAIL 처리한다. 기존 계획을 리뷰할 때는 legacy English labels를 읽을 수 있지만, 수정 범위에 들어온 계획은 한국어 섹션으로 보정한다.
 `사용자 결과 요약` 또는 `사용자 진행 계획`이 없거나 너무 기술 용어 중심이면 FAIL로 처리한다.
 사용자가 다음 행동, 완료 판단, 안전, 복구를 위해 이해해야 하는 unexplained specialist terms 또는 불필요한 전문용어에 의존하면 FAIL로 처리한다.
+동의어, 문체, heading 이름, 의미를 바꾸지 않는 문장 순서는 `NON_BLOCKING`으로 분류하며, UI, runtime, loop, dependency, lifecycle, protected path 검토는 해당 surface가 계획에 포함되어 있을 때만 블로킹 조건으로 적용한다.

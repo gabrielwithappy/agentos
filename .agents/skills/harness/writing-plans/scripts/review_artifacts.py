@@ -367,6 +367,8 @@ def record_review(
     snapshot = semantic_snapshot(text)
     out_dir = review_dir(root, rel_path)
     revisions = []
+    latest_snapshot = None
+    max_rev = 0
     if out_dir.is_dir():
         for candidate in out_dir.glob("*.json"):
             try:
@@ -375,7 +377,16 @@ def record_review(
                 continue
             if isinstance(prior.get("semantic_revision"), int):
                 revisions.append(prior["semantic_revision"])
-    revision = max(revisions, default=0) or 1
+                if prior["semantic_revision"] > max_rev:
+                    max_rev = prior["semantic_revision"]
+                    latest_snapshot = prior.get("semantic_snapshot")
+
+    if max_rev == 0:
+        revision = 1
+    elif latest_snapshot == snapshot:
+        revision = max_rev
+    else:
+        revision = max_rev + 1
 
     artifact = {
         "schema": ARTIFACT_SCHEMA,
@@ -442,7 +453,7 @@ def main() -> None:
                 invalid_bits = ",".join(f"{k}:{v}" for k, v in sorted(result.invalid.items()))
                 details.append(f"invalid={invalid_bits}")
             detail_text = " ".join(details) if details else "invalid-review-evidence"
-            print(f"FAIL gate2-review-check {detail_text}")
+            print(f"APPROVAL_PENDING gate2-review-check {detail_text}")
             raise SystemExit(1)
         return
 
