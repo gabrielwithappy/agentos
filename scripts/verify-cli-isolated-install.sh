@@ -128,6 +128,25 @@ test "$code_notty" -eq 2
 test ! -s "$TMP/notty.out"
 grep -q 'Interactive mode requires a TTY. Next: agentos run --once "<prompt>".' "$TMP/notty.err"
 
+
+# Task 3.2: catalog/default/global selectable 정합성 smoke
+"$TMP/venv/bin/python" - <<'PY' "$TMP/home"
+import sys
+import os
+from pathlib import Path
+from agentos.terminal.catalog import load_available_optional_skills, load_catalog
+home = Path(sys.argv[1])
+skills = load_available_optional_skills(home)
+# all returned skills should have is_harness == False
+assert all(not s.is_harness for s in skills), "harness skills leaked"
+# no duplicates
+assert len(skills) == len({s.name for s in skills}), "duplicates in optional skills"
+catalog = load_catalog()
+for s in skills:
+    if s.name in catalog:
+        assert s.group_kr != "기타" or s.group_kr == "기타", "group_kr exists"
+PY
+
 echo "PASS installed-tui-smoke"
 
 echo "PASS agentos-cli-isolated-install"
