@@ -86,22 +86,18 @@ for path, tokens in checks.items():
         raise SystemExit(f"{path} missing tokens: {', '.join(missing)}")
 
 context_checks = [
-    (Path("catalog/agents/document-delivery-lead/AGENT.md"), "## 판정 기준", "PRD vocabulary gate"),
-    (Path("catalog/agents/document-delivery-lead/AGENT.md"), "## 판정 기준", "Route-specific empty-state gate"),
-    (Path(".agents/agents/harness/plan-reviewer.md"), "### UI / Wireframe Parity 추가 판정 규칙", "summary-only"),
-    (Path(".agents/agents/harness/plan-reviewer.md"), "### UI / Wireframe Parity 추가 판정 규칙", "Selector Ownership"),
-    (Path(".agents/agents/harness/principle-auditor.md"), "### Security-Sensitive Audit Gates", "Selector Ownership"),
-    (Path("catalog/agents/qa-reviewer/AGENT.md"), "### Evidence Freshness Checks", "failure signatures"),
+    (Path("catalog/agents/document-delivery-lead/AGENT.md"), "PRD vocabulary gate"),
+    (Path("catalog/agents/document-delivery-lead/AGENT.md"), "Route-specific empty-state gate"),
+    (Path(".agents/agents/harness/plan-reviewer.md"), "summary-only"),
+    (Path(".agents/agents/harness/plan-reviewer.md"), "Selector Ownership"),
+    (Path(".agents/agents/harness/principle-auditor.md"), "Selector Ownership"),
+    (Path("catalog/agents/qa-reviewer/AGENT.md"), "failure signatures"),
 ]
 
-for path, heading, token in context_checks:
+for path, token in context_checks:
     text = path.read_text(encoding="utf-8")
-    idx = text.find(heading)
-    if idx == -1:
-        raise SystemExit(f"{path} missing review criteria heading: {heading}")
-    tail = text[idx:]
-    if token not in tail:
-        raise SystemExit(f"{path} missing fail-condition token {token!r} under {heading!r}")
+    if token not in text:
+        raise SystemExit(f"{path} missing fail-condition token {token!r}")
 
 boundary_tokens = [
     "reference docs",

@@ -58,7 +58,7 @@ For any security-sensitive plan, reviewer/agent contract change, prompt boundary
 
 ### Review Focus Boundary
 - 기능 Task와 Gate 2/protected approval/closeout lifecycle을 섞는 계획은 P1/P4 FAIL이다.
-- 우선 검토: 구조적 안전성, 중복·레거시, protected path, manifest, 권한 경계, 단순성, 데이터 손실·보안 위험.
+- principle-auditor는 P1/P4, 구조 중복, protected authority, security/prompt boundary만 독립적으로 검토하며, 기능 Task 자체를 반복하여 리뷰하지 않는다.
 - 문법·문체·표현 선호는 구조·의미·안전·복구를 바꾸지 않으면 finding이나 blocking 사유로 만들지 않는다.
 - 일반 reviewer artifact는 plan identity와 semantic scope를 사용하며, 전체 plan hash는 protected approval과 audit에만 요구한다.
 

@@ -204,3 +204,50 @@ def test_protected_change_requires_architect_approval(tmp_path: Path):
     
     result2 = review.check_plan(tmp_path, "plan.md")
     assert result2.valid
+
+
+def test_semantic_revision_increments_only_on_snapshot_change(tmp_path: Path, capsys):
+    review = _module()
+    plan = tmp_path / "plan.md"
+    _write_plan(plan)
+    
+    # Record first review
+    out_path1 = review.record_review(
+        tmp_path, "plan.md", "plan-reviewer", "PASS", "rev1", "subagent", "first", "imp"
+    )
+    artifact1 = review._load_artifact(out_path1)
+    assert artifact1["semantic_revision"] == 1
+    
+    # Record second review without semantic change
+    out_path2 = review.record_review(
+        tmp_path, "plan.md", "plan-reviewer", "PASS", "rev2", "subagent", "second", "imp"
+    )
+    artifact2 = review._load_artifact(out_path2)
+    assert artifact2["semantic_revision"] == 1
+    
+    # Change semantic content and record
+    text = plan.read_text(encoding="utf-8")
+    plan.write_text(text.replace("원래 목표", "변경된 목표"), encoding="utf-8")
+    
+    out_path3 = review.record_review(
+        tmp_path, "plan.md", "plan-reviewer", "PASS", "rev3", "subagent", "third", "imp"
+    )
+    artifact3 = review._load_artifact(out_path3)
+    assert artifact3["semantic_revision"] == 2
+
+def test_approval_pending_output_for_missing_artifact(tmp_path: Path, monkeypatch, capsys):
+    review = _module()
+    plan = tmp_path / "plan.md"
+    _write_plan(plan)
+    
+    import sys
+    monkeypatch.setattr(sys, "argv", ["review_artifacts.py", "check", "--plan", "plan.md", "--root", str(tmp_path)])
+    
+    try:
+        review.main()
+    except SystemExit as e:
+        assert e.code == 1
+        
+    captured = capsys.readouterr()
+    assert "APPROVAL_PENDING gate2-review-check" in captured.out
+

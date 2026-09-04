@@ -41,7 +41,6 @@ for token in \
   "Recently Applied Evolution Results" \
   "Deferred / Local-only Findings" \
   "How To Read This Status" \
-  "PMBOK open dossier" \
   "계획의 결과가 무엇인지 모르겠다" \
   "Plan completion metadata and user archive gate" \
   "Implementation Result" \

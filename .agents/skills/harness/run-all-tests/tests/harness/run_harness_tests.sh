@@ -94,37 +94,37 @@ check "T4-6: Brain 폴더 구조 확인" \
   'test -d "$PROJECT_ROOT/.agents/skills/harness/brain/resources/"'
 
 check "T4-7: history checkpoint contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_history_checkpoint_contract.sh" | grep -qx "PASS history-checkpoint-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_history_checkpoint_contract.sh" | grep -qEx "PASS[- ]history-checkpoint-contract"'
 
 check "T4-8: harness agent contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_agent_contracts.sh" | grep -qx "PASS agent-contracts"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_agent_contracts.sh" | grep -qEx "PASS[- ]agent-contracts"'
 
 # ─────────────────────────────────────────────────────
 echo ""
 echo "=== [T6] requirement-discovery output contract ==="
 
 check "T6-1: requirement-discovery output contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_requirement_discovery_output_contract.sh" | grep -q "PASS requirement-discovery-output-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_requirement_discovery_output_contract.sh" | grep -qE "PASS[- ]requirement-discovery-output-contract"'
 
 echo ""
 echo "=== [T7] agent project template contract ==="
 
 check "T7-1: agent project template contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_agent_project_template_contract.sh" | grep -q "PASS agent-project-template-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_agent_project_template_contract.sh" | grep -qE "PASS[- ]agent-project-template-contract"'
 
 # ─────────────────────────────────────────────────────
 echo ""
 echo "=== [T8] dependency gate contract ==="
 
 check "T8-1: dependency-gate-contract" \
-  '[[ "$(bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_dependency_gate_contract.sh")" == "PASS dependency-gate-contract" ]]'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_dependency_gate_contract.sh" | grep -qEx "PASS[- ]dependency-gate-contract"'
 
 # ─────────────────────────────────────────────────────
 echo ""
 echo "=== [T9] safety security prompt contract ==="
 
 check "T9-1: safety security prompt contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_safety_security_prompt_contract.sh" all | grep -q "PASS safety-security-prompt-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_safety_security_prompt_contract.sh" all | grep -qE "PASS[- ]safety-security-prompt-contract"'
 
 # ─────────────────────────────────────────────────────
 echo ""
@@ -139,42 +139,49 @@ echo ""
 echo "=== [T18] plan lifecycle completion contract ==="
 
 check "T18-1: plan lifecycle completion contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_plan_lifecycle_completion_contract.sh" | grep -qx "PASS plan-completion-lifecycle-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_plan_lifecycle_completion_contract.sh" | grep -qEx "PASS[- ]plan-completion-lifecycle-contract"'
 
 # ─────────────────────────────────────────────────────
 echo ""
 echo "=== [T19] evolution visibility contract ==="
 
 check "T19-1: evolution visibility contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_evolution_visibility_contract.sh" | grep -qx "PASS evolution-visibility-regression"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_evolution_visibility_contract.sh" | grep -qEx "PASS[- ]evolution-visibility-regression"'
 
 # ─────────────────────────────────────────────────────
 echo ""
 echo "=== [T20] user-facing terminology clarity ==="
 
 check "T20-1: user-facing terminology clarity contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_user_facing_terminology_clarity_contract.sh" | grep -qx "PASS user-facing-terminology-clarity-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_user_facing_terminology_clarity_contract.sh" | grep -qEx "PASS[- ]user-facing-terminology-clarity-contract"'
 
 # ─────────────────────────────────────────────────────
 echo ""
 echo "=== [T21] plan markdown metadata rendering ==="
 
 check "T21-1: plan markdown metadata contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_plan_markdown_metadata_contract.sh" | grep -qx "PASS plan-markdown-metadata-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_plan_markdown_metadata_contract.sh" | grep -qEx "PASS[- ]plan-markdown-metadata-contract"'
 
 # ─────────────────────────────────────────────────────
 echo ""
 echo "=== [T22] Costmaster harness transfer contract ==="
 
 check "T22-1: costmaster-harness-transfer-contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_costmaster_harness_transfer_contract.sh" | grep -qx "PASS costmaster-harness-transfer-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_costmaster_harness_transfer_contract.sh" | grep -qEx "PASS[- ]costmaster-harness-transfer-contract"'
 
 # ─────────────────────────────────────────────────────
 echo ""
 echo "=== [T23] intent-goal-first contract ==="
 
 check "T23-1: intent-goal-first contract" \
-  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_intent_goal_first_contract.sh" | grep -qx "PASS intent-goal-first-contract"'
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_intent_goal_first_contract.sh" | grep -qEx "PASS[- ]intent-goal-first-contract"'
+
+# ─────────────────────────────────────────────────────
+echo ""
+echo "=== [T24] harness pass protocol ==="
+
+check "T24-1: normalized pass contract" \
+  'bash "$PROJECT_ROOT/.agents/skills/harness/run-all-tests/tests/harness/test_harness_pass_protocol.sh" | grep -qEx "PASS[- ]normalized-pass-contract"'
 
 # ─────────────────────────────────────────────────────
 echo ""

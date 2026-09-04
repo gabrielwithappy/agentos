@@ -152,7 +152,8 @@ loop mode 계획이면 아래 Ralph loop suitability conditional check도 추가
 ## Review Focus Boundary
 
 - 우선 검토: 실행 가능성, 요구사항 정합성, 범위 누수, 안전·보호 경계, 의존성, 검증 가능성, 복구 가능성.
-- 문법·맞춤법·문체·표현 선호는 계획의 의미, 모호성, 안전, 복구, 완료 판단을 바꾸지 않으면 finding이나 blocking 사유로 만들지 않는다.
+- UI, runtime, loop, dependency, lifecycle, protected path 검토는 해당 surface가 계획에 포함되어 있을 때만 블로킹 조건으로 적용한다.
+- 동의어, 문체, heading 이름, 의미를 바꾸지 않는 문장 순서 등의 표면적 차이는 `NON_BLOCKING`으로 분류하며, 이를 이유로 리뷰를 FAIL 처리하지 않는다.
 - 계획 전체를 다시 읽더라도 핵심 계약 변경 여부를 먼저 판단하고, cosmetic-only 변경에는 최소한의 출력만 남긴다.
 - reviewer artifact는 plan path/hash 대신 plan identity, review scope, semantic revision, semantic snapshot을 우선 기록한다. 전체 hash와 signature는 protected approval과 audit에서만 필수다.
 
