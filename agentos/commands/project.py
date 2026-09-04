@@ -156,9 +156,9 @@ def _read_selector_key() -> str:
             sequence += sys.stdin.read(1)
             if len(sequence) >= 3:
                 break
-        if sequence == "\x1b[A":
+        if sequence in ("\x1b[A", "\x1bOA"):
             return "up"
-        if sequence == "\x1b[B":
+        if sequence in ("\x1b[B", "\x1bOB"):
             return "down"
         return "cancel" if sequence == "\x1b" else "invalid"
     if char in ("\r", "\n"):
@@ -189,6 +189,7 @@ def _run_tty_selector(available: list, current_selection: list[str]) -> list[str
     original_attrs = termios.tcgetattr(stdin_fd)
 
     def render(message: str | None = None) -> None:
+        console.clear()
         console.print("\n[bold]AgentOS Optional Skills[/bold]")
         groups = {}
         for s in available:
@@ -208,6 +209,8 @@ def _run_tty_selector(available: list, current_selection: list[str]) -> list[str
             console.print(message)
 
     try:
+        sys.stdout.write("\033[?1049h")
+        sys.stdout.flush()
         tty.setcbreak(stdin_fd)
         message = None
         while True:
@@ -232,6 +235,8 @@ def _run_tty_selector(available: list, current_selection: list[str]) -> list[str
             else:
                 message = "[red]Invalid key. Use Up/Down or j/k to move, Space to select, Enter to confirm, q to cancel.[/red]"
     finally:
+        sys.stdout.write("\033[?1049l")
+        sys.stdout.flush()
         termios.tcsetattr(stdin_fd, termios.TCSADRAIN, original_attrs)
 
 
