@@ -13,11 +13,9 @@ def test_load_catalog():
     assert not catalog["future-slide"].is_harness
 
 def test_load_available_optional_skills(tmp_path):
+    # Empty home -> no global skills
     skills = load_available_optional_skills(home=tmp_path)
-    names = [s.name for s in skills]
-    assert "future-slide" in names
-    assert "harness" not in names
-    assert "agentos-core-guidance" not in names
+    assert len(skills) == 0
 
 def test_parse_skills_input():
     assert parse_skills_input(None) is None
@@ -38,9 +36,26 @@ def test_validate_selection():
     assert validate_selection([], available) == []
     
     # Invalid (unknown)
-    with pytest.raises(StateError, match="Unknown or invalid skill selected"):
+    with pytest.raises(StateError, match="is not installed as an optional project skill"):
         validate_selection(["c"], available)
         
     # Invalid (duplicate)
     with pytest.raises(StateError, match="Duplicate skill in selection"):
         validate_selection(["a", "a"], available)
+
+def test_catalog_only_skill_not_in_available(tmp_path):
+    # If home=tmp_path, then global_skills_dir is empty (nothing installed)
+    # Therefore, load_available_optional_skills should return empty list
+    skills = load_available_optional_skills(home=tmp_path)
+    assert len(skills) == 0
+
+    # Let's mock a global installation of 'future-slide' only
+    global_dir = tmp_path / "core" / ".agents" / "skills"
+    skill_dir = global_dir / "future-slide"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("---")
+    
+    skills2 = load_available_optional_skills(home=tmp_path)
+    names = [s.name for s in skills2]
+    assert "future-slide" in names
+    assert "codex-imagegen-2" not in names # catalog has it, but not installed

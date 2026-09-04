@@ -3,11 +3,12 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-09-04T06:27:00Z
+> Generated at: 2026-09-04T08:41:54Z
 
 ## Active Plans
 - older active plans omitted=0
-- `구현 계획 (실행 대기)` [project init 스킬 카탈로그/설치 정합성 개선 구현 계획](.agentos/project/exec-plans/active/2026-09-04-project-skill-catalog-install-alignment.md) | reviewed | progress: Gate 2 리뷰 통과, 사용자 실행 승인 대기.
+- `완료` [의미 중심 하네스 리뷰 효율화 구현 계획](.agentos/project/exec-plans/active/2026-09-04-reviewer-semantic-efficiency.md) | reviewed_evidence=invalid | progress: 독립 코드베이스 조사와 Intent Sheet 작성이 끝났고, Gate 2 리뷰 및 protected architect 승인이 필요하다.
+- `완료` [project init 스킬 카탈로그/설치 정합성 개선 구현 계획](.agentos/project/exec-plans/active/2026-09-04-project-skill-catalog-install-alignment.md) | reviewed_evidence=invalid | progress: 완료. (검증 통과 및 사용 방법 업데이트 완료)
 
 ## Archived Plans
 - archive summary: completed=21, parked=0

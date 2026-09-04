@@ -179,6 +179,7 @@ def _run_tty_selector(available: list, current_selection: list[str]) -> list[str
     selection = set(current_selection)
     cursor_index = 0
     if not available:
+        console.print("No optional project skills are installed. Continuing with default harness skills is safe. To add optional skills later, run this in your AgentOS terminal: agentos skill install <path-to-a-skill-directory>, then return to this project and run agentos project skills select.")
         return []
 
     import termios

@@ -182,3 +182,34 @@ def test_project_init_rejects_symlink_path(tmp_path):
     result = runner.invoke(app, ["project", "init", "--path", str(link)], env={"AGENTOS_HOME": str(home)})
     assert result.exit_code == 2
     assert "regular directory" in result.stderr
+
+def test_project_init_skills_rejection(tmp_path):
+    home, project = tmp_path / "home", tmp_path / "project"
+    project.mkdir()
+    # Empty setup
+    assert runner.invoke(app, ["setup"], env={"AGENTOS_HOME": str(home)}).exit_code == 0
+    # Add a custom skill to global so available is NOT empty
+    source = tmp_path / "source"
+    _skill(home, source)
+    
+    # Try invalid skill when installed choices are present
+    result = runner.invoke(app, ["project", "init", "--path", str(project), "--skills", "invalid"], env={"AGENTOS_HOME": str(home)})
+    assert result.exit_code == 2
+    assert "Installed choices are" in result.stderr
+    assert "Next: rerun with agentos project init --skills <available-name>" in result.stderr
+
+    # Try invalid skill when NO installed choices are present
+    import shutil
+    shutil.rmtree(home / "core" / ".agents" / "skills" / "demo", ignore_errors=True)
+    # also remove any default ones loaded by setup? we can just mock global_skills_dir to return empty
+    
+def test_project_init_skills_rejection_empty(tmp_path, monkeypatch):
+    home, project = tmp_path / "home", tmp_path / "project"
+    project.mkdir()
+    from agentos.terminal import skills
+    monkeypatch.setattr(skills, "global_skills_dir", lambda home=None: tmp_path / "empty")
+    
+    result = runner.invoke(app, ["project", "init", "--path", str(project), "--skills", "invalid"], env={"AGENTOS_HOME": str(home)})
+    assert result.exit_code == 2
+    assert "Installed choices are: none." in result.stderr
+    assert "Next: rerun without --skills to continue with default harness skills" in result.stderr

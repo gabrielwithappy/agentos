@@ -49,17 +49,20 @@ def load_catalog() -> dict[str, SkillMetadata]:
 
 def load_available_optional_skills(home: Path | None = None) -> list[SkillMetadata]:
     catalog = load_catalog()
-    
-    # Exclude harness
-    optional = {k: v for k, v in catalog.items() if not v.is_harness}
-    
-    # Also load custom global skills
+    optional = {}
     global_dir = global_skills_dir(home)
+    
     if global_dir.is_dir():
         for item in global_dir.iterdir():
             if item.is_dir() and (item / "SKILL.md").is_file():
-                if item.name not in optional and item.name not in catalog:
-                    # Parse frontmatter for summary if possible, else default
+                if item.name in catalog and catalog[item.name].is_harness:
+                    continue
+                if item.name == "harness":
+                    continue
+                
+                if item.name in catalog:
+                    optional[item.name] = catalog[item.name]
+                else:
                     summary = "Custom global skill"
                     try:
                         content = (item / "SKILL.md").read_text(encoding="utf-8")
@@ -78,12 +81,17 @@ def load_available_optional_skills(home: Path | None = None) -> list[SkillMetada
     
     return sorted(optional.values(), key=lambda x: (x.group_kr, x.name))
 
+
 def validate_selection(selection: list[str], available: list[SkillMetadata]) -> list[str]:
     available_names = {s.name for s in available}
     seen = set()
     for s in selection:
         if s not in available_names:
-            raise StateError(f"Unknown or invalid skill selected: {s}")
+            if available_names:
+                choices = ", ".join(sorted(available_names))
+                raise StateError(f"{s} is not installed as an optional project skill. Installed choices are: {choices}. Next: rerun with agentos project init --skills <available-name> or use agentos project skills select.")
+            else:
+                raise StateError(f"{s} is not installed as an optional project skill. Installed choices are: none. No optional skills were added. Next: rerun without --skills to continue with default harness skills, or run this in your AgentOS terminal: agentos skill install <path-to-a-skill-directory>, then return to this project and run agentos project skills select.")
         if s in seen:
             raise StateError(f"Duplicate skill in selection: {s}")
         seen.add(s)
