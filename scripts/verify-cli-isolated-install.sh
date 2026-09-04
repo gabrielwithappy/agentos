@@ -58,9 +58,9 @@ AGENTOS_HOME="$TMP/existing-home" "$TMP/venv/bin/agentos" setup --path "$TMP/exi
 grep -q "enabled=claude-code" "$TMP/setup-existing.out"
 grep -q "skipped_vendors=codex" "$TMP/setup-existing.out"
 test "$(cat "$TMP/existing/.codex/hooks.json")" = '{"user":"config"}'
-mkdir -p "$TMP/skill"
-printf '%s\n' '---' 'name: isolated-skill' 'description: isolated install skill' '---' > "$TMP/skill/SKILL.md"
-"$TMP/venv/bin/agentos" skill install "$TMP/skill" | grep -q "Successfully installed skill"
+mkdir -p "$TMP/isolated-skill"
+printf '%s\n' '---' 'name: isolated-skill' 'description: isolated install skill' '---' > "$TMP/isolated-skill/SKILL.md"
+"$TMP/venv/bin/agentos" skill install "$TMP/isolated-skill" | grep -q "Successfully installed skill"
 "$TMP/venv/bin/agentos" skill status --json | "$TMP/venv/bin/python" -m json.tool >/dev/null
 "$TMP/venv/bin/agentos" project init --path "$TMP/outside" --json | "$TMP/venv/bin/python" -m json.tool >/dev/null
 test -f "$TMP/outside/.agentos/project/00-project-index.md"
