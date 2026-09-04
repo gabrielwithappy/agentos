@@ -1,6 +1,6 @@
 # project init 스킬 카탈로그/설치 정합성 개선 구현 계획
 
-> **상태:** 완료<br>
+> **상태:** 완료
 > **작성일:** 2026-09-04<br>
 > reviewed: true<br>
 > **usability_review_required:** true<br>
