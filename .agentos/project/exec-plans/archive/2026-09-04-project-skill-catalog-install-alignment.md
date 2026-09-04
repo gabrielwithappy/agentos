@@ -1,6 +1,6 @@
 # project init 스킬 카탈로그/설치 정합성 개선 구현 계획
 
-> **상태:** 구현 계획 (실행 대기)<br>
+> **상태:** 완료
 > **작성일:** 2026-09-04<br>
 > reviewed: true<br>
 > **usability_review_required:** true<br>
@@ -9,9 +9,9 @@
 > active_agent: Codex<br>
 > active_session: current<br>
 > dashboard_item_id: (agentos dashboard sync-plan 실행 시 자동 기록됨)<br>
-> implementation_started_at: <br>
-> implementation_completed_at: <br>
-> implementation_duration: <br>
+> implementation_started_at: 2026-09-04T08:37:00Z<br>
+> implementation_completed_at: 2026-09-04T08:41:00Z<br>
+> implementation_duration: 4m 0s<br>
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
@@ -28,7 +28,7 @@
 - Durable Result Surface: `catalog/skills/catalog.json`, `agentos/terminal/catalog.py`, `agentos/terminal/skills.py`, `agentos/commands/project.py`, `tests/test_project_skill_selection.py`, `tests/test_project_command.py`, `scripts/verify-cli-isolated-install.sh`, 필요 시 `.agentos/project/02-product-scope-and-requirements.md`와 `.agentos/project/03-system-contract.md`
 - documentation-only exception: 없음. 이 계획은 CLI 동작과 카탈로그 메타데이터를 함께 수정한다.
 
-**진행 상태:** Gate 2 리뷰 통과, 사용자 실행 승인 대기.
+**진행 상태:** 완료. (검증 통과 및 사용 방법 업데이트 완료)
 
 **아키텍처:** 카탈로그 JSON은 스킬 이름/요약/카테고리 메타데이터의 기준으로 유지하되, `project init`의 selectable optional list는 실제 글로벌 설치 경로에 존재하는 non-harness 스킬만 노출한다. setup이 설치하는 bundled skill 목록과 catalog metadata가 어긋나지 않도록 focused contract를 추가한다.
 
@@ -246,17 +246,29 @@ Expected: `plan=.agentos/project/exec-plans/active/2026-09-04-project-skill-cata
 - 더 단순한 대안이 있음에도 복잡한 경로를 택했는가? 아니오. 런타임 확장이나 하네스 구조 변경 없이 기존 CLI와 catalog surface만 정리한다.
 
 ## 구현 결과
-
-(구현 후 작성)
+- `catalog.json` 스키마 오류 및 번들 스킬 메타데이터 정합성을 수정했습니다.
+- `agentos project init` 및 `project skills select` 실행 시 표시되는 선택 가능한 스킬 목록을 실제 글로벌 설치된 스킬들로만 제한했습니다.
+- 알 수 없거나 설치되지 않은 스킬을 명령줄 `--skills` 인자로 지정했을 때의 오류 메시지를 명확히 개선했습니다.
 
 ## 사용 방법
-
-(구현 후 작성)
+AgentOS 터미널에서 아래 명령을 실행할 때, 실제 설치된 스킬만 선택지에 표시됩니다:
+```bash
+agentos project init
+agentos project skills select
+```
+설치되지 않은 스킬을 지정하면 설치된 스킬 목록과 이후 해결 방법을 명확히 안내합니다.
 
 ## 완료 증거
+- `PASS catalog-default-skill-metadata-aligned`
+- `PASS project-skill-focused-tests` (18 passed)
+- `PASS project-command-tests` (13 passed)
+- `PASS project-skill-selection-tty`
+- `PASS agentos-cli-isolated-install`
 
-(구현 후 exact PASS outputs와 durable result surface를 기록)
+Durable Result Surface:
+- `catalog/skills/catalog.json`
+- `agentos/terminal/catalog.py`
+- `tests/test_project_skill_selection.py`
 
 ## 아카이브 결정
-
-(모든 구현과 검증, 하네스 리뷰 완료 후 아카이브 결정 사유 기록)
+이 계획은 아직 active에 남아 있으며, 사용자가 명시적으로 archive를 요청하면 `python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py archive .agentos/project/exec-plans/active/2026-09-04-project-skill-catalog-install-alignment.md --status 완료` 명령으로 이동합니다.

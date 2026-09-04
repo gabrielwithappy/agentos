@@ -117,6 +117,7 @@ def _assert_interactive(root: Path) -> None:
         env = os.environ.copy()
         env["PYTHONPATH"] = str(root)
         env["AGENTOS_HOME"] = str(tmp / "home")
+        env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
         env["AGENTOS_TUI_TEST_PLAIN"] = "1"
         python = str(root / ".venv" / "bin" / "python") if (root / ".venv" / "bin" / "python").exists() else sys.executable
         code, transcript = _run_pty(
@@ -146,6 +147,7 @@ def _assert_installed_tui(command: str, cwd: Path) -> None:
     try:
         env = os.environ.copy()
         env["AGENTOS_HOME"] = str(tmp / "home")
+        env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
         env["AGENTOS_TUI_TEST_PLAIN"] = "1"
         code, transcript = _run_pty_with_cwd(
             shlex.split(command),
@@ -265,6 +267,7 @@ def _assert_delete_confirmation(root: Path) -> None:
         env = os.environ.copy()
         env["PYTHONPATH"] = str(root)
         env["AGENTOS_HOME"] = str(tmp / "home")
+        env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
         python = str(root / ".venv" / "bin" / "python") if (root / ".venv" / "bin" / "python").exists() else sys.executable
         subprocess.run([python, "-m", "agentos.cli", "setup"], env=env, cwd=root, check=True, stdout=subprocess.DEVNULL)
         sid = subprocess.check_output(
@@ -296,19 +299,25 @@ def _assert_project_skill_selection(command: str) -> None:
         command_path = str(Path(command).resolve())
         env = os.environ.copy()
         env["AGENTOS_HOME"] = str(tmp / "home")
+        env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
 
-        from agentos.terminal.catalog import load_available_optional_skills
+        from agentos.terminal.catalog import load_available_optional_skills, load_catalog
+        import shutil
 
-        available = load_available_optional_skills(home=tmp / "home")
-        assert len(available) >= 2
         skills_root = tmp / "home" / "core" / ".agents" / "skills"
-        for skill in available:
+        skills_root.mkdir(parents=True, exist_ok=True)
+        catalog = load_catalog()
+        to_mock = [s for s in catalog.values() if not s.is_harness][:2]
+        for skill in to_mock:
             skill_dest = skills_root / skill.name
             skill_dest.mkdir(parents=True)
             (skill_dest / "SKILL.md").write_text(
                 f"---\nname: {skill.name}\ndescription: {skill.summary}\n---\n",
                 encoding="utf-8",
             )
+        
+        available = load_available_optional_skills(home=tmp / "home")
+        assert len(available) >= 2
 
         first_skill = available[0].name
         second_skill = available[1].name
@@ -355,6 +364,20 @@ def _assert_project_skill_selection(command: str) -> None:
         assert "Next: rerun this command when" in plain
         manifest = json.loads((tmp / ".agentos" / "agentos-project" / "manifest.json").read_text(encoding="utf-8"))
         assert manifest["optional_skills"] == [first_skill, second_skill]
+
+        # Test empty available skills
+        import shutil
+        shutil.rmtree(skills_root)
+        skills_root.mkdir()
+        code, transcript = _run_pty_with_cwd(
+            [command_path, "project", "init"],
+            [], # No interaction needed, it returns immediately
+            env,
+            tmp,
+        )
+        assert code == 0, transcript
+        plain = _plain(transcript)
+        assert "No optional project skills are installed" in plain
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
