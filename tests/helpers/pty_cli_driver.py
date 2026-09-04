@@ -28,6 +28,7 @@ def _run_pty(args: list[str], writes: list[bytes], env: dict[str, str], timeout:
     )
     os.close(slave)
     output = bytearray()
+    prompt_buffer = bytearray()
     deadline = time.time() + timeout
     write_index = 0
     try:
@@ -41,10 +42,12 @@ def _run_pty(args: list[str], writes: list[bytes], env: dict[str, str], timeout:
                 if not chunk:
                     break
                 output.extend(chunk)
-                prompt_markers = (b"Type a message or / for commands", b"agentos[", b"[y/N]:")
-                if write_index < len(writes) and any(marker in output for marker in prompt_markers):
+                prompt_buffer.extend(chunk)
+                prompt_markers = (b"Type a message or / for commands", b"agentos[", b"[y/N]:", b"Action: ")
+                if write_index < len(writes) and any(marker in prompt_buffer for marker in prompt_markers):
                     os.write(master, writes[write_index])
                     write_index += 1
+                    prompt_buffer = bytearray()
             if proc.poll() is not None:
                 break
         if proc.poll() is None:
@@ -202,6 +205,7 @@ def _run_pty_with_cwd(args: list[str], writes: list[bytes], env: dict[str, str],
     )
     os.close(slave)
     output = bytearray()
+    prompt_buffer = bytearray()
     deadline = time.time() + timeout
     write_index = 0
     try:
@@ -215,10 +219,12 @@ def _run_pty_with_cwd(args: list[str], writes: list[bytes], env: dict[str, str],
                 if not chunk:
                     break
                 output.extend(chunk)
-                prompt_markers = (b"Type a message or / for commands", b"agentos[", b"[y/N]:")
-                if write_index < len(writes) and any(marker in output for marker in prompt_markers):
+                prompt_buffer.extend(chunk)
+                prompt_markers = (b"Type a message or / for commands", b"agentos[", b"[y/N]:", b"Action: ")
+                if write_index < len(writes) and any(marker in prompt_buffer for marker in prompt_markers):
                     os.write(master, writes[write_index])
                     write_index += 1
+                    prompt_buffer = bytearray()
             if proc.poll() is not None:
                 break
         if proc.poll() is None:
@@ -262,6 +268,48 @@ def _assert_delete_confirmation(root: Path) -> None:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+
+def _assert_project_skill_selection(command: str) -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="agentos-pty-skill-"))
+    try:
+        env = os.environ.copy()
+        env["AGENTOS_HOME"] = str(tmp / "home")
+        
+        # Fake install
+        skill_dest = tmp / "home" / "core" / ".agents" / "skills" / "codebase-inspection"
+        skill_dest.mkdir(parents=True)
+        (skill_dest / "SKILL.md").write_text("---\nname: codebase-inspection\n---\n", encoding="utf-8")
+        
+        # 1. project init
+        # We need to simulate running agentos project init
+        # It will show the menu
+        # writes:
+        # b"1\n" (toggle skill 1)
+        # b"c\n" (confirm)
+        code, transcript = _run_pty_with_cwd(
+            [command, "project", "init"],
+            [b"1\n", b"c\n"],
+            env,
+            tmp,
+        )
+        assert code == 0, transcript
+        assert "AgentOS Optional Skills" in transcript
+        assert "[ ]" in transcript  # Unchecked initially
+        assert "[x]" in transcript, f"Missing [x] in:\n{transcript}"
+        
+        # 2. project skills select
+        # Uncheck everything and confirm
+        code, transcript = _run_pty_with_cwd(
+            [command, "project", "skills", "select"],
+            [b"1\n", b"c\n"],
+            env,
+            tmp,
+        )
+        assert code == 0, transcript
+        # Should now be empty managed optional
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--self-check", action="store_true")
@@ -269,7 +317,12 @@ def main() -> int:
     parser.add_argument("--installed-tui-smoke", metavar="COMMAND")
     parser.add_argument("--installed-textual-app", metavar="PYTHON")
     parser.add_argument("--cwd", default=None)
+    parser.add_argument("--project-skill-selection", metavar="COMMAND")
     args = parser.parse_args()
+    if args.project_skill_selection:
+        _assert_project_skill_selection(args.project_skill_selection)
+        print("PASS project-skill-selection-tty")
+        return 0
     if args.installed_textual_app:
         _assert_installed_textual_app(args.installed_textual_app)
         return 0

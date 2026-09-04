@@ -18,6 +18,10 @@ USABILITY_HEADER_RE = re.compile(
     r"^> (?:\*\*usability_review_required:\*\*|usability_review_required:) (true|false)(?:\s*<br\s*/?>)?$",
     re.MULTILINE,
 )
+PROTECTED_CHANGE_RE = re.compile(
+    r"^> (?:\*\*protected_change:\*\*|protected_change:) (true|false)(?:\s*<br\s*/?>)?$",
+    re.MULTILINE,
+)
 GATE2_RE = re.compile(r"^> gate2_[^:\n]+:.*$", re.MULTILINE)
 HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
 # Fields/sections that other harness contracts require agents to fill in
@@ -151,6 +155,65 @@ def required_reviewers_for_text(text: str) -> list[str]:
     return reviewers
 
 
+def is_protected_change(text: str) -> bool:
+    values = PROTECTED_CHANGE_RE.findall(text)
+    if values and (len(set(values)) != 1 or len(values) > 1):
+        raise ValueError("invalid-protected-metadata")
+    return values and values[0] == "true"
+
+
+def extract_declared_scope(text: str) -> set[str]:
+    match = re.search(r"^- declared protected paths:\s*(.+)$", text, re.MULTILINE)
+    if not match:
+        return set()
+    line = match.group(1)
+    paths = set(re.findall(r"`([^`]+)`", line))
+    if "manifest update" in line or "manifest data" in line:
+        paths.add("manifest update")
+    return paths
+
+
+def _architect_approval_problem(
+    artifact: dict[str, Any],
+    expected_plan_path: str,
+    expected_hash: str,
+    root: Path,
+    expected_scope: set[str],
+) -> str | None:
+    if artifact.get("schema") != "harness-architect-approval-v1":
+        return "schema-mismatch"
+    if artifact.get("plan_path") != expected_plan_path:
+        return "plan-path-mismatch"
+    if artifact.get("plan_sha256") != expected_hash:
+        return "plan-sha256-mismatch"
+    if artifact.get("reviewer_id") != "harness-architect":
+        return "missing-or-unauthorized-architect-provenance"
+    if artifact.get("reviewer_source") != "subagent":
+        return "unsupported-reviewer-source"
+    if artifact.get("decision") != "APPROVED":
+        return "result-not-pass"
+    
+    implementer_id = artifact.get("implementer_id")
+    if not implementer_id:
+        return "missing-implementer-id"
+    if implementer_id == artifact.get("reviewer_id"):
+        return "reviewer-equals-implementer"
+
+    auth_scope = artifact.get("authorized_scope")
+    if not isinstance(auth_scope, list) or set(auth_scope) != expected_scope:
+        return "extra-approval-scope"
+        
+    try:
+        import json
+        version_data = json.loads((root / ".agents" / "_version.json").read_text(encoding="utf-8"))
+        if artifact.get("reviewer_id") not in version_data.get("authorized_architects", []):
+            return "missing-or-unauthorized-architect-provenance"
+    except Exception:
+        return "missing-or-unauthorized-architect-provenance"
+
+    return None
+
+
 def _load_artifact(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -234,6 +297,21 @@ def check_plan(root: Path, plan_path: str) -> ReviewCheck:
             continue
         reviewer_ids[reviewer] = reviewer_id
         artifacts[reviewer] = artifact
+
+    is_protected = is_protected_change(text)
+    if is_protected:
+        artifact_path = artifacts_dir / "harness-architect-approval.json"
+        if not artifact_path.is_file():
+            missing.append("harness-architect-approval")
+        else:
+            artifact = _load_artifact(artifact_path)
+            problem = _architect_approval_problem(
+                artifact, rel_path, plan_hash(text), root, extract_declared_scope(text)
+            )
+            if problem:
+                invalid["harness-architect-approval"] = problem
+            else:
+                artifacts["harness-architect-approval"] = artifact
 
     valid = not missing and not invalid
     if valid:

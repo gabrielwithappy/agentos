@@ -860,12 +860,173 @@
         "reason_template": "agentos-core-guidance matches because the project needs portable planning, safety, and verification behavior without relying on a local AGENTS.md.",
         "already_installed_behavior": "already installed; use the project-local agentos-core-guidance skill"
       },
-      "source_path": "catalog/skills/agentos-core-guidance",
-      "install_path": ".agents/skills/agentos-core-guidance",
+      "category": "harness",
+      "source_path": ".agents/skills/harness/agentos-core-guidance",
+      "install_path": ".agents/skills/harness/agentos-core-guidance",
       "license": "MIT",
       "upstream": {
         "source": "AgentOS portable core operating guidance"
       }
+    },
+    {
+      "name": "harness",
+      "summary": "Route to the AgentOS harness skills and their reading order.",
+      "triggers": ["harness", "core skills", "agent workflow", "skill routing"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness",
+      "install_path": ".agents/skills/harness"
+    },
+    {
+      "name": "agent-token-info",
+      "summary": "Check agent token readiness and usage limits.",
+      "triggers": ["token status", "usage quota", "token info"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/agent-token-info",
+      "install_path": ".agents/skills/harness/agent-token-info"
+    },
+    {
+      "name": "brain",
+      "summary": "Load shared harness context and reasoning guidance.",
+      "triggers": ["context loading", "reasoning guidance", "harness brain"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/brain",
+      "install_path": ".agents/skills/harness/brain"
+    },
+    {
+      "name": "brainstorm",
+      "summary": "Explore intent and solution directions before planning.",
+      "triggers": ["brainstorm", "ideation", "explore approaches"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/brainstorm",
+      "install_path": ".agents/skills/harness/brainstorm"
+    },
+    {
+      "name": "careful",
+      "summary": "Guard destructive shell commands before execution.",
+      "triggers": ["destructive command", "command safety", "safe shell"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/careful",
+      "install_path": ".agents/skills/harness/careful"
+    },
+    {
+      "name": "debug",
+      "summary": "Diagnose failures with reproduction and verification.",
+      "triggers": ["debug", "error", "regression", "traceback"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/debug",
+      "install_path": ".agents/skills/harness/debug"
+    },
+    {
+      "name": "executing-plans",
+      "summary": "Execute a reviewed implementation plan with checkpoints.",
+      "triggers": ["execute plan", "implement reviewed plan", "plan execution"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/executing-plans",
+      "install_path": ".agents/skills/harness/executing-plans"
+    },
+    {
+      "name": "git-worktree-parallel",
+      "summary": "Manage isolated worktrees for parallel or protected work.",
+      "triggers": ["worktree", "parallel agent", "isolated branch"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/git-worktree-parallel",
+      "install_path": ".agents/skills/harness/git-worktree-parallel"
+    },
+    {
+      "name": "harness-loop",
+      "summary": "Run and monitor the harness execution loop.",
+      "triggers": ["harness loop", "automation loop", "resume loop"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/harness-loop",
+      "install_path": ".agents/skills/harness/harness-loop"
+    },
+    {
+      "name": "intent-clarification",
+      "summary": "Converge user intent, scope, and measurable completion criteria.",
+      "triggers": ["clarify intent", "scope clarification", "completion criteria"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/intent-clarification",
+      "install_path": ".agents/skills/harness/intent-clarification"
+    },
+    {
+      "name": "knowledge-curator",
+      "summary": "Manage durable project knowledge and research notes.",
+      "triggers": ["knowledge base", "research notes", "durable knowledge"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/knowledge-curator",
+      "install_path": ".agents/skills/harness/knowledge-curator"
+    },
+    {
+      "name": "mcp",
+      "summary": "Manage Model Context Protocol server configuration.",
+      "triggers": ["MCP", "MCP server", "connector configuration"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/mcp",
+      "install_path": ".agents/skills/harness/mcp"
+    },
+    {
+      "name": "pm",
+      "summary": "Decompose requirements into prioritized actionable work.",
+      "triggers": ["requirements", "product planning", "task breakdown"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/pm",
+      "install_path": ".agents/skills/harness/pm"
+    },
+    {
+      "name": "principle-auditor",
+      "summary": "Audit plans and architecture against harness principles.",
+      "triggers": ["principle audit", "architecture audit", "simplicity review"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/principle-auditor",
+      "install_path": ".agents/skills/harness/principle-auditor"
+    },
+    {
+      "name": "qa",
+      "summary": "Review quality, security, performance, and accessibility risks.",
+      "triggers": ["QA", "security review", "quality review"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/qa",
+      "install_path": ".agents/skills/harness/qa"
+    },
+    {
+      "name": "requirement-discovery",
+      "summary": "Discover and document unclear implementation requirements.",
+      "triggers": ["unclear requirements", "requirement discovery", "define problem"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/requirement-discovery",
+      "install_path": ".agents/skills/harness/requirement-discovery"
+    },
+    {
+      "name": "run-all-tests",
+      "summary": "Run the full harness test suite and integrity checks.",
+      "triggers": ["run harness tests", "full test suite", "integrity check"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/run-all-tests",
+      "install_path": ".agents/skills/harness/run-all-tests"
+    },
+    {
+      "name": "sync-manifest",
+      "summary": "Synchronize and verify harness asset manifests.",
+      "triggers": ["sync manifest", "manifest integrity", "harness assets"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/sync-manifest",
+      "install_path": ".agents/skills/harness/sync-manifest"
+    },
+    {
+      "name": "verification-before-completion",
+      "summary": "Require fresh evidence before completion claims.",
+      "triggers": ["verify completion", "fresh verification", "evidence before claim"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/verification-before-completion",
+      "install_path": ".agents/skills/harness/verification-before-completion"
+    },
+    {
+      "name": "writing-plans",
+      "summary": "Write executable implementation plans before coding.",
+      "triggers": ["write plan", "implementation plan", "plan quality"],
+      "category": "harness",
+      "source_path": ".agents/skills/harness/writing-plans",
+      "install_path": ".agents/skills/harness/writing-plans"
     }
   ]
 }

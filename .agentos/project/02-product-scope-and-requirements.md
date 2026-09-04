@@ -40,6 +40,7 @@ Work Contract 정의: 별도 파일/스키마/저장소를 새로 만드는 것�
 배경: 현재 `AGENTS.md`/`CLAUDE.md`는 cwd부터 조상 디렉터리까지 탐색해 어느 프로젝트에서든 발견되지만(`agentos/conversation/bootstrap.py:discover_context_files`), 스킬(`SKILL.md`)은 `AGENTOS_HOME/core/.agents/skills/`라는 고정 전역 경로에서만 검색되고(`agentos/terminal/sessions.py`), 그 경로조차 `agentos skill install <path>`로 스킬 하나씩 수동 복사해야만 채워진다(`agentos/commands/skill.py`) — 프로젝트별로 자동 반영되는 경로가 없다. `0005-agentos-independent-interactive-cli.md`가 이미 "project-local 규칙은 신뢰 승인 없이는 실행하지 않는다"는 원칙을 세워두었으나, 이를 실현하는 명시적 반영 명령이 없다.
 
 - REQ-HARNESS-002 (must, 계획 필요): AgentOS 기능(스킬 등 `AGENTOS_HOME`에 설치된 자원)은 설치 후 OS 자원처럼 어느 프로젝트에서든 전역으로 일관되게 사용 가능해야 하며, 사용자가 명시적 명령(예: `agentos project init`)으로 특정 프로젝트에 전역 기능을 반영(오버라이드/추가)할 수 있어야 한다. 반영은 opt-in이며, 명시적 반영 명령 없이는 project-local 자원이 전역 동작을 바꾸지 않는다.
+- REQ-HARNESS-002-d (must, 현재 계획): 핵심 harness skill은 `AGENTOS_HOME/core/.agents/skills/harness/` 아래의 canonical root/child tree에서 제공하고, catalog는 각 entry의 `category`, `source_path`, `install_path`를 표시한다. `agentos project init`은 이 동일한 tree를 프로젝트에 명시적으로 반영하며, optional catalog skill과 중복 source를 만들지 않는다.
 - 비목표: 이 requirement는 REQ-HARNESS-001-a~f(대상 프로젝트의 Work Contract/실행 계약)와 다른 층위다 — AgentOS 자신의 기능(스킬, 설정)을 전역과 프로젝트 사이에 어떻게 배치·전파하는지를 다루며, 대상 프로젝트의 작업 계약 내용과는 무관하다.
 
 | ID | requirement | Priority | acceptance | 추적성 | Evidence link / 검증 근거 | status |
@@ -111,6 +112,11 @@ Work Contract 정의: 별도 파일/스키마/저장소를 새로 만드는 것�
 - 추가적인 문서(예: SECURITY.md)에서도 혼동을 주는 문구가 발견될 경우
 
 ## 미해결 질문
+
+### 계획 리뷰 비용과 핵심 범위
+
+- 계획의 metadata-only 변경은 일반 reviewer artifact를 무효화하지 않는다. 도구가 semantic 변경을 자동 분류한 경우에만 재리뷰한다.
+- 질문으로 확정한 Intent Sheet가 사용자 의도의 기준이며, 이미 답변된 의도는 반복 질문하지 않는다. 새 모호성만 한 번에 하나씩 질문한다.
 
 | Question | Owner | Impact | Blocking? |
 |---|---|---|---|

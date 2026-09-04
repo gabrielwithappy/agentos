@@ -20,13 +20,13 @@ supporting discovery package가 존재해도 이 reviewer는 `Requirement Brief-
 ## Scope
 
 - 리뷰 대상: `.agentos/project/exec-plans/archive/reference/requirement-brief/requirement-brief-YYYYMMDD-<slug>.md`
-- 리뷰 대상: discovery package 규칙을 따르는 프로젝트의 `docs/project/reference/implementation/01-requirement-brief.md`
+- 리뷰 대상: discovery package 규칙을 따르는 프로젝트의 `.agentos/project/reference/implementation/01-requirement-brief.md`
 - 리뷰하지 않는 것:
   - 구현 가능성
   - 파일 구조 설계
   - task decomposition
   - 테스트 전략
-  - supporting discovery package (`docs/project/reference/implementation/02-user-stories.md`, `docs/project/reference/implementation/03-rtm.md`, `docs/project/reference/implementation/04-implementation-guide.md`)
+  - supporting discovery package (`.agentos/project/reference/implementation/02-user-stories.md`, `.agentos/project/reference/implementation/03-rtm.md`, `.agentos/project/reference/implementation/04-implementation-guide.md`)
 
 위 항목들은 `plan-reviewer` 또는 이후 planning 단계의 책임이다.
 

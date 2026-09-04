@@ -27,17 +27,17 @@ for file in "${required_files[@]}"; do
 done
 
 alignment_paths=(
-  "docs/project/reference/implementation/01-requirement-brief.md"
-  "docs/project/reference/implementation/02-user-stories.md"
-  "docs/project/reference/implementation/03-rtm.md"
-  "docs/project/reference/implementation/04-implementation-guide.md"
+  ".agentos/project/reference/implementation/01-requirement-brief.md"
+  ".agentos/project/reference/implementation/02-user-stories.md"
+  ".agentos/project/reference/implementation/03-rtm.md"
+  ".agentos/project/reference/implementation/04-implementation-guide.md"
 )
 
 for path in "${alignment_paths[@]}"; do
   grep -Eq "$path" .agents/skills/harness/requirement-discovery/SKILL.md
 done
-grep -Eq "docs/project/reference/implementation/01-requirement-brief.md" .agents/agents/harness/goal-alignment-reviewer.md
-! grep -Eq "docs/project/01-requirement-brief.md|docs/project/02-user-stories.md|docs/project/03-rtm.md|docs/project/04-implementation-guide.md" \
+grep -Eq ".agentos/project/reference/implementation/01-requirement-brief.md" .agents/agents/harness/goal-alignment-reviewer.md
+! grep -Eq ".agentos/project/01-requirement-brief.md|.agentos/project/02-user-stories.md|.agentos/project/03-rtm.md|.agentos/project/04-implementation-guide.md" \
   .agents/skills/harness/requirement-discovery/SKILL.md \
   .agents/agents/harness/goal-alignment-reviewer.md
 
@@ -74,8 +74,8 @@ for category in "${supporting_categories[@]}"; do
   test -f "docs/project/template/reference/$category/README.md"
   grep -Eq "reference/$category/" docs/project/README.md docs/project/template/00-project-index.md
   grep -Eq "$category/" docs/project/template/reference/README.md
-  grep -Eq "template/reference/$category/README.md" bin/aha
-  grep -Eq "reference/$category/README.md" bin/aha
+  grep -Eq "agentos project init" docs/cli-reference.md
+  grep -Eq "agentos project status" docs/cli-reference.md
   grep -Eq "does not override" "docs/project/template/reference/$category/README.md"
 done
 

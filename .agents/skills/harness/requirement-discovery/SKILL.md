@@ -34,7 +34,7 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 - "대충 이런 느낌", "정확히는 모르겠는데", "뭘 만들어야 할지 같이 정하자" 같은 요청
 - 구현에 앞서 사용자 목표, 구체 예시, 비목표를 먼저 문서화해야 하는 경우
 - `intent-clarification`을 바로 시작하기엔 요구사항이 아직 흐린 경우
-- `docs/project` 문서는 존재하지만 다음 구현에 필요한 정보가 충분히 닫혔는지 먼저 확인해야 하는 경우
+- `.agentos/project` 문서는 존재하지만 다음 구현에 필요한 정보가 충분히 닫혔는지 먼저 확인해야 하는 경우
 - `document-delivery-lead`가 문서 부족 또는 문서 준비 상태 blocker를 발견해 discovery reroute를 요구하는 경우
 - Codex CLI 진입이 아래 셋 중 하나로 성립하는 경우
   - 명시 호출: `requirement-discovery`, `요구사항 인터뷰 시작`, `요구사항 분석 시작`
@@ -84,12 +84,12 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 인터뷰가 충분히 수렴되면 아래 결과물 패키지를 함께 만든다.
 
 ### Primary discovery artifact
-- `docs/project/reference/implementation/01-requirement-brief.md`
+- `.agentos/project/reference/implementation/01-requirement-brief.md`
 
 ### Supporting discovery package
-- `docs/project/reference/implementation/02-user-stories.md`
-- `docs/project/reference/implementation/03-rtm.md`
-- `docs/project/reference/implementation/04-implementation-guide.md`
+- `.agentos/project/reference/implementation/02-user-stories.md`
+- `.agentos/project/reference/implementation/03-rtm.md`
+- `.agentos/project/reference/implementation/04-implementation-guide.md`
 
 원칙:
 - `Requirement Brief`는 사용자 목표와 문제 정의의 primary artifact다.
@@ -105,11 +105,11 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
 - 관련 파일, 기존 기능, 유사 패턴을 먼저 읽는다.
 - 이미 코드가 답해주는 질문은 사용자에게 다시 묻지 않는다.
 - `lessons-learned.md`의 Cross-Domain 섹션을 참고해 오버엔지니어링을 피한다.
-- `docs/project`가 이미 현재 작업의 기준선이면 먼저 `docs/project/README.md`, `docs/project/document-governance.md`, `docs/project/00-project-index.md`, `docs/project/01-project-charter.md`, `docs/project/02-product-scope-and-requirements.md`를 읽는다.
+- `.agentos/project`가 이미 현재 작업의 기준선이면 먼저 `.agentos/project/README.md`, `.agentos/project/document-governance.md`, `.agentos/project/00-project-index.md`, `.agentos/project/01-project-charter.md`, `.agentos/project/02-product-scope-and-requirements.md`를 읽는다. `docs/project`는 package-owned template source다.
 
 ### Phase 2: 요구사항 발견 인터뷰
 
-`docs/project`가 이미 사용자와 agent의 기준선이거나 `document-delivery-lead`가 reroute한 경우, 일반 Q1-Q5 인터뷰 전에 짧은 `docs/project` 문서 준비 상태 pass를 먼저 수행한다.
+`.agentos/project`가 이미 사용자와 agent의 기준선이거나 `document-delivery-lead`가 reroute한 경우, 일반 Q1-Q5 인터뷰 전에 짧은 `.agentos/project` 문서 준비 상태 pass를 먼저 수행한다.
 
 **DIAGNOSE**
 
@@ -129,7 +129,7 @@ You are part of the Agent Harness. You MUST read and follow **[AGENTS.md](AGENTS
   - model boundary / terminology: `03-system-contract.md`
   - verification expectation: `04-safety-risk-verification.md`
   - ownership / escalation: `05-agent-operating-contract.md`
-- user-facing frontend 또는 visual quality critical 작업이면 `docs/project/reference/implementation/` 아래 current visual support note(latest `.md` + optional `.excalidraw`)를 canonical capture surface로 취급한다.
+- user-facing frontend 또는 visual quality critical 작업이면 `.agentos/project/reference/implementation/` 아래 current visual support note(latest `.md` + optional `.excalidraw`)를 canonical capture surface로 취급한다.
 - current wireframe pair가 비어 있거나 frontend intent가 모호하면 아래 질문 축을 one-question protocol로 한 번에 하나씩 확인한다.
   - `좋아하는 레퍼런스`
   - `피해야 하는 레퍼런스`
@@ -197,7 +197,7 @@ loop mode에서는 짧고 명확한 진행 보고를 우선한다.
 인터뷰가 충분히 수렴되면 아래 산출물을 생성하거나 갱신한다.
 
 #### 4-1. Requirement Brief
-- 저장 위치: `docs/project/reference/implementation/01-requirement-brief.md`
+- 저장 위치: `.agentos/project/reference/implementation/01-requirement-brief.md`
 - 목적: 사용자 목표, 현재 문제, 예시, 비목표, 제약, 열린 질문을 고정
 - 성격: primary discovery artifact
 
@@ -229,7 +229,7 @@ loop mode에서는 짧고 명확한 진행 보고를 우선한다.
 ```
 
 #### 4-2. User Stories
-- 저장 위치: `docs/project/reference/implementation/02-user-stories.md`
+- 저장 위치: `.agentos/project/reference/implementation/02-user-stories.md`
 - 목적: 입력자/검토자/공통 사용자의 실제 행동을 story와 acceptance criteria로 정리
 
 ```markdown
@@ -246,7 +246,7 @@ loop mode에서는 짧고 명확한 진행 보고를 우선한다.
 ```
 
 #### 4-3. RTM
-- 저장 위치: `docs/project/reference/implementation/03-rtm.md`
+- 저장 위치: `.agentos/project/reference/implementation/03-rtm.md`
 - 목적: 요구사항과 사용자 스토리, 기능/화면, 최소 검증을 연결
 
 ```markdown
@@ -257,7 +257,7 @@ loop mode에서는 짧고 명확한 진행 보고를 우선한다.
 ```
 
 #### 4-4. Implementation Guide
-- 저장 위치: `docs/project/reference/implementation/04-implementation-guide.md`
+- 저장 위치: `.agentos/project/reference/implementation/04-implementation-guide.md`
 - 목적: 인터뷰와 참고 자료를 시스템 관점의 입력/계산/검토/이력 구조로 번역
 
 ```markdown
@@ -290,11 +290,11 @@ loop mode에서는 짧고 명확한 진행 보고를 우선한다.
 discovery package 저장 후 다음 메시지로 넘긴다:
 
 ```text
-Requirement discovery package가 `docs/project/reference/implementation/` 아래에 정리되었습니다.
-- Requirement Brief: `docs/project/reference/implementation/01-requirement-brief.md`
-- User Stories: `docs/project/reference/implementation/02-user-stories.md`
-- RTM: `docs/project/reference/implementation/03-rtm.md`
-- Implementation Guide: `docs/project/reference/implementation/04-implementation-guide.md`
+Requirement discovery package가 `.agentos/project/reference/implementation/` 아래에 정리되었습니다.
+- Requirement Brief: `.agentos/project/reference/implementation/01-requirement-brief.md`
+- User Stories: `.agentos/project/reference/implementation/02-user-stories.md`
+- RTM: `.agentos/project/reference/implementation/03-rtm.md`
+- Implementation Guide: `.agentos/project/reference/implementation/04-implementation-guide.md`
 
 이 결과물을 입력으로 intent-clarification 스킬을 실행해 Intent Sheet를 만들까요?
 ```
@@ -306,4 +306,4 @@ Requirement discovery package가 `docs/project/reference/implementation/` 아래
 - 비목표를 기록하지 않아 범위가 계속 커지게 두기
 - `Requirement Brief`를 `Intent Sheet` 대신 실행 계약 SSOT로 오해하기
 - supporting discovery package 없이 인터뷰를 끝내 개발 handoff가 끊기게 두기
-- `docs/project` 문서 준비 상태 결과를 별도 임시 artifact로 흩뜨리거나 두 번째 discovery 체계처럼 불려 나가게 두기
+- `.agentos/project` 문서 준비 상태 결과를 별도 임시 artifact로 흩뜨리거나 두 번째 discovery 체계처럼 불려 나가게 두기

@@ -94,30 +94,3 @@ def pre_tool_call(tool_name, tool_args):
             if result.returncode != 0:
                 print("AgentOS Unified Hook: File modification rejected by check-alignment.py (Missing User Alignment / Plan)", file=sys.stderr)
                 sys.exit(result.returncode)
-
-def post_tool_call(tool_name, tool_args, tool_result):
-    """Bridge for PostToolUse (e.g., post_tool_use_review.py)"""
-    if tool_name == "run_command":
-        root = get_workspace_root()
-        script_path = os.path.join(root, ".agents/hooks/scripts/post_tool_use_review.py")
-        if os.path.exists(script_path):
-            subprocess.run([sys.executable, script_path], env=os.environ)
-    elif tool_name in ["write_to_file", "replace_file_content", "multi_replace_file_content"]:
-        root = get_workspace_root()
-        script_path = os.path.join(root, ".agents/hooks/scripts/dashboard_sync_on_plan_write.py")
-        if os.path.exists(script_path):
-            payload = json.dumps({"tool_name": tool_name, "tool_input": tool_args})
-            subprocess.run(
-                [sys.executable, script_path, root],
-                input=payload,
-                capture_output=True,
-                text=True,
-                env=os.environ,
-            )
-
-def on_session_stop(session_data):
-    """Bridge for Stop Review Gate"""
-    root = get_workspace_root()
-    script_path = os.path.join(root, ".agents/hooks/scripts/stop_review_gate.py")
-    if os.path.exists(script_path):
-        subprocess.run([sys.executable, script_path], env=os.environ)
