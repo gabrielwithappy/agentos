@@ -14,7 +14,6 @@ It is a reading surface, not a runtime, and it does not auto-install anything.
 
 - `contrarian`
 - `goal-alignment-reviewer`
-- `knowledge-curator`
 - `plan-reviewer`
 - `principle-auditor`
 - `simplifier`

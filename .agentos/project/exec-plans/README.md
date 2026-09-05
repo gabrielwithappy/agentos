@@ -3,11 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-09-05T03:22:17Z
+> Generated at: 2026-09-05T03:46:36Z
 
 ## Active Plans
-- 현재 실행 중인 계획 없음
 - older active plans omitted=0
+- `완료` [redundant knowledge-curator 에이전트 제거 및 스킬 일원화 구현 계획](.agentos/project/exec-plans/active/2026-09-05-remove-redundant-knowledge-curator-agent.md) | reviewed_evidence=invalid | progress: 구현 및 전체 검증 완료
 
 ## Archived Plans
 - archive summary: completed=31, parked=0

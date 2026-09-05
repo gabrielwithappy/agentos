@@ -82,7 +82,6 @@
     ".agents/agents/harness/contrarian.md",
     ".agents/agents/harness/goal-alignment-reviewer.md",
     ".agents/agents/harness/harness-architect.md",
-    ".agents/agents/harness/knowledge-curator.md",
     ".agents/agents/harness/plan-reviewer.md",
     ".agents/agents/harness/principle-auditor.md",
     ".agents/agents/harness/simplifier.md",
