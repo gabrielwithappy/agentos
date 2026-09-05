@@ -1,6 +1,6 @@
 # Harness Evolution Status
 
-_Generated: 2026-09-05T02:16:17Z_
+_Generated: 2026-09-05T02:26:31Z_
 
 This Markdown file is the v1 user-facing status surface for harness evolution. It summarizes evidence from `HISTORY.md` and execution plan registries; it does not approve changes or override governance.
 
@@ -27,6 +27,7 @@ Known trigger example: PMBOK open dossier confusion, where the user said `계획
 - `[2026-09-05T08:35:00Z] [EVOLUTION_APPLIED] trigger_id=plan-reviewer-orchestrator-20260904 trigger_source=user-request-and-repeated-gate-review user_problem=excessive-review-conflict-and-bootstrap-cycle classification=harness-evolution plan=.agentos/project/exec-plans/archive/2026-09-04-plan-reviewer-orchestrator.md result=reviewer-routing-and-state-machine-applied artifact=.agents/agents/harness/plan-reviewer.md,.agents/skills/harness/writing-plans/scripts/review_artifacts.py verification=focused-review-tests,full-harness,public-suite,manifest next_action=archive-only-on-explicit-user-request`
 - `[2026-09-05T01:30:00Z] [EVOLUTION_APPLIED] trigger_id=remove-manifest-governance-20260905 trigger_source=user-request user_problem=manifest-governance-and-architect-approval-overhead classification=harness-evolution plan=.agentos/project/exec-plans/archive/2026-09-05-remove-manifest-governance.md result=manifest-and-architect-governance-removed artifact=AGENTS.md,.agentos/project/exec-plans/TEMPLATE.md,.agents/skills/harness/writing-plans/scripts/review_artifacts.py verification=focused-review-tests,full-harness,public-suite next_action=archived-by-user-request`
 - `[2026-09-05T01:57:00Z] [EVOLUTION_APPLIED] trigger_id=plan-frontmatter-standardization-20260904 trigger_source=user-request user_problem=plan-metadata-readability-and-legacy-support classification=harness-evolution plan=.agentos/project/exec-plans/archive/2026-09-04-plan-frontmatter.md result=plan-frontmatter-standardization-and-legacy-compat artifact=.agentos/project/exec-plans/TEMPLATE.md,.agents/skills/harness/writing-plans/SKILL.md,agentos/observability/plan_parser.py,.agents/skills/harness/writing-plans/scripts/plan_lifecycle.py,.agents/skills/harness/writing-plans/scripts/review_artifacts.py verification=focused-plan-parser-and-review-scope-tests,isolated-install-check,Gate2-subagent-consensus next_action=user-archive-decision`
+- `[2026-09-05T02:26:00Z] [EVOLUTION_APPLIED] trigger_id=knowledge-curator-path-normalization-20260905 trigger_source=user-request user_problem=dated-harness-skill-path-confusion-and-catalog-missing-warning classification=harness-evolution plan=.agentos/project/exec-plans/active/2026-09-05-knowledge-curator-path-normalization.md result=knowledge-curator-canonical-path-normalized artifact=.agents/skills/harness/knowledge-curator/,config/public-boundary.json verification=focused-knowledge-curator-evals,catalog-viewer-no-warning,full-harness,public-suite next_action=user-archive-decision`
 
 Applied result example: Plan completion metadata and user archive gate made completed active plans expose `Implementation Result`, `How To Use`, `Completion Evidence`, and `Archive Decision` before archive.
 

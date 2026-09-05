@@ -3,11 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-09-05T02:15:52Z
+> Generated at: 2026-09-05T02:26:01Z
 
 ## Active Plans
 - older active plans omitted=0
-- `리뷰 대기 (완료 후 '완료'로 변경)` [knowledge-curator harness 경로 정규화 구현 계획](.agentos/project/exec-plans/active/2026-09-05-knowledge-curator-path-normalization.md) | progress: 계획 초안 작성, Gate 2 리뷰 대기 중. 실제 rename·삭제·manifest 수정은 아직 실행하지 않았다.
+- `완료` [knowledge-curator harness 경로 정규화 구현 계획](.agentos/project/exec-plans/active/2026-09-05-knowledge-curator-path-normalization.md) | reviewed | progress: 계획 초안 작성, 독립 리뷰 대기 중
 
 ## Archived Plans
 - archive summary: completed=28, parked=0

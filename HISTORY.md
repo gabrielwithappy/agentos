@@ -93,3 +93,6 @@
 [2026-09-05T02:05:43Z] [CHECKPOINT] 하네스 검증 완료 | PASS=27 FAIL=0 | .agents/skills/harness/run-all-tests/tests/harness/run_harness_tests.sh
 [2026-09-05T02:16:00Z] [CHECKPOINT] 완료 계획 정리 | 2026-09-04-plan-frontmatter.md를 공식 lifecycle archive로 이동. 미완료 2026-09-05-knowledge-curator-path-normalization.md는 active 유지.
 [2026-09-05T02:16:19Z] [CHECKPOINT] 하네스 검증 완료 | PASS=27 FAIL=0 | .agents/skills/harness/run-all-tests/tests/harness/run_harness_tests.sh
+[2026-09-05T02:24:41Z] [CHECKPOINT] 하네스 검증 완료 | PASS=27 FAIL=0 | .agents/skills/harness/run-all-tests/tests/harness/run_harness_tests.sh
+[2026-09-05T02:26:00Z] [EVOLUTION_APPLIED] trigger_id=knowledge-curator-path-normalization-20260905 trigger_source=user-request user_problem=dated-harness-skill-path-confusion-and-catalog-missing-warning classification=harness-evolution plan=.agentos/project/exec-plans/active/2026-09-05-knowledge-curator-path-normalization.md result=knowledge-curator-canonical-path-normalized artifact=.agents/skills/harness/knowledge-curator/,config/public-boundary.json verification=focused-knowledge-curator-evals,catalog-viewer-no-warning,full-harness,public-suite next_action=user-archive-decision
+[2026-09-05T02:26:33Z] [CHECKPOINT] 하네스 검증 완료 | PASS=27 FAIL=0 | .agents/skills/harness/run-all-tests/tests/harness/run_harness_tests.sh
