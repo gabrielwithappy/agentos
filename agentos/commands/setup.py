@@ -113,10 +113,12 @@ def main(
     try:
         dest = initialize_state(Path(home) if home else None)
         summary = install_bundled_skills(dest, refresh=refresh_bundled_skills)
+        pruned_part = f", 정리 {summary.pruned}" if summary.pruned else ""
         console.print(
             "기본 카탈로그 스킬: "
             f"설치 {summary.installed}, 최신 {summary.already_current}, 갱신 {summary.bundled_updated}, "
             f"보존 {summary.custom_preserved}, 갱신 가능 {summary.bundled_update_available}, 실패 {summary.failed}"
+            f"{pruned_part}"
         )
         if summary.failed:
             raise StateError("Default skill installation failed. Next: agentos setup")

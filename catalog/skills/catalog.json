@@ -222,86 +222,6 @@
       "skill_tree_sha256": "cd14f0f9a8e6e858059853af2c75893ba98e0e118278782b34d728a7102bde7a"
     },
     {
-      "name": "ascii-art",
-      "summary": "Create text banners, boxes, and small ASCII/Unicode art.",
-      "category": "text-and-ideation",
-      "triggers": [
-        "ascii art",
-        "figlet",
-        "text banner",
-        "terminal logo",
-        "box drawing",
-        "unicode art"
-      ],
-      "when_to_recommend": {
-        "positive_examples": [
-          "make an ASCII banner for this project",
-          "draw a terminal text logo",
-          "put this warning in a box"
-        ],
-        "negative_examples": [
-          "render a production video",
-          "design a database schema",
-          "review this pull request"
-        ],
-        "reason_template": "ascii-art matches because the user asked for terminal-style text art or banners.",
-        "already_installed_behavior": "already installed; use the project-local ascii-art skill instead of reinstalling"
-      },
-      "source_path": "catalog/skills/ascii-art",
-      "install_path": ".agents/skills/ascii-art",
-      "license": "MIT",
-      "upstream": {
-        "source": "Hermes profile skill adapted for AgentOS catalog: ascii-art",
-        "profile": "myprofile",
-        "copied": "adapted-summary-only"
-      },
-      "verification": {
-        "install_smoke": "agentos skill install ascii-art --project <target> --yes",
-        "use_smoke": "test -f .agents/skills/ascii-art/SKILL.md"
-      },
-      "skill_tree_sha256": "92c8e18180eae6aa546df6795b428b69ee798347b1a3c9d7a21f67146b6dc037"
-    },
-    {
-      "name": "baoyu-comic",
-      "summary": "Plan educational comics, biography comics, and tutorial comic prompts.",
-      "category": "visual-assets",
-      "triggers": [
-        "comic",
-        "knowledge comic",
-        "educational comic",
-        "tutorial comic",
-        "biography comic",
-        "storyboard"
-      ],
-      "when_to_recommend": {
-        "positive_examples": [
-          "turn this lesson into a knowledge comic",
-          "make a biography comic storyboard",
-          "create panel prompts for a tutorial comic"
-        ],
-        "negative_examples": [
-          "debug failing tests",
-          "summarize a spreadsheet",
-          "configure GitHub auth"
-        ],
-        "reason_template": "baoyu-comic matches because the user asked for an educational or tutorial comic workflow.",
-        "already_installed_behavior": "already installed; use the project-local baoyu-comic skill instead of reinstalling"
-      },
-      "source_path": "catalog/skills/baoyu-comic",
-      "install_path": ".agents/skills/baoyu-comic",
-      "license": "MIT",
-      "upstream": {
-        "source": "Hermes profile skill adapted for AgentOS catalog: baoyu-comic",
-        "profile": "myprofile",
-        "copied": "adapted-summary-only"
-      },
-      "verification": {
-        "install_smoke": "agentos skill install baoyu-comic --project <target> --yes",
-        "use_smoke": "test -f .agents/skills/baoyu-comic/SKILL.md"
-      },
-      "skill_tree_sha256": "5becf5571876439b5e2c30d1ab47f2726641b56e19387c95f4edfb627d09317d"
-    },
-    {
       "name": "baoyu-infographic",
       "summary": "Plan dense infographics, information cards, and visual summaries.",
       "category": "visual-assets",
@@ -706,48 +626,6 @@
         "use_smoke": "test -f .agents/skills/frontend-design/SKILL.md"
       },
       "skill_tree_sha256": "f17fb91c8c226a1a7c448b9dfd1d4b95d87f1dc9eaed3a4c90f51e2f97802ce9"
-    },
-    {
-      "name": "xlsx",
-      "summary": "Create, read, edit, clean, and validate spreadsheet files such as .xlsx, .xlsm, .csv, and .tsv.",
-      "category": "productivity",
-      "triggers": [
-        "xlsx",
-        "spreadsheet",
-        "excel",
-        "workbook",
-        "csv",
-        "tsv",
-        "table cleaning",
-        "sheet"
-      ],
-      "when_to_recommend": {
-        "positive_examples": [
-          "edit an xlsx spreadsheet",
-          "create a workbook from this data",
-          "clean this CSV into a spreadsheet",
-          "fix formulas and formatting in an Excel file"
-        ],
-        "negative_examples": [
-          "build a frontend prototype",
-          "debug failing CI",
-          "operate Discord bot bridge",
-          "write a Word document only"
-        ],
-        "reason_template": "xlsx matches because the user asked to create, edit, clean, or validate spreadsheet data or files.",
-        "already_installed_behavior": "already installed; use the project-local xlsx skill instead of reinstalling"
-      },
-      "source_path": "catalog/skills/xlsx",
-      "install_path": ".agents/skills/xlsx",
-      "license": "MIT",
-      "upstream": {
-        "source": "Agent Harness repo-local skill migrated to optional catalog"
-      },
-      "verification": {
-        "install_smoke": "agentos skill install xlsx --project <target> --yes",
-        "use_smoke": "test -f .agents/skills/xlsx/SKILL.md && test -f .agents/skills/xlsx/scripts/recalc.py"
-      },
-      "skill_tree_sha256": "51d85101d96802cc764e67ed835f05152b52d612148543b723394e9177792758"
     },
     {
       "name": "youtube-transcript",
