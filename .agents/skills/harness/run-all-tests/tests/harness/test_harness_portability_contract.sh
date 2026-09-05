@@ -24,7 +24,6 @@ allowed_fragments = [
     ".agents/skills/harness/run-all-tests/tests/test_cli_adapters.py:/tmp/codex-last-message.txt",
     ".agents/skills/harness/run-all-tests/tests/test_cli_adapters.py:/tmp/codex-trace.log",
     ".agents/skills/harness/run-all-tests/tests/harness/run_harness_tests.sh:/tmp/nonexistent_",
-    ".agents/skills/harness/harness-loop/SKILL.md:/tmp/harness-loop.out",
     ".agents/skills/harness/skill-creator/SKILL.md:/tmp/",
     ".agents/skills/harness/qa/resources/error-playbook.md:/tmp/progress-",
 ]

@@ -18,9 +18,7 @@ It is a reading surface, not a runtime, and it does not auto-install anything.
 - `debug`
 - `executing-plans`
 - `git-worktree-parallel`
-- `harness-loop`
 - `intent-clarification`
-- `mcp`
 - `pm`
 - `principle-auditor`
 - `qa`
