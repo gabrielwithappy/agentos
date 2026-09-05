@@ -160,7 +160,7 @@ def evolution_completion_output(summary: str = "evolution closeout") -> str:
             f"마지막 checkpoint 요약: {summary}",
             "strategy_artifact_path: .agents/skills/harness-evolution/SKILL.md",
             "final_conclusion_path: .agentos/project/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md#final-closeout-evidence",
-            "harness-architect: PASS",
+            "principle-auditor: PASS",
             "<promise>HARNESS_COMPLETE</promise>",
         ]
     )

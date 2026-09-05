@@ -180,7 +180,7 @@ After all tasks complete and verified:
 
 ## Review-evidence recovery
 
-If review evidence is missing or out of date, do not execute. Request the required independent reviews and run `python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <plan-path>`. For `protected_change: true`, also request independent `harness-architect` approval before retrying.
+If review evidence is missing or out of date, do not execute. Request the required independent reviews and run `python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <plan-path>` before retrying.
 
 ## Integration
 

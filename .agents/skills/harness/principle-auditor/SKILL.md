@@ -35,9 +35,9 @@ model: sonnet
    ```
    Expected: 4 (정확히 예약 이름만 존재). 추가 항목 있으면 `[RESERVED_NAME_VIOLATION]` 태그
 
-4. **sync-manifest 일치 확인**
+4. **구조 회귀 확인**
    ```bash
-   bash .agents/harness/scripts/sync-manifest.sh --check 2>&1 | tail -5
+   bash .agents/skills/harness/run-all-tests/tests/harness/run_harness_tests.sh
    ```
    Expected: exit 0
 

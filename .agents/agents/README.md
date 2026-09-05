@@ -14,7 +14,6 @@ It is a reading surface, not a runtime, and it does not auto-install anything.
 
 - `contrarian`
 - `goal-alignment-reviewer`
-- `harness-architect`
 - `knowledge-curator`
 - `plan-reviewer`
 - `principle-auditor`
@@ -30,4 +29,3 @@ It is a reading surface, not a runtime, and it does not auto-install anything.
 - `agents install` must not auto-install; ask the user first.
 - `ask the user` is the default when a catalog agent is only a recommendation.
 - `do not auto-install` is a hard boundary for optional agents.
-

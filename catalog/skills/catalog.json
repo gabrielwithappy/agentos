@@ -1082,18 +1082,6 @@
       "install_path": ".agents/skills/harness/run-all-tests"
     },
     {
-      "name": "sync-manifest",
-      "summary": "Synchronize and verify harness asset manifests.",
-      "triggers": [
-        "sync manifest",
-        "manifest integrity",
-        "harness assets"
-      ],
-      "category": "harness",
-      "source_path": ".agents/skills/harness/sync-manifest",
-      "install_path": ".agents/skills/harness/sync-manifest"
-    },
-    {
       "name": "verification-before-completion",
       "summary": "Require fresh evidence before completion claims.",
       "triggers": [
