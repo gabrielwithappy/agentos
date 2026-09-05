@@ -3,7 +3,6 @@ status: 구현 계획 (리뷰 대기)
 date: 2026-09-04
 reviewed: false
 usability_review_required: true
-protected_change: true
 user_request: 계획문서 상단의 상태와 실행 metadata를 frontmatter로 읽기 쉽게 표현하고, 하네스 에이전트의 계획·리뷰·lifecycle 경로가 이를 사용하도록 계획을 작성한다.
 active_agent:
 active_session:
@@ -11,7 +10,7 @@ dashboard_item_id:
 implementation_started_at:
 implementation_completed_at:
 implementation_duration:
-next_action: 독립 reviewer PASS와 protected architect approval 후 구현
+next_action: 독립 reviewer PASS 후 구현
 ---
 
 # 계획문서 frontmatter metadata 표준화 구현 계획
@@ -59,7 +58,7 @@ next_action: 독립 reviewer PASS와 protected architect approval 후 구현
 |---|---|---|---|
 | 1. frontmatter 계약 정의 | 신규 계획 상단에서 metadata가 표준 YAML block으로 보임 | `TEMPLATE.md`, writing-plans guidance | template contract test PASS |
 | 2. 하위 도구 호환 | lifecycle과 reviewer가 frontmatter 계획을 legacy 계획과 동일하게 처리 | `plan_lifecycle.py`, `review_artifacts.py`, `plan_parser.py` | focused parser/reviewer/lifecycle tests PASS |
-| 3. 운영 경계 확인 | 기존 archive 계획을 강제 변환하지 않고 점진적으로 사용할 수 있음 | migration guidance, generated board | legacy compatibility 및 manifest PASS |
+| 3. 운영 경계 확인 | 기존 archive 계획을 강제 변환하지 않고 점진적으로 사용할 수 있음 | migration guidance, generated board | legacy compatibility 및 harness verifier PASS |
 
 ## 의존성 분석
 
@@ -67,11 +66,10 @@ next_action: 독립 reviewer PASS와 protected architect approval 후 구현
 - 기술적 제약: PyYAML 같은 새 dependency를 추가하지 않고, 현재 metadata 계약에 필요한 제한된 scalar frontmatter만 지원한다.
 - runtime action: lifecycle parser 변경 뒤 `plan_lifecycle.py refresh`와 reviewer contract 검증을 수행한다.
 
-## 보호 변경 범위
+## 리뷰 범위
 
-- declared protected paths: `.agents/agents/harness/plan-reviewer.md`, `.agents/agents/harness/principle-auditor.md`, `.agents/agents/harness/usability-reviewer.md`, `.agents/_version.json`, `.agents/mission/plan.json`, `.agents/skills/harness/writing-plans/SKILL.md`, `.agents/skills/harness/writing-plans/scripts/plan_lifecycle.py`, `.agents/skills/harness/writing-plans/scripts/review_artifacts.py`, `.agents/skills/harness/writing-plans/tests/test_plan_review_scope.py`, `manifest update`
-- required approval: `.agents/_version.json`의 `authorized_architects`에 따른 독립 harness-architect approval
-- required audit: `principle-auditor` 구조 감사와 `sync-manifest --update codex`, `sync-manifest --check`
+- 관련 reviewer surface: `.agents/agents/harness/plan-reviewer.md`, `.agents/agents/harness/principle-auditor.md`, `.agents/agents/harness/usability-reviewer.md`, `.agents/mission/plan.json`, `.agents/skills/harness/writing-plans/SKILL.md`, `.agents/skills/harness/writing-plans/scripts/plan_lifecycle.py`, `.agents/skills/harness/writing-plans/scripts/review_artifacts.py`, `.agents/skills/harness/writing-plans/tests/test_plan_review_scope.py`
+- required review: 독립 `plan-reviewer`, `principle-auditor`, `usability-reviewer` PASS
 
 ## 파일 구조
 
@@ -103,16 +101,16 @@ next_action: 독립 reviewer PASS와 protected architect approval 후 구현
 | frontmatter와 본문의 동일 key/legacy label 충돌 | `Conflicting plan metadata: keep the frontmatter field and remove the duplicate body metadata, then rerun plan_lifecycle.py refresh.` | 본문의 동일 `status`, `reviewed`, review flag, 담당자·실행 시각 label 중복을 제거하고 refresh 실행 | 충돌 해소 전에는 BLOCKED |
 | Gate 2 증거 없음/오래됨 | `Review evidence is missing or out of date. Request independent plan-reviewer, principle-auditor, and usability-reviewer PASS, then rerun python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan .agentos/project/exec-plans/active/2026-09-04-plan-frontmatter.md.` | reviewer를 독립 재실행하고 지정 명령을 재실행 | `reviewed: true` 전환 및 구현 BLOCKED |
 
-## Task 0: 구현 전 Gate 2와 protected approval
+## Task 0: 구현 전 Gate 2
 
 **파일:**
 - 수정: 없음
 
-**사용자에게 보이는 마일스톤:** 계획의 핵심 범위와 보호된 변경 권한이 구현 전에 독립적으로 확인된다.
+**사용자에게 보이는 마일스톤:** 계획의 핵심 범위가 구현 전에 독립적으로 확인된다.
 
-- [ ] **Step 0.1: 세 reviewer와 authorized harness-architect의 현재 계획 검토를 완료한다.**
+- [ ] **Step 0.1: 세 reviewer의 현재 계획 검토를 완료한다.**
 
-`plan-reviewer`, `principle-auditor`, `usability-reviewer`가 현재 semantic plan을 PASS한다. 보호 승인 artifact는 authorized harness-architect가 `.agents/traces/reviews/2026-09-04-plan-frontmatter/harness-architect-approval.json`에 독립적으로 제공하며, 그 `authorized_scope`는 위 exact declared protected paths와 일치해야 한다. 현재 `review_artifacts.py`가 frontmatter를 읽기 전이므로 이 preflight에서는 구현자가 `check`를 자기 승인에 사용할 수 없다. 외부 reviewer가 plan path·semantic hash·reviewer provenance·implementer 분리·authorized scope를 확인해 reviewer/architect artifact를 기록·전달한다. parser와 routing 구현 전에는 checker가 frontmatter 계획을 완전히 판정할 수 없으므로 `check` 결과를 PASS로 기대하지 않으며, Task 3.3에서 scope와 frontmatter 인식 구현을 반영한 뒤에만 fresh `check`로 검증한다. 이 Gate 전에는 Task 1–4의 파일 수정, lifecycle 실행, `sync-manifest --update`, `reviewed: true` 전환을 수행하지 않는다.
+`plan-reviewer`, `principle-auditor`, `usability-reviewer`가 현재 semantic plan을 PASS한다. 외부 reviewer가 plan path·semantic hash·reviewer provenance·implementer 분리를 확인해 artifact를 기록·전달한다. 이 Gate 전에는 Task 1–4의 파일 수정, lifecycle 실행, `reviewed: true` 전환을 수행하지 않는다.
 
 Run: `python3 - <<'PY'
 import json
@@ -120,18 +118,6 @@ from pathlib import Path
 base = Path('.agents/traces/reviews/2026-09-04-plan-frontmatter')
 names = ['plan-reviewer', 'principle-auditor', 'usability-reviewer']
 expected = '.agentos/project/exec-plans/active/2026-09-04-plan-frontmatter.md'
-scope = {
-    '.agents/agents/harness/plan-reviewer.md',
-    '.agents/agents/harness/principle-auditor.md',
-    '.agents/agents/harness/usability-reviewer.md',
-    '.agents/_version.json',
-    '.agents/mission/plan.json',
-    '.agents/skills/harness/writing-plans/SKILL.md',
-    '.agents/skills/harness/writing-plans/scripts/plan_lifecycle.py',
-    '.agents/skills/harness/writing-plans/scripts/review_artifacts.py',
-    '.agents/skills/harness/writing-plans/tests/test_plan_review_scope.py',
-    'manifest update',
-}
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location('review_artifacts', '.agents/skills/harness/writing-plans/scripts/review_artifacts.py')
 module = importlib.util.module_from_spec(spec); sys.modules[spec.name] = module; spec.loader.exec_module(module)
@@ -143,19 +129,9 @@ for name in names:
     assert data.get('result') in {'PASS', 'PASS/CLEAN', 'PASS/APPROVE'}
     assert data.get('reviewer_source') == 'subagent' and data.get('reviewer_id') != data.get('implementer_id')
     assert data.get('plan_sha256') == expected_hash
-approval = json.loads((base / 'harness-architect-approval.json').read_text(encoding='utf-8'))
-assert approval.get('schema') == 'harness-architect-approval-v1'
-assert approval.get('plan_path') == expected and approval.get('reviewer_source') == 'subagent'
-assert approval.get('reviewer_id') == 'harness-architect'
-assert approval.get('reviewer_id') != approval.get('implementer_id')
-assert approval.get('decision') == 'APPROVED'
-assert approval.get('plan_sha256') == expected_hash
-assert set(approval.get('authorized_scope', [])) == scope
-version = json.loads(Path('.agents/_version.json').read_text(encoding='utf-8'))
-assert approval['reviewer_id'] in version.get('authorized_architects', [])
 print('PASS preflight-review-handoff-validated')
 PY`
-Expected: `PASS preflight-review-handoff-validated`가 출력된다. frontmatter 지원 구현 전 `review_artifacts.py check`는 실행하지 않는다.
+Expected: `PASS preflight-review-handoff-validated`가 출력된다.
 
 ## Task 1: frontmatter 계약과 backward compatibility 고정
 
@@ -166,7 +142,7 @@ Expected: `PASS preflight-review-handoff-validated`가 출력된다. frontmatter
 
 - [ ] **Step 1.1: canonical fields와 허용 값 범위를 고정한다.**
 
-최소 fields: `status`, `date`, `reviewed`, `usability_review_required`, `protected_change`, `user_request`, `active_agent`, `active_session`, `dashboard_item_id`, `implementation_started_at`, `implementation_completed_at`, `implementation_duration`, `next_action`. 값은 현재 blockquote metadata와 동일한 의미를 유지한다. 빈 값은 화면에서 `미지정` 또는 `시작 전`으로 표시한다.
+최소 fields: `status`, `date`, `reviewed`, `usability_review_required`, `user_request`, `active_agent`, `active_session`, `dashboard_item_id`, `implementation_started_at`, `implementation_completed_at`, `implementation_duration`, `next_action`. 값은 현재 blockquote metadata와 동일한 의미를 유지한다. 빈 값은 화면에서 `미지정` 또는 `시작 전`으로 표시한다.
 
 Run: `pytest tests/test_plan_parser.py -q && echo "PASS plan-frontmatter-parser-baseline"`
 Expected: 기존 parser 테스트와 현재 frontmatter fixture가 PASS한다.
@@ -211,33 +187,14 @@ Expected: `PASS plan-parser-frontmatter-compat`
 
 - [ ] **Step 3.2: lifecycle status/reviewed 추출을 frontmatter 우선으로 바꾼다.**
 
-`plan_parser.py`를 lifecycle과 review artifact 양쪽의 metadata 읽기 단일 구현으로 사용한다. `plan_lifecycle.py`는 frontmatter 계획을 수집·분류하고 `set-status`와 `archive`에서 `status:`를 갱신한 뒤 board와 mission registry를 refresh한다. Task 3.3에서 기존 `PROTECTED_REVIEW_SCOPE`의 reviewer 정의와 `_version.json` 보호 항목은 유지하고, 실제 추가 변경 경로만 승인된 범위로 포함한다. legacy blockquote 계획은 기존처럼 처리한다. generated board의 status mapping과 plan identity는 바꾸지 않는다.
+`plan_parser.py`를 lifecycle과 review artifact 양쪽의 metadata 읽기 단일 구현으로 사용한다. `plan_lifecycle.py`는 frontmatter 계획을 수집·분류하고 `set-status`와 `archive`에서 `status:`를 갱신한 뒤 board와 mission registry를 refresh한다. Task 3.3에서 reviewer 정의 항목은 유지하고, 실제 추가 변경 경로만 검증 범위로 포함한다. legacy blockquote 계획은 기존처럼 처리한다. generated board의 status mapping과 plan identity는 바꾸지 않는다.
 
 Run: `pytest .agents/skills/harness/writing-plans/tests/test_plan_review_scope.py -q && python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py set-status .agentos/project/exec-plans/active/2026-09-04-plan-frontmatter.md '구현 계획 (실행 대기)' && python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh`
 Expected: exit 0이며 frontmatter `status:`가 갱신되고 완료 상태에서도 active plan과 `.agents/mission/plan.json` 항목이 유지되며 board에 표시된다.
 
 - [ ] **Step 3.3: review artifact 검사도 frontmatter metadata를 인식한다.**
 
-`plan_parser.py`를 lifecycle과 review artifact 양쪽의 공통 metadata reader로 사용한다. `reviewed: true`, `status`, usability/protected flags를 frontmatter에서 읽되, reviewer independence와 evidence validation 규칙은 그대로 유지한다. `normalize_plan_text()`에서 제외할 lifecycle-only 목록은 `status`, `reviewed`, `usability_review_required`, `protected_change`, `active_agent`, `active_session`, `dashboard_item_id`, `implementation_started_at`, `implementation_completed_at`, `implementation_duration`, `next_action`으로 고정한다. 목표·범위·Task·검증 계약 변경은 계속 감지한다.
-
-현재 `PROTECTED_REVIEW_SCOPE`의 기존 reviewer 정의와 `_version.json` 항목을 equality 변경으로 제거하지 않는다. authorized harness-architect가 승인한 실제 추가 변경 경로만 scope에 포함하고 declared protected paths와 equality를 테스트한다.
-
-구현 전에는 현재 상수가 reviewer 정의·`_version.json`을 포함하고 `plan_lifecycle.py`를 포함하지 않는다는 차이를 preflight에 기록한다. `PROTECTED_REVIEW_SCOPE`를 exact declared scope로 바꾼 직후 다음 equality 검사를 실행한다:
-
-Run: `python3 - <<'PY'
-from pathlib import Path
-import ast
-text = Path('.agents/skills/harness/writing-plans/scripts/review_artifacts.py').read_text(encoding='utf-8')
-tree = ast.parse(text)
-scope = next(node for node in ast.walk(tree) if isinstance(node, ast.Assign) and any(getattr(t, 'id', '') == 'PROTECTED_REVIEW_SCOPE' for t in node.targets))
-values = {elt.value for elt in scope.value.args[0].elts if isinstance(elt, ast.Constant)}
-baseline = {'.agents/agents/harness/plan-reviewer.md', '.agents/agents/harness/principle-auditor.md', '.agents/agents/harness/usability-reviewer.md', '.agents/_version.json'}
-baseline.add('.agents/mission/plan.json')
-additional = {'.agents/skills/harness/writing-plans/SKILL.md', '.agents/skills/harness/writing-plans/scripts/plan_lifecycle.py', '.agents/skills/harness/writing-plans/scripts/review_artifacts.py', '.agents/skills/harness/writing-plans/tests/test_plan_review_scope.py', 'manifest update'}
-assert baseline <= values and additional <= values, (values, baseline, additional)
-print('PASS protected-scope-equality')
-PY`
-Expected: `PASS protected-scope-equality`; 기존 보호 항목이 유지되고 계획의 추가 변경 경로가 포함된다. 이 검사 뒤에만 fresh `review_artifacts.py check`를 실행한다.
+`plan_parser.py`를 lifecycle과 review artifact 양쪽의 공통 metadata reader로 사용한다. `reviewed: true`, `status`, `usability_review_required` flags를 frontmatter에서 읽되, reviewer independence와 evidence validation 규칙은 그대로 유지한다. `normalize_plan_text()`에서 제외할 lifecycle-only 목록은 `status`, `reviewed`, `usability_review_required`, `active_agent`, `active_session`, `dashboard_item_id`, `implementation_started_at`, `implementation_completed_at`, `implementation_duration`, `next_action`으로 고정한다. 목표·범위·Task·검증 계약 변경은 계속 감지한다.
 
 Run: `python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan .agentos/project/exec-plans/active/2026-09-04-plan-frontmatter.md`
 Expected: review artifact가 없으면 실행 차단을 명확히 출력하고, reviewer PASS artifact 설치 후에는 valid로 판정한다.
@@ -252,9 +209,9 @@ text = Path('.agentos/project/exec-plans/active/2026-09-04-plan-frontmatter.md')
 assert module.plan_hash(text) == hashlib.sha256(module.semantic_snapshot(text).encode('utf-8')).hexdigest()
 print('PASS semantic-hash-contract')
 PY`
-Expected: reviewer와 architect artifact가 동일한 semantic hash를 사용하고 raw byte hash는 audit 보조값으로만 취급한다.
+Expected: reviewer artifact가 동일한 semantic hash를 사용하고 raw byte hash는 audit 보조값으로만 취급한다.
 
-구현 순서는 외부 authorized architect가 제안된 exact scope와 plan identity를 승인하고, 그 approval artifact를 `.agents/traces/reviews/2026-09-04-plan-frontmatter/harness-architect-approval.json`으로 전달한 뒤 시작한다. 이후 `PROTECTED_REVIEW_SCOPE`에 `.agents/mission/plan.json`과 `.agents/skills/harness/writing-plans/scripts/plan_lifecycle.py`를 추가하고 declared scope equality 테스트를 통과시킨 다음, 공통 parser를 review artifact에 연결하고 frontmatter reviewer-routing contract 및 fresh Gate 2 check를 실행한다. reviewer 정의 파일과 `_version.json`은 수정하지 않는다.
+공통 parser를 review artifact에 연결하고 frontmatter reviewer-routing contract 및 fresh Gate 2 check를 실행한다. reviewer 정의 파일은 수정하지 않는다.
 
 ## Task 4: 계약 테스트와 isolated lifecycle 검증
 
@@ -298,12 +255,12 @@ print('PASS frontmatter-archive-lifecycle')
 PY`
 Expected: `PASS frontmatter-archive-lifecycle`이며 active 원본 없음, archive 파일 존재, frontmatter `status: 완료`, generated board archive 반영이 모두 확인된다.
 
-- [ ] **Step 4.2: isolated install과 manifest를 검증한다.**
+- [ ] **Step 4.2: isolated install을 검증한다.**
 
-설치된 writing-plans template/guidance와 lifecycle script가 frontmatter 계획을 처리하는지 확인하고 protected asset manifest를 갱신·검사한다.
+설치된 writing-plans template/guidance와 lifecycle script가 frontmatter 계획을 처리하는지 확인한다.
 
-Run: `bash .agents/skills/harness/sync-manifest/scripts/sync-manifest.sh --update codex && bash .agents/skills/harness/sync-manifest/scripts/sync-manifest.sh --check && bash scripts/verify-cli-isolated-install.sh`
-Expected: 모든 명령 exit 0이며 `PASS agentos-cli-isolated-install`이 출력된다.
+Run: `bash scripts/verify-cli-isolated-install.sh`
+Expected: exit 0이며 `PASS agentos-cli-isolated-install`이 출력된다.
 
 ## Task 5: 최종 검증과 closeout
 
@@ -313,11 +270,11 @@ Expected: 모든 명령 exit 0이며 `PASS agentos-cli-isolated-install`이 출�
 
 - [ ] **Step 5.1: Gate 2 승인 이후에만 reviewed 상태로 전환하고 구현을 시작한다.**
 
-Task 0.1의 valid 결과를 확인한 뒤에만 `reviewed: true`로 전환한다. 이 계획은 protected 계획이므로 `plan_lifecycle.py`, `review_artifacts.py`, `SKILL.md`, reviewer scope 및 manifest 변경을 승인된 범위 안에서만 수행한다.
+Task 0.1의 valid 결과를 확인한 뒤에만 `reviewed: true`로 전환한다. `plan_lifecycle.py`, `review_artifacts.py`, `SKILL.md` 변경을 계획된 범위 안에서만 수행한다.
 
 - [ ] **Step 5.2: 구현 후 fresh verification과 closeout을 기록한다.**
 
-Run: `pytest tests/test_plan_parser.py .agents/skills/harness/writing-plans/tests/test_plan_review_scope.py -q && python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh && bash .agents/skills/harness/sync-manifest/scripts/sync-manifest.sh --check && git diff --check`
+Run: `pytest tests/test_plan_parser.py .agents/skills/harness/writing-plans/tests/test_plan_review_scope.py -q && python3 .agents/skills/harness/writing-plans/scripts/plan_lifecycle.py refresh && git diff --check`
 Expected: 모든 명령 exit 0이고 구현 결과·사용 방법·완료 증거·아카이브 결정이 기록되며 `HISTORY.md`에 `EVOLUTION_APPLIED`, `plan=`, `artifact=`, `verification=`, `next_action=`이 append된다. archive는 사용자 명시 요청 전까지 수행하지 않는다.
 
 Run: `python3 - <<'PY'

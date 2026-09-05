@@ -1,6 +1,6 @@
 # Harness Evolution Status
 
-_Generated: 2026-09-05T01:05:28Z_
+_Generated: 2026-09-05T01:30:20Z_
 
 This Markdown file is the v1 user-facing status surface for harness evolution. It summarizes evidence from `HISTORY.md` and execution plan registries; it does not approve changes or override governance.
 
@@ -25,6 +25,7 @@ Known trigger example: PMBOK open dossier confusion, where the user said `계획
 - `[2026-09-04T08:41:00Z] [EVOLUTION_APPLIED] trigger_id=project-skill-catalog-install-alignment-20260904 trigger_source=user-reported-project-init-skill-list-mismatch classification=harness-evolution plan=.agentos/project/exec-plans/archive/2026-09-04-project-skill-catalog-install-alignment.md result=project init selectable optional 목록을 실제 글로벌 설치본으로 제한하고 catalog metadata/category를 bundled default와 정합화함 artifact=catalog/skills/catalog.json,agentos/terminal/catalog.py,tests/test_project_skill_selection.py verification=PASS project-skill-focused-tests, PASS project-skill-selection-tty, PASS agentos-cli-isolated-install next_action=user archive decision`
 - `[2026-09-05T08:22:30Z] [EVOLUTION_APPLIED] trigger_id=bootstrap-circular-dependency-safety-gate-20260905 trigger_source=user-emergency-request user_problem=Task0_preflight에서_미구현_미래_아티팩트_스키마_검증_요구로_부트스트랩_데드락_발생 classification=harness-evolution plan=none-emergency-direct-fix result=writing-plans-skill_TEMPLATE_plan-reviewer에_Bootstrap_Safety_Gate_및_동적_해시계산_규칙_반영 artifact=.agents/skills/harness/writing-plans/SKILL.md,.agents/agents/harness/plan-reviewer.md,.agentos/project/exec-plans/TEMPLATE.md verification=sync-manifest_check_PASS next_action=resume-plan-execution-or-review`
 - `[2026-09-05T08:35:00Z] [EVOLUTION_APPLIED] trigger_id=plan-reviewer-orchestrator-20260904 trigger_source=user-request-and-repeated-gate-review user_problem=excessive-review-conflict-and-bootstrap-cycle classification=harness-evolution plan=.agentos/project/exec-plans/archive/2026-09-04-plan-reviewer-orchestrator.md result=reviewer-routing-and-state-machine-applied artifact=.agents/agents/harness/plan-reviewer.md,.agents/skills/harness/writing-plans/scripts/review_artifacts.py verification=focused-review-tests,full-harness,public-suite,manifest next_action=archive-only-on-explicit-user-request`
+- `[2026-09-05T01:30:00Z] [EVOLUTION_APPLIED] trigger_id=remove-manifest-governance-20260905 trigger_source=user-request user_problem=manifest-governance-and-architect-approval-overhead classification=harness-evolution plan=.agentos/project/exec-plans/archive/2026-09-05-remove-manifest-governance.md result=manifest-and-architect-governance-removed artifact=AGENTS.md,.agentos/project/exec-plans/TEMPLATE.md,.agents/skills/harness/writing-plans/scripts/review_artifacts.py verification=focused-review-tests,full-harness,public-suite next_action=archived-by-user-request`
 
 Applied result example: Plan completion metadata and user archive gate made completed active plans expose `Implementation Result`, `How To Use`, `Completion Evidence`, and `Archive Decision` before archive.
 
