@@ -158,53 +158,6 @@ def test_legacy_artifact_without_implementer_is_rejected(tmp_path: Path):
     assert result.invalid["plan-reviewer"] == "missing-implementer-id"
 
 
-def test_protected_approval_scope_requires_every_declared_file():
-    review = _module()
-    complete = set(review.PROTECTED_REVIEW_SCOPE)
-    assert review.protected_scope_is_complete(complete)
-    complete.remove("manifest update")
-    assert not review.protected_scope_is_complete(complete)
-
-def test_protected_change_requires_architect_approval(tmp_path: Path):
-    review = _module()
-    plan = tmp_path / "plan.md"
-    _write_plan(plan)
-    
-    text = plan.read_text(encoding="utf-8")
-    text = text.replace("> reviewed: true<br>", "> reviewed: true<br>\n> **protected_change:** true<br>")
-    text += "\n- declared protected paths: `manifest update`"
-    plan.write_text(text, encoding="utf-8")
-    
-    _record_default_reviews(review, tmp_path)
-    
-    # Missing architect approval
-    result = review.check_plan(tmp_path, "plan.md")
-    assert not result.valid
-    assert "harness-architect-approval" in result.missing
-    
-    # Add valid architect approval
-    artifact_dir = tmp_path / ".agents/traces/reviews/plan"
-    artifact_dir.mkdir(parents=True, exist_ok=True)
-    
-    (tmp_path / ".agents").mkdir(exist_ok=True)
-    (tmp_path / ".agents" / "_version.json").write_text('{"authorized_architects": ["harness-architect"]}')
-    
-    (artifact_dir / "harness-architect-approval.json").write_text(
-        json.dumps({
-            "schema": "harness-architect-approval-v1",
-            "plan_path": "plan.md",
-            "plan_sha256": review.plan_hash(text),
-            "reviewer_id": "harness-architect",
-            "reviewer_source": "subagent",
-            "decision": "APPROVED",
-            "implementer_id": "implementer",
-            "authorized_scope": ["manifest update"]
-        })
-    )
-    
-    result2 = review.check_plan(tmp_path, "plan.md")
-    assert result2.valid
-
 
 def test_semantic_revision_increments_only_on_snapshot_change(tmp_path: Path, capsys):
     review = _module()

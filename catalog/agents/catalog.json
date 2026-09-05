@@ -289,41 +289,6 @@
       "agent_tree_sha256": "56139886add3d5237ba446f1c71f01403aae79704741f068e1550c407cafbaa9"
     },
     {
-      "name": "harness-architect",
-      "summary": "Design or audit protected Agent Harness architecture and core governance changes.",
-      "triggers": [
-        "harness architecture",
-        "protected path",
-        "core harness",
-        "authorized architect",
-        "manifest",
-        "agent harness structure"
-      ],
-      "when_to_recommend": {
-        "positive_examples": [
-          "audit a protected harness architecture change",
-          "design a core harness governance update",
-          "review manifest-affecting changes"
-        ],
-        "negative_examples": [
-          "ordinary app UI",
-          "slide generation",
-          "casual writing rewrite"
-        ],
-        "reason_template": "harness-architect matches because the user request fits the harness-architect harness role.",
-        "already_installed_behavior": "already installed; use the project-local harness-architect wrapper instead of reinstalling"
-      },
-      "source_path": "catalog/agents/harness-architect",
-      "install_path": ".agents/agents/harness-architect",
-      "role_source_path": ".agents/agents/harness/harness-architect.md",
-      "license": "Agent Harness project license",
-      "verification": {
-        "install_smoke": "agentos agent install harness-architect --project <target> --yes",
-        "use_smoke": "test -f .agents/agents/harness-architect/AGENT.md"
-      },
-      "agent_tree_sha256": "fbd4ba9f54d2228b30c4212d37c82d5a32cbd0405b411078d3e023776b4577f1"
-    },
-    {
       "name": "plan-reviewer",
       "summary": "Review implementation plans against Agent Harness execution-quality gates.",
       "triggers": [

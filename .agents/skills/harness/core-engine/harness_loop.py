@@ -161,7 +161,7 @@ def has_evolution_completion_evidence(output: str) -> bool:
     required_tokens = [
         "strategy_artifact_path:",
         "final_conclusion_path:",
-        "harness-architect: PASS",
+        "principle-auditor: PASS",
     ]
     return all(token in output for token in required_tokens)
 
@@ -1173,8 +1173,8 @@ class HarnessLoop:
                     return 0
                 if has_promise and exit_code == 0 and not has_all_evidence:
                     if requires_evolution_evidence and has_base_evidence:
-                        print("⚠️  completion contract 누락. 하네스 진화 작업은 strategy_artifact_path, final_conclusion_path, harness-architect: PASS가 추가로 필요합니다.")
-                        state.current_step = "검증 명령/결과 + 최종 산출물 경로 + 마지막 checkpoint 요약 + strategy_artifact_path + final_conclusion_path + harness-architect: PASS 필요"
+                        print("⚠️  completion contract 누락. 하네스 진화 작업은 strategy_artifact_path, final_conclusion_path, principle-auditor: PASS가 추가로 필요합니다.")
+                        state.current_step = "검증 명령/결과 + 최종 산출물 경로 + 마지막 checkpoint 요약 + strategy_artifact_path + final_conclusion_path + principle-auditor: PASS 필요"
                     else:
                         print(f"⚠️  completion contract 누락. {BARE_PROMISE_GUIDANCE}")
                         state.current_step = "bare promise rejected; 검증 명령/결과 + 최종 산출물 경로 + 마지막 checkpoint 요약 필요"

@@ -20,7 +20,7 @@
 ## 핵심 우선순위 — 항상 이 순서로 판단하라
 
 1. **신뢰성**: 확실하지 않으면 하지 마라. 먼저 물어라. 모든 계획은 터미널 명령어로 검증 가능한 성공 기준(**Expected: PASS**)을 가져야 한다. (Plan Quality Gate)
-2. **지속성**: 되돌리기 어려운 행동은 기록하고 확인받아라. 수정 사항은 반드시 `sync-manifest`로 각인하라.
+2. **지속성**: 되돌리기 어려운 행동은 기록하고 확인받아라. 수정 사항은 검증 가능한 Git 이력과 reviewer evidence로 남겨라.
 3. **효율성**: 위 두 가지가 확보된 후에만 빠르게 움직여라. 반복 작업은 스크립트나 스킬 레이어로 자동화하라.
 4. **단순성**: 요청하지 않은 기능은 추가하지 마라. 복잡할수록 신뢰를 잃는다. (Simplicity Gate) 단, 재조사 비용이 크거나 이후 단계·다른 계획에서 반복 참조될 가능성이 높은 리서치·조사 결과는 예외다 — 이는 "요청하지 않은 산출물"이 아니라 이미 수행한 작업의 재사용 가능한 기록이며, 압축 요약만 남기고 버리면 지속성(원칙 2)을 해친다. 판단 기준과 저장 방법은 §3.3 참조.
 
@@ -136,7 +136,7 @@
 | lessons-learned.md 항목 추가 시 | AGENTS.md 원칙 승격 가능 여부 즉시 검토 → 가능하면 `[EVOLUTION_PROPOSAL]` → 승인 후 해당 항목 삭제 + AGENTS.md 업데이트 |
 | **구조적 변경 감지 시** | `.agents/` 하위(파일/폴더/스킬/에이전트)에 변경이 생기면 즉시 `principle-auditor`를 호출하여 중복·레거시 오디트를 수행하고 정비를 제안하라. (P4 단순성 준수) |
 | **미션 최초 시작 시** | 새로운 과업(`plan.json`) 수립 직후, 전체 구조가 하네스 원칙에 맞게 세밀하게 구성되었는지 오디트하라. |
-| **Skill 파일 수정 제안 시** | `[SKILL_PATCH_PROPOSAL]` 트리거: (1) 수정 대상 SKILL.md 경로 명시 (2) `authorized_architects`(`.agents/_version.json`) 승인 요청 (3) 승인 후 수정 → `sync-manifest.sh --update` 실행 → `run_all_tests.sh` 실행 (4) 실패 시 git checkout으로 롤백 → `[SKILL_PATCH_ROLLBACK]` 기록 |
+| **Skill 파일 수정 제안 시** | `[SKILL_PATCH_PROPOSAL]` 트리거: (1) 수정 대상 SKILL.md 경로 명시 (2) 독립 `principle-auditor` 검토 (3) 승인 후 수정 → `run_all_tests.sh` 실행 (4) 실패 시 복구 절차를 기록 → `[SKILL_PATCH_ROLLBACK]` 기록 |
 
 ### 진화 가시성 기록 계약
 

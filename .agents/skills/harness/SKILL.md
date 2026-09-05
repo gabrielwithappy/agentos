@@ -26,7 +26,6 @@ Child skills are explicit routes, not an automatic cascade:
 - `verification-before-completion/` — require fresh evidence before claiming
   completion.
 - `debug/` or `qa/` — route diagnosis and quality/security review work.
-- `sync-manifest/` — synchronize and check protected harness assets.
 
 Choose the narrowest route that matches the task, then read that child
 `SKILL.md` in full. A child document cannot override `AGENTS.md`, vendor

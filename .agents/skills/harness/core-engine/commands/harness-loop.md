@@ -122,7 +122,7 @@ Non-goals: No Hermes gateway, No dashboard, No scheduler, No provider transport,
 
 - `strategy_artifact_path:` evolution strategy artifact 또는 관련 skill/plan 경로
 - `final_conclusion_path:` intermediate checkpoint 위치와 구분되는 최종 결론 저장 위치
-- `harness-architect: PASS`
+- `principle-auditor: PASS`
 
 예시:
 
@@ -132,7 +132,7 @@ Non-goals: No Hermes gateway, No dashboard, No scheduler, No provider transport,
 마지막 checkpoint 요약: evolution strategy contract + focused regression 반영
 strategy_artifact_path: .agents/skills/harness-evolution/SKILL.md
 final_conclusion_path: .agentos/project/exec-plans/active/2026-04-11-harness-ralph-loop-evolution-strategy.md#final-closeout-evidence
-harness-architect: PASS
+principle-auditor: PASS
 <promise>HARNESS_COMPLETE</promise>
 ```
 

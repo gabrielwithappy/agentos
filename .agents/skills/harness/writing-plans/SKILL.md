@@ -468,7 +468,6 @@ first draft 작성 후, 필요할 때만 아래 helper를 사용해 계획 품�
    ```bash
    python3 .agents/skills/harness/writing-plans/scripts/review_artifacts.py check --plan <plan-path>
    ```
-   - `protected_change: true`이면 independent `harness-architect` approval도 요청한 뒤 같은 명령으로 재검증한다.
 3. **Issues Found → 작성 에이전트가 즉시 계획 문서를 수정한다:**
    - 리뷰어가 지적한 모든 단점을 계획 문서 본문에 직접 반영한다.
    - FAIL finding에는 finding ID, 영향 surface, 최소 수정 방향, 재검토가 필요한 reviewer 목록을 기록한다.

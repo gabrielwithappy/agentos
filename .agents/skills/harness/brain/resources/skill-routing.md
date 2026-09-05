@@ -30,7 +30,7 @@ harness agent review, and explicit human approval.
 | implementation plan review | `plan-reviewer` |
 | simplicity, reliability, duplicate/legacy audit, prompt/security boundary governance | `principle-auditor` |
 | codebase structure question | optional catalog `codebase-explorer` |
-| architecture or harness structure | `harness-architect` |
+| architecture or harness structure | `principle-auditor` |
 | product/design artifact | optional catalog `designer-agent` |
 | document package or delivery flow | optional catalog `document-delivery-lead` |
 | challenge assumptions or alternatives | `contrarian` |
@@ -92,7 +92,7 @@ runtime rules.
 |-----------|------------------|
 | Role finds a bug outside its scope | optional catalog `debug-investigator` |
 | QA finds CRITICAL or HIGH issue | Relevant implementation role plus optional catalog `qa-reviewer`; protected-path/security governance escalates to `principle-auditor` |
-| Architecture change needed | `harness-architect` and `principle-auditor` |
+| Architecture change needed | `principle-auditor` |
 | Scope becomes unclear | Stop and clarify with the user |
 
 Keep routing as a reference. It does not create agents or bypass the current runtime's delegation rules.
