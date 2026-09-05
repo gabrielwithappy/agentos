@@ -3,10 +3,11 @@
 > 자동 생성 문서. 수동 편집하지 마세요.
 > Source of truth: `.agents/mission/plan.json`
 
-> Generated at: 2026-09-05T02:35:39Z
+> Generated at: 2026-09-05T03:01:59Z
 
 ## Active Plans
 - older active plans omitted=0
+- `완료` [setup 시 번들 제외 스킬 자동 정리 및 유령 카탈로그 제거 계획](.agentos/project/exec-plans/active/2026-09-05-setup-prune-unbundled-skills.md) | reviewed | progress: 계획 초안 작성, 독립 리뷰 대기 중
 - `완료` [harness-loop, mcp, agent-token-info 레거시 하네스 스킬 제거 계획](.agentos/project/exec-plans/active/2026-09-05-remove-legacy-harness-skills.md) | reviewed | progress: 계획 초안 작성, 독립 리뷰 대기 중
 - `완료` [knowledge-curator harness 경로 정규화 구현 계획](.agentos/project/exec-plans/active/2026-09-05-knowledge-curator-path-normalization.md) | reviewed | progress: 계획 초안 작성, 독립 리뷰 대기 중
 

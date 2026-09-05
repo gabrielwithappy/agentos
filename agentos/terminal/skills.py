@@ -38,6 +38,7 @@ class BundledInstallSummary:
     bundled_update_available: int = 0
     custom_preserved: int = 0
     failed: int = 0
+    pruned: int = 0
 
 
 def bundled_skill_sources() -> list[Path]:
@@ -135,7 +136,9 @@ def install_bundled_skills(home: str | Path | None = None, *, refresh: bool = Fa
     result = BundledInstallSummary()
     manifest = _manifest(home)
     root = global_skills_dir(home)
-    for source in bundled_skill_sources():
+    sources = bundled_skill_sources()
+    bundled_names = {source.name for source in sources}
+    for source in sources:
         name = source.name
         try:
             bundle_digest = skill_digest(source)
@@ -161,6 +164,33 @@ def install_bundled_skills(home: str | Path | None = None, *, refresh: bool = Fa
                 result = BundledInstallSummary(**{**result.__dict__, "custom_preserved": result.custom_preserved + 1})
         except (OSError, StateError):
             result = BundledInstallSummary(**{**result.__dict__, "failed": result.failed + 1})
+
+    # Prune obsolete bundled skills
+    pruned_count = 0
+    stale_manifest_keys = []
+    manifest = _manifest(home)
+    for name, record in list(manifest["skills"].items()):
+        if record.get("origin") == "bundled" and name not in bundled_names:
+            stale_manifest_keys.append(name)
+            dest = root / name
+            if dest.exists():
+                try:
+                    if dest.is_dir() and not dest.is_symlink():
+                        shutil.rmtree(dest)
+                    elif not dest.is_symlink():
+                        dest.unlink()
+                    pruned_count += 1
+                except OSError:
+                    result = BundledInstallSummary(**{**result.__dict__, "failed": result.failed + 1})
+    if stale_manifest_keys:
+        for name in stale_manifest_keys:
+            if name in manifest["skills"]:
+                del manifest["skills"][name]
+        atomic_write_json(_manifest_path(home), manifest)
+
+    if pruned_count:
+        result = BundledInstallSummary(**{**result.__dict__, "pruned": result.pruned + pruned_count})
+
     return result
 
 
