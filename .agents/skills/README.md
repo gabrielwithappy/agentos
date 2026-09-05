@@ -26,7 +26,6 @@ It is a reading surface, not a runtime, and it does not auto-install anything.
 - `qa`
 - `requirement-discovery`
 - `run-all-tests`
-- `sync-manifest`
 - `verification-before-completion`
 - `writing-plans`
 

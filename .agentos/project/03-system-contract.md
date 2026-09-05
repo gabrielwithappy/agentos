@@ -113,7 +113,7 @@ root docs는 architecture intent와 decision boundary를 담는다. 상세 API�
 
 - 일반 계획 리뷰는 핵심 실행 가능성·정합성·안전·범위·검증을 우선하며 cosmetic 문법·문체 지적은 blocking finding으로 만들지 않는다.
 - 기본 `plan-reviewer`와 `principle-auditor`는 유지하고 user-facing 계획에만 `usability-reviewer`를 추가한다. 일반 reviewer validity는 전체 plan hash에 종속되지 않는다.
-- 전체 plan hash/signature와 protected approval은 protected path와 감사 추적에만 사용하며, manifest update 전에는 승인 범위를 exact path로 검증한다.
+- 일반 reviewer artifact는 semantic snapshot과 reviewer provenance로 감사 추적을 제공하며, 별도 manifest 승인 경로는 사용하지 않는다.
 - 계획 작성 질문으로 확정한 사용자 의도는 Intent Sheet에 고정하고, unresolved ambiguity가 있을 때만 사용자에게 재질문한다.
 
 - `.agentos/project/reference/implementation/2026-07-18-cli-llm-vscode-integration-analysis.md`

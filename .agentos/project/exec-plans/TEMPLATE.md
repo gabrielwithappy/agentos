@@ -1,21 +1,23 @@
-# [계획 제목] 구현 계획
+---
+status: 구현 계획 (리뷰 대기)
+date: YYYY-MM-DD
+reviewed: false
+usability_review_required: false
+user_request: <사용자 요청 요약 1-2문장 (계획 작성 시작 시점에 작성)>
+active_agent:
+active_session:
+dashboard_item_id:
+implementation_started_at:
+implementation_completed_at:
+implementation_duration:
+next_action:
+---
 
-> **상태:** 리뷰 대기 (완료 후 '완료'로 변경)
-> **작성일:** YYYY-MM-DD<br>
-> reviewed: false (리뷰 증거 파일 생성 전까지 절대 true로 변경 불가)<br>
-> **usability_review_required:** false<br>
-> **protected_change:** false<br>
-> user_request: <사용자 요청 요약 1-2문장 (계획 작성 시작 시점에 작성)><br>
-> active_agent: <br>
-> active_session: <br>
-> dashboard_item_id: (agentos dashboard sync-plan 실행 시 자동 기록됨)<br>
-> implementation_started_at: <br>
-> implementation_completed_at: <br>
-> implementation_duration: <br>
+# [계획 제목] 구현 계획
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
-> **상태 문구 관용구:** 구현과 자동 검증(테스트 스위트 등)은 모두 끝났지만 사람의 수동 확인(예: 실제 브라우저 로그인, 외부 서비스 UI 조회)만 남은 경우, `> **상태:**` 문구에 정확히 `"(사용자 실사용 확인 대기)"`를 포함시킨다. 이 문구는 `agentos dashboard sync-plan`이 보드 Status를 `In Progress`가 아니라 `Awaiting Verification`으로 정확히 분류하는 데 쓰인다(`agentos/observability/plan_parser.py`의 `status_to_board_status()` 참고).
+> **상태 문구 관용구:** 구현과 자동 검증(테스트 스위트 등)은 모두 끝났지만 사람의 수동 확인(예: 실제 브라우저 로그인, 외부 서비스 UI 조회)만 남은 경우, `status:` 문구에 정확히 `"(사용자 실사용 확인 대기)"`를 포함시킨다. 이 문구는 `agentos dashboard sync-plan`이 보드 Status를 `In Progress`가 아니라 `Awaiting Verification`으로 정확히 분류하는 데 쓰인다(`agentos/observability/plan_parser.py`의 `status_to_board_status()` 참고).
 
 **목표:** 
 - 무엇을 달성하고자 하는가? (사용자 관점)
@@ -62,12 +64,8 @@
 
 ## 사전 실행 Gate와 closeout 경계
 
-Gate 2 artifact, protected approval, signature는 구현 Task가 아니라 이 lifecycle section에서 확인한다. 기능 Task 안에 reviewer artifact 생성·self-signing·approval·closeout 기록을 넣지 않는다. `protected_change: true`이면 File Structure와 Task의 `.agents/**` 변경 경로를 `## 보호 변경 범위`에 선언하고 authorized architect approval을 먼저 확인한다.
+Gate 2 artifact는 구현 Task가 아니라 이 lifecycle section에서 확인한다. 기능 Task 안에 reviewer artifact 생성·self-signing·approval·closeout 기록을 넣지 않는다. `plan-reviewer`와 `principle-auditor`의 독립 PASS를 먼저 확인하고, `usability_review_required: true`인 계획에는 `usability-reviewer` PASS도 확인한다.
 ※ 주의 (Bootstrap Safety): 하네스/체커/리뷰어 자체를 변경하는 계획일 경우, Task 0(사전 게이트)에 아직 구현되지 않은 미래의 스키마나 필드를 assertion 조건으로 포함하지 마라. (현재 환경의 유효성만 검증하고, 새 스키마/기능 검증은 반드시 구현 후 Task에서 수행할 것)
-
-## 보호 변경 범위
-
-- declared protected paths: (없으면 `없음`)
 
 ## 구현 결과
 (구현 후 작성)

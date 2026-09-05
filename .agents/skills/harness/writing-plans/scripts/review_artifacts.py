@@ -12,15 +12,19 @@ from pathlib import Path
 from typing import Any
 
 
-REVIEWED_RE = re.compile(r"^> reviewed: true(?:\s*<br\s*/?>)?$", re.MULTILINE)
-REVIEWED_META_RE = re.compile(r"^> reviewed: (?:true|false)(?:\s*<br\s*/?>)?$", re.MULTILINE)
-STATUS_RE = re.compile(r"^> \*\*상태:\*\* (.+?)(?:\s*<br\s*/?>)?$", re.MULTILINE)
+REVIEWED_RE = re.compile(r"^(?:>\s*)?reviewed:\s*true(?:\s*<br\s*/?>)?$", re.MULTILINE)
+REVIEWED_META_RE = re.compile(r"^(?:>\s*)?reviewed:\s*(?:true|false)(?:\s*<br\s*/?>)?$", re.MULTILINE)
+STATUS_RE = re.compile(r"^(?:>\s*)?(?:\*\*상태:\*\*|status:)\s*(.+?)(?:\s*<br\s*/?>)?$", re.MULTILINE)
 USABILITY_HEADER_RE = re.compile(
-    r"^> (?:\*\*usability_review_required:\*\*|usability_review_required:) (true|false)(?:\s*<br\s*/?>)?$",
+    r"^(?:>\s*)?(?:\*\*usability_review_required:\*\*|usability_review_required:)\s*(true|false)(?:\s*<br\s*/?>)?$",
     re.MULTILINE,
 )
 GATE2_RE = re.compile(r"^> gate2_[^:\n]+:.*$", re.MULTILINE)
-HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
+HEADER_STATUS_RE = re.compile(r"^(?:>\s*)?(?:\*\*상태:\*\*|status:)\s*.+$", re.MULTILINE)
+USABILITY_META_RE = re.compile(
+    r"^(?:>\s*)?(?:\*\*usability_review_required:\*\*|usability_review_required:)\s*(?:true|false)(?:\s*<br\s*/?>)?$",
+    re.MULTILINE,
+)
 # Fields/sections that other harness contracts require agents to fill in
 # AFTER Gate 2 signing: implementation_*_at/duration, active_agent,
 # active_session (executing-plans/SKILL.md Step 7-8 occupancy lock),
@@ -38,8 +42,8 @@ HEADER_STATUS_RE = re.compile(r"^> \*\*상태:\*\* .+$", re.MULTILINE)
 # any of these patterns and remains fully hashed, so tampering with scope
 # after signing still invalidates the signature.
 LIVING_META_RE = re.compile(
-    r"^> (?:implementation_started_at|implementation_completed_at|implementation_duration|"
-    r"dashboard_item_id|active_agent|active_session): .*$",
+    r"^(?:>\s*)?(?:implementation_started_at|implementation_completed_at|implementation_duration|"
+    r"dashboard_item_id|active_agent|active_session|next_action):.*$",
     re.MULTILINE,
 )
 TASK_CHECKBOX_RE = re.compile(r"^(\s*-\s*)\[[ xX]\]", re.MULTILINE)
@@ -91,6 +95,7 @@ def normalize_plan_text(text: str) -> str:
     normalized = REVIEWED_META_RE.sub("", text)
     normalized = GATE2_RE.sub("", normalized)
     normalized = HEADER_STATUS_RE.sub("", normalized)
+    normalized = USABILITY_META_RE.sub("", normalized)
     normalized = LIVING_META_RE.sub("", normalized)
     normalized = TASK_CHECKBOX_RE.sub(r"\1[ ]", normalized)
     normalized = LIVING_SECTION_RE.sub("", normalized)
@@ -168,7 +173,7 @@ def _artifact_problem(
             return "missing-review-scope"
         if not isinstance(artifact.get("semantic_revision"), int) or artifact["semantic_revision"] < 1:
             return "invalid-semantic-revision"
-        if artifact.get("semantic_snapshot") != expected_snapshot:
+        if artifact.get("semantic_snapshot") != expected_snapshot and normalize_plan_text(str(artifact.get("semantic_snapshot", ""))) != expected_snapshot:
             return "semantic-snapshot-mismatch"
     # Legacy artifacts remain readable. Their full-plan hash is intentionally
     # not checked; newly recorded artifacts use semantic_snapshot instead.
@@ -394,7 +399,11 @@ def dispatch(root: Path, plan_path: str, stage: str) -> int:
             print("ERROR: missing plan-reviewer.json for triage dispatch", file=sys.stderr)
             return 1
         pr = _load_artifact(pr_path)
-        if pr.get("plan_sha256") != expected_digest and pr.get("semantic_snapshot") != expected_snapshot:
+        if (
+            pr.get("plan_sha256") != expected_digest
+            and pr.get("semantic_snapshot") != expected_snapshot
+            and normalize_plan_text(str(pr.get("semantic_snapshot", ""))) != expected_snapshot
+        ):
             print("ERROR: plan-reviewer artifact hash or snapshot mismatch", file=sys.stderr)
             return 1
         if pr.get("result") not in ALLOWED_PASS_RESULTS:

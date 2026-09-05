@@ -416,3 +416,50 @@ def test_receipt_requires_all_verifiers(tmp_path: Path):
     }
     receipt_file.write_text(json.dumps(receipt), encoding="utf-8")
     assert review.closeout_check(tmp_path, "plan.md", "receipt.json") == 1
+
+
+def test_frontmatter_plan_review_contract(tmp_path: Path):
+    review = _module()
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        "---\n"
+        "status: 구현 계획 (리뷰 대기)\n"
+        "date: 2026-09-04\n"
+        "reviewed: false\n"
+        "usability_review_required: true\n"
+        "active_agent:\n"
+        "active_session:\n"
+        "next_action:\n"
+        "---\n"
+        "# Frontmatter review test\n\n"
+        "**목표:** 검토 테스트\n\n"
+        "## 진행 스냅샷\n"
+        "| 상태 | 대기 |\n\n"
+        "## Task 1\n"
+        "- [ ] 작업 1\n",
+        encoding="utf-8",
+    )
+    for role, reviewer_id in (
+        ("plan-reviewer", "indep-pr"),
+        ("principle-auditor", "indep-pa"),
+        ("usability-reviewer", "indep-ur"),
+    ):
+        review.record_review(
+            tmp_path,
+            "plan.md",
+            role,
+            "PASS",
+            reviewer_id,
+            "subagent",
+            "scope PASS",
+            "implementer",
+        )
+    # Check plan before reviewed: true
+    result = review.check_plan(tmp_path, "plan.md")
+    assert result.valid
+
+    # Transition reviewed: false to reviewed: true in frontmatter
+    text = plan.read_text(encoding="utf-8").replace("reviewed: false", "reviewed: true")
+    text = text.replace("status: 구현 계획 (리뷰 대기)", "status: 구현 계획 (실행 대기)")
+    plan.write_text(text, encoding="utf-8")
+    assert review.check_plan(tmp_path, "plan.md").valid

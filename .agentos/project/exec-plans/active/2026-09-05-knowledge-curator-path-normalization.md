@@ -4,7 +4,6 @@
 > **작성일:** 2026-09-05<br>
 > reviewed: false (리뷰 증거 파일 생성 전까지 절대 true로 변경 불가)<br>
 > **usability_review_required:** false<br>
-> **protected_change:** true<br>
 > user_request: 날짜가 붙어 혼동을 주는 knowledge-curator harness 경로를 canonical 이름으로 정리하는 계획만 작성한다. 이번 단계에서는 실제 변경을 실행하지 않는다.<br>
 > active_agent: codex<br>
 > active_session: /home/gabriel/agent/prj-agent/agentos-workspace/agentos (branch: chore/remove-manifest-governance)<br>
@@ -21,8 +20,8 @@
 
 **의존성 분석:**
 - 외부 의존성: 없음
-- 내부 선행 조건: 현재 active 상태인 2026-09-05-remove-manifest-governance.md와 동시 실행하지 않는다. 두 계획이 .agents manifest 표면을 다루므로, 이 계획을 먼저 실행하거나 manifest 계획에 본 계획의 경로 정규화를 병합한 뒤 하나만 실행한다.
-- 스캔 기준: Git 상태, catalog/skills/catalog.json, harness source tree, _version.json, public boundary, catalog viewer, knowledge-curator 및 harness 테스트.
+- 내부 선행 조건: 다른 active 계획과 동시 실행하지 않는다.
+- 스캔 기준: Git 상태, catalog/skills/catalog.json, harness source tree, public boundary, catalog viewer, knowledge-curator 및 harness 테스트.
 
 **장기 적용 표면:**
 - traceability surface: 이 active plan, Intent Sheet archive/reference/intent/intent-20260905-knowledge-curator-path-normalization.md, HISTORY.md, lifecycle board
@@ -63,8 +62,8 @@
 
 | 마일스톤 | 사용자에게 보이는 결과 | 구현 소유 surface | 검증 |
 |---|---|---|---|
-| 1. 범위와 충돌 고정 | 기존 manifest governance 계획과 동시 실행하지 않을 범위가 확정됨 | Intent Sheet, active plans, Git status | rg inventory PASS |
-| 2. canonical 경로 정규화 | 날짜 경로가 harness/knowledge-curator로 바뀜 | .agents/skills/harness/, _version.json | canonical path PASS |
+| 1. 범위와 충돌 고정 | 다른 active 계획과 충돌하지 않을 범위가 확정됨 | Intent Sheet, active plans, Git status | rg inventory PASS |
+| 2. canonical 경로 정규화 | 날짜 경로가 harness/knowledge-curator로 바뀜 | .agents/skills/harness/ | canonical path PASS |
 | 3. discovery 정합화 | catalog viewer에서 knowledge-curator가 누락 없이 보임 | catalog/skills/catalog.json, config/public-boundary.json, viewer | catalog-discovery PASS |
 | 4. 기능 보존 검증 | knowledge-curator와 harness 기능이 유지됨 | tests, public verifier | focused tests 및 PASS agentos-public-suite |
 
@@ -75,22 +74,21 @@
 
 ## 사전 실행 Gate와 closeout 경계
 
-- 이 계획은 .agents/ protected surface를 변경하므로 Gate 2 PASS와 현재 governance 정책에 따른 protected approval을 구현 전에 확인한다.
-- 현재 active 2026-09-05-remove-manifest-governance.md가 먼저 실행되면 _version.json 처리 방식이 달라지므로, 두 계획을 병렬로 실행하지 않는다. 선행 계획의 결과에 따라 이 계획의 _version.json 단계를 병합·제거하는 조정 기록을 남긴다.
+- 이 계획은 `.agents/` surface를 변경하므로 Gate 2 PASS를 구현 전에 확인한다.
+- 다른 active 계획과 같은 파일을 동시에 수정하지 않는다.
 - 이 계획은 실행 계획 작성만 완료하는 현재 턴에서 어떤 파일도 rename·삭제·수정하지 않는다.
 - reviewer artifact 생성·self-signing·승인·lifecycle closeout은 구현 Task가 아니라 Gate 2와 closeout 절차에서 처리한다.
 
-## 보호 변경 범위
+## 리뷰 범위
 
-- declared protected paths: .agents/skills/harness/2026-08-31-project-init-project-documents/**, .agents/skills/harness/knowledge-curator/** (rename target), .agents/skills/harness/_version.json, catalog/skills/catalog.json, config/public-boundary.json, 관련 harness/catalog 검증 surface
-- required approval: plan-reviewer PASS, principle-auditor PASS/CLEAN, 그리고 현재 protected-path 정책이 유지되는 동안 authorized architect approval
+- 변경 범위: `.agents/skills/harness/2026-08-31-project-init-project-documents/**`, `.agents/skills/harness/knowledge-curator/**` (rename target), `catalog/skills/catalog.json`, `config/public-boundary.json`, 관련 harness/catalog 검증 surface
+- required review: plan-reviewer PASS, principle-auditor PASS/CLEAN
 - recovery: 구현 전 git status와 source/destination digest를 기록하고, rename 실패 시 Git rename 상태를 보존한 채 즉시 중단한다. 기능 삭제를 위한 git rm이나 history rewrite는 사용하지 않는다.
 
 ## 파일 구조
 
 - 생성: 없음
 - rename: .agents/skills/harness/2026-08-31-project-init-project-documents/ → .agents/skills/harness/knowledge-curator/
-- 수정: .agents/skills/harness/_version.json — harness skill 목록의 날짜 경로를 canonical 이름으로 교체한다(선행 manifest-governance 계획이 해당 파일을 제거한 경우 이 단계는 수행하지 않는다).
 - 수정: config/public-boundary.json — 날짜 경로 항목을 canonical 경로 항목으로 정합화한다.
 - 검증/필요 시 수정: catalog/skills/catalog.json — knowledge-curator의 source_path·install_path가 canonical harness 경로인지 확인하고, 이미 맞으면 내용은 바꾸지 않는다.
 - 검증: catalog/skills/skill-catalog-viewer/scripts/generate_html.py, tests/test_knowledge_skill.py, tests/test_knowledge_curator_evals.py, tests/test_common_base_resources.py, scripts/verify-public-test-suite.sh
@@ -122,9 +120,8 @@ Expected: source·bundled SKILL.md가 동일하고 catalog에 canonical source_p
 
 **파일:**
 - rename: .agents/skills/harness/2026-08-31-project-init-project-documents/** → .agents/skills/harness/knowledge-curator/**
-- 수정: .agents/skills/harness/_version.json 또는 선행 manifest 계획의 최종 registry 표면
 
-**사용자에게 보이는 마일스톤:** 날짜가 붙은 경로가 사라지고 frontmatter 이름과 디렉터리 이름이 knowledge-curator로 일치한다.
+**사용자에게 보이는 마일스톤:** 날짜가 붙은 경로가 사라지고 skill 이름과 디렉터리 이름이 knowledge-curator로 일치한다.
 
 - [ ] **Step 1.1: 기능 파일 전체를 Git rename으로 이동한다.**
 
@@ -132,13 +129,6 @@ git mv는 파일 내용을 바꾸지 않고 directory path만 정규화한다. c
 
 Run: git mv .agents/skills/harness/2026-08-31-project-init-project-documents .agents/skills/harness/knowledge-curator && test -f .agents/skills/harness/knowledge-curator/SKILL.md && ! test -e .agents/skills/harness/2026-08-31-project-init-project-documents && cmp -s .agents/skills/harness/knowledge-curator/SKILL.md catalog/skills/knowledge-curator/SKILL.md && echo 'PASS harness-path-renamed'
 Expected: PASS harness-path-renamed가 출력되고 이전 경로는 존재하지 않는다.
-
-- [ ] **Step 1.2: harness registry의 경로 이름을 정규화한다.**
-
-현재 manifest governance가 유지되는 경우 _version.json의 날짜 항목을 knowledge-curator로 교체한다. 선행 manifest governance 계획이 registry를 삭제한 경우에는 중복 수정하지 않고 그 계획의 closeout evidence를 참조한다.
-
-Run: python3 -c "import json; from pathlib import Path; p=Path('.agents/skills/harness/_version.json'); d=json.loads(p.read_text()); names=d.get('skills', []); assert 'knowledge-curator' in names and '2026-08-31-project-init-project-documents' not in names; print('PASS harness-registry-name')"
-Expected: registry를 유지하는 실행 순서에서는 PASS harness-registry-name이 출력된다. registry를 제거하는 실행 순서에서는 선행 계획의 registry-removal PASS를 사용하고 이 Step을 건너뛴 근거가 기록된다.
 
 ## Task 2: catalog와 public boundary discovery를 정합화한다
 
@@ -158,7 +148,7 @@ Expected: PASS catalog-canonical-path가 출력된다.
 
 - [ ] **Step 2.2: generated public boundary를 canonical path로 갱신한다.**
 
-현재 public boundary 생성·동기화 절차를 사용해 old path 항목을 canonical path 항목으로 교체하고, canonical source tree의 모든 파일이 누락 없이 등록되었는지 확인한다. 현재 manifest governance 계획과 같은 파일을 동시에 갱신하지 않는다.
+현재 public boundary 생성·동기화 절차를 사용해 old path 항목을 canonical path 항목으로 교체하고, canonical source tree의 모든 파일이 누락 없이 등록되었는지 확인한다. 다른 active 계획과 같은 파일을 동시에 갱신하지 않는다.
 
 Run: ! rg -n '2026-08-31-project-init-project-documents' config/public-boundary.json && rg -n 'agents/skills/harness/knowledge-curator/' config/public-boundary.json && echo 'PASS public-boundary-canonical-path'
 Expected: old path가 검색되지 않고 canonical path가 검색되며 PASS public-boundary-canonical-path가 출력된다.
@@ -202,4 +192,3 @@ Expected: PASS agentos-public-suite 및 git diff --check exit 0.
 ## 아카이브 결정
 
 이 계획은 구현·Gate 2·검증이 모두 끝난 뒤에도 사용자 명시 요청 전까지 active에 둔다. archive는 공식 lifecycle 명령으로만 수행한다.
-
