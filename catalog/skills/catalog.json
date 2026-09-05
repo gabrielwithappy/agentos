@@ -889,18 +889,6 @@
       "install_path": ".agents/skills/harness"
     },
     {
-      "name": "agent-token-info",
-      "summary": "Check agent token readiness and usage limits.",
-      "triggers": [
-        "token status",
-        "usage quota",
-        "token info"
-      ],
-      "category": "harness",
-      "source_path": ".agents/skills/harness/agent-token-info",
-      "install_path": ".agents/skills/harness/agent-token-info"
-    },
-    {
       "name": "brain",
       "summary": "Load shared harness context and reasoning guidance.",
       "triggers": [
@@ -974,18 +962,6 @@
       "install_path": ".agents/skills/harness/git-worktree-parallel"
     },
     {
-      "name": "harness-loop",
-      "summary": "Run and monitor the harness execution loop.",
-      "triggers": [
-        "harness loop",
-        "automation loop",
-        "resume loop"
-      ],
-      "category": "harness",
-      "source_path": ".agents/skills/harness/harness-loop",
-      "install_path": ".agents/skills/harness/harness-loop"
-    },
-    {
       "name": "intent-clarification",
       "summary": "Converge user intent, scope, and measurable completion criteria.",
       "triggers": [
@@ -1008,18 +984,6 @@
       "category": "harness",
       "source_path": ".agents/skills/harness/knowledge-curator",
       "install_path": ".agents/skills/harness/knowledge-curator"
-    },
-    {
-      "name": "mcp",
-      "summary": "Manage Model Context Protocol server configuration.",
-      "triggers": [
-        "MCP",
-        "MCP server",
-        "connector configuration"
-      ],
-      "category": "harness",
-      "source_path": ".agents/skills/harness/mcp",
-      "install_path": ".agents/skills/harness/mcp"
     },
     {
       "name": "pm",
