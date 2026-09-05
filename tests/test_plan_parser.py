@@ -1,3 +1,4 @@
+from pathlib import Path
 from agentos.observability.plan_parser import parse_exec_plan, render_card_body, status_to_board_status
 
 # 실제 exec-plan 파일(2026-07-27-github-projectv2-dashboard-adapter.md)의
@@ -221,3 +222,95 @@ def test_upsert_meta_field_frontmatter():
     # Check if a new field gets inserted properly
     updated_text_new = upsert_meta_field(FRONTMATTER_PLAN_TEXT, "new_field", "some value")
     assert "new_field: some value" in updated_text_new
+
+
+def test_malformed_frontmatter_raises_error():
+    import pytest
+    malformed = "---\nstatus: 구현 계획\n# 제목만 있고 delimiter 닫히지 않음"
+    with pytest.raises(ValueError, match="Invalid plan frontmatter: fix the opening/closing --- delimiters or duplicate keys"):
+        parse_exec_plan(malformed)
+
+
+def test_duplicate_keys_in_frontmatter_raises_error():
+    import pytest
+    dup = "---\nstatus: 구현 계획\nstatus: 다른 상태\n---\n# 제목\n"
+    with pytest.raises(ValueError, match="Invalid plan frontmatter: fix the opening/closing --- delimiters or duplicate keys"):
+        parse_exec_plan(dup)
+
+
+def test_conflicting_metadata_raises_error():
+    import pytest
+    conflict = "---\nstatus: 구현 계획 (리뷰 대기)\n---\n# 제목\n\n> **상태:** 구현 계획 (실행 대기)\n"
+    with pytest.raises(ValueError, match="Conflicting plan metadata: keep the frontmatter field and remove the duplicate body metadata"):
+        parse_exec_plan(conflict)
+
+
+def test_parses_all_canonical_frontmatter_fields():
+    text = """---
+status: 구현 계획 (실행 대기)
+date: 2026-09-04
+reviewed: true
+usability_review_required: true
+user_request: 프론트매터 표준화 요청
+active_agent: antigravity
+active_session: session-123
+dashboard_item_id: item-456
+implementation_started_at: 2026-09-04T12:00:00Z
+implementation_completed_at: 2026-09-04T13:00:00Z
+implementation_duration: 1h
+next_action: Task 1 구현
+---
+
+# 전체 캐노니컬 필드 테스트 계획
+
+**목표:** 모든 표준 필드가 정상 파싱되는지 검증
+"""
+    summary = parse_exec_plan(text)
+    assert summary.title == "전체 캐노니컬 필드 테스트 계획"
+    assert summary.status == "구현 계획 (실행 대기)"
+    assert summary.reviewed == "true"
+    assert summary.active_agent == "antigravity"
+    assert summary.active_session == "session-123"
+    assert summary.dashboard_item_id == "item-456"
+    assert summary.implementation_started_at == "2026-09-04T12:00:00Z"
+    assert summary.implementation_completed_at == "2026-09-04T13:00:00Z"
+    assert summary.implementation_duration == "1h"
+    assert summary.next_action == "Task 1 구현"
+    assert summary.user_request == "프론트매터 표준화 요청"
+
+
+def test_frontmatter_archive_lifecycle(tmp_path):
+    import subprocess
+    root = tmp_path
+    active = root / ".agentos/project/exec-plans/active"
+    active.mkdir(parents=True)
+    fixture = active / "fixture.md"
+    fixture.write_text(
+        "---\nstatus: 구현 계획 (실행 대기)\nreviewed: false\n---\n# Fixture\n\n**목표:** archive contract\n\n**사용자 결과:** archive test\n",
+        encoding="utf-8",
+    )
+    script = Path(".agents/skills/harness/writing-plans/scripts/plan_lifecycle.py").resolve()
+    result = subprocess.run(
+        ["python3", str(script), "set-status", ".agentos/project/exec-plans/active/fixture.md", "완료", "--root", str(root)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert fixture.exists()
+
+    subprocess.run(["python3", str(script), "refresh", "--root", str(root)], check=True, capture_output=True, text=True)
+    assert "active/fixture.md" in (root / ".agentos/project/exec-plans/README.md").read_text(encoding="utf-8")
+
+    result = subprocess.run(
+        ["python3", str(script), "archive", ".agentos/project/exec-plans/active/fixture.md", "--status", "완료", "--root", str(root)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    archived = root / ".agentos/project/exec-plans/archive/fixture.md"
+    assert not fixture.exists() and archived.exists()
+    assert "status: 완료" in archived.read_text(encoding="utf-8")
+
+    subprocess.run(["python3", str(script), "refresh", "--root", str(root)], check=True, capture_output=True, text=True)
+    board = (root / ".agentos/project/exec-plans/README.md").read_text(encoding="utf-8")
+    assert "archive/fixture.md" in board

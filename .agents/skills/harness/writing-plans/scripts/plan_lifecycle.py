@@ -11,10 +11,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = Path(__file__).resolve().parents[5]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from review_artifacts import check_plan
+from agentos.observability.plan_parser import parse_exec_plan, upsert_meta_field
 
 
 STATUS_RE = re.compile(r"^> \*\*상태:\*\* (.+?)(?:\s*<br\s*/?>)?$", re.MULTILINE)
@@ -86,20 +90,26 @@ def parse_plan(path: Path, root: Path) -> PlanEntry | None:
         return None
 
     text = path.read_text(encoding="utf-8")
-    title_match = TITLE_RE.search(text)
-    status_match = STATUS_RE.search(text)
-    user_outcome_match = first_match(USER_OUTCOME_RES, text)
-    progress_match = first_match(PROGRESS_RES, text)
-    if not title_match or not status_match:
+    try:
+        summary = parse_exec_plan(text)
+    except ValueError:
+        raise
+
+    if not summary.title or not summary.status:
         return None
 
+    user_outcome_match = first_match(USER_OUTCOME_RES, text)
+    progress_match = first_match(PROGRESS_RES, text)
+
     rel_path = path.relative_to(root).as_posix()
-    reviewed_header = bool(REVIEWED_RE.search(text))
+    reviewed_header = bool(summary.reviewed and summary.reviewed.strip().lower() == "true")
+    if not reviewed_header:
+        reviewed_header = bool(REVIEWED_RE.search(text))
     review_check = check_plan(root, rel_path) if reviewed_header else None
     return PlanEntry(
         path=rel_path,
-        status=status_match.group(1).strip(),
-        title=title_match.group(1).strip(),
+        status=summary.status,
+        title=summary.title,
         reviewed=bool(review_check and review_check.valid),
         reviewed_header=reviewed_header,
         review_evidence_status=(review_check.status if review_check and not review_check.valid else None),
@@ -410,6 +420,10 @@ def validate_status(status: str) -> None:
 
 
 def replace_status(text: str, status: str) -> str:
+    fm_match = re.search(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.DOTALL | re.MULTILINE)
+    if fm_match:
+        return upsert_meta_field(text, "status", status)
+
     updated, count = STATUS_RE.subn(f"> **상태:** {status}", text, count=1)
     if count != 1:
         raise ValueError("status header not found")

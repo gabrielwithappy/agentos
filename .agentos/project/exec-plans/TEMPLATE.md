@@ -1,20 +1,23 @@
-# [계획 제목] 구현 계획
+---
+status: 구현 계획 (리뷰 대기)
+date: YYYY-MM-DD
+reviewed: false
+usability_review_required: false
+user_request: <사용자 요청 요약 1-2문장 (계획 작성 시작 시점에 작성)>
+active_agent:
+active_session:
+dashboard_item_id:
+implementation_started_at:
+implementation_completed_at:
+implementation_duration:
+next_action:
+---
 
-> **상태:** 리뷰 대기 (완료 후 '완료'로 변경)
-> **작성일:** YYYY-MM-DD<br>
-> reviewed: false (리뷰 증거 파일 생성 전까지 절대 true로 변경 불가)<br>
-> **usability_review_required:** false<br>
-> user_request: <사용자 요청 요약 1-2문장 (계획 작성 시작 시점에 작성)><br>
-> active_agent: <br>
-> active_session: <br>
-> dashboard_item_id: (agentos dashboard sync-plan 실행 시 자동 기록됨)<br>
-> implementation_started_at: <br>
-> implementation_completed_at: <br>
-> implementation_duration: <br>
+# [계획 제목] 구현 계획
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
-> **상태 문구 관용구:** 구현과 자동 검증(테스트 스위트 등)은 모두 끝났지만 사람의 수동 확인(예: 실제 브라우저 로그인, 외부 서비스 UI 조회)만 남은 경우, `> **상태:**` 문구에 정확히 `"(사용자 실사용 확인 대기)"`를 포함시킨다. 이 문구는 `agentos dashboard sync-plan`이 보드 Status를 `In Progress`가 아니라 `Awaiting Verification`으로 정확히 분류하는 데 쓰인다(`agentos/observability/plan_parser.py`의 `status_to_board_status()` 참고).
+> **상태 문구 관용구:** 구현과 자동 검증(테스트 스위트 등)은 모두 끝났지만 사람의 수동 확인(예: 실제 브라우저 로그인, 외부 서비스 UI 조회)만 남은 경우, `status:` 문구에 정확히 `"(사용자 실사용 확인 대기)"`를 포함시킨다. 이 문구는 `agentos dashboard sync-plan`이 보드 Status를 `In Progress`가 아니라 `Awaiting Verification`으로 정확히 분류하는 데 쓰인다(`agentos/observability/plan_parser.py`의 `status_to_board_status()` 참고).
 
 **목표:** 
 - 무엇을 달성하고자 하는가? (사용자 관점)

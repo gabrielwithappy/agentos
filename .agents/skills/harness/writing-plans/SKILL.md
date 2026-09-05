@@ -102,18 +102,32 @@ Required contract:
 
 **모든 새 계획은 한국어가 모국어인 사용자가 빠르게 이해할 수 있도록 한국어로 작성해야 한다.**
 
+- 신규 계획은 YAML frontmatter(`---`)를 canonical metadata 위치로 사용한다.
+- 기존 blockquote(`>`) 형식의 legacy 계획도 수정 없이 정상적으로 파싱되고 lifecycle을 통과할 수 있다. 기존 계획을 수정할 때는 원래 형식을 유지하고, 새 계획만 frontmatter를 사용한다.
+- 빈 `active_agent`, `active_session`, 실행 시각은 각각 `미지정`, `시작 전`으로 표시하며, `next_action`이 비어 있으면 `다음 행동 미지정`으로 표시한다.
 - 제목, 상단 요약, 진행 표, 사용자 결과 표, Task/Milestone 설명은 한국어를 기본값으로 쓴다.
 - 명령 이름, 파일 경로, 제품명, API 이름, protocol, 표준 runtime 이름은 원문을 유지할 수 있다.
-- lifecycle 파서는 기존 계획 호환을 위해 legacy English fields도 읽지만, 새 계획에는 한국어 필드를 우선 사용한다.
+- lifecycle 파서는 기존 계획 호환을 위해 legacy blockquote 및 legacy English fields도 읽지만, 새 계획에는 frontmatter와 한국어 필드를 우선 사용한다.
 
-**모든 계획은 이 헤더로 시작해야 한다:**
+**모든 신규 계획은 이 헤더(Frontmatter)로 시작해야 한다:**
 
 ```markdown
-# [기능명] 구현 계획
+---
+status: 구현 계획 (리뷰 대기)
+date: YYYY-MM-DD
+reviewed: false
+usability_review_required: false
+user_request: <사용자 요청 요약 1-2문장>
+active_agent:
+active_session:
+dashboard_item_id:
+implementation_started_at:
+implementation_completed_at:
+implementation_duration:
+next_action:
+---
 
-> **상태:** [구현 계획 (리뷰 대기) | 구현 계획 (실행 대기) | 진행 중]<br>
-> **작성일:** YYYY-MM-DD<br>
-> reviewed: true<br>
+# [기능명] 구현 계획
 
 > **에이전트 작업자용:** 단계 추적에는 체크박스(`- [ ]`) 문법을 사용한다. 다음 단계로 진행하기 전에 각 단계를 완료한다.
 
@@ -166,12 +180,12 @@ Required contract:
 ```
 
 참고:
-- `reviewed: true`는 Gate 2 통과 후에만 추가한다. `reviewed: false → true`와 상태 header 전이는 lifecycle metadata이며 reviewer semantic snapshot을 무효화하지 않는다.
-- active plan의 Gate 2 PASS는 header text만으로 성립하지 않는다. reviewer artifact가 plan identity, review scope, semantic snapshot/revision, reviewer identity/provenance, timestamp, PASS verdict, reviewer 분리를 증명해야 한다. 전체 plan hash/signature는 protected approval과 audit 증거에서만 필수다.
+- `reviewed: true`는 Gate 2 통과 후에만 추가한다. `reviewed: false → true`와 상태 header/frontmatter 전이는 lifecycle metadata이며 reviewer semantic snapshot을 무효화하지 않는다.
+- active plan의 Gate 2 PASS는 header text만으로 성립하지 않는다. reviewer artifact가 plan identity, review scope, semantic snapshot/revision, reviewer identity/provenance, timestamp, PASS verdict, reviewer 분리를 증명해야 한다. 전체 plan hash/signature는 audit 증거에서만 필수다.
 - execution plan은 active plan이므로 `설계 문서 (구현 미정)` 상태로 저장하지 않는다
-- active plan의 `> **상태:** 완료`는 구현 검증과 completed-plan closeout이 끝난 뒤 사용할 수 있다. 완료 상태만으로 archive하지 않는다.
+- active plan의 `status: 완료` 또는 legacy `> **상태:** 완료`는 구현 검증과 completed-plan closeout이 끝난 뒤 사용할 수 있다. 완료 상태만으로 archive하지 않는다.
 - `통합됨`, `보관됨` 상태는 archive 이동 직전 또는 archive 내부 문서에만 사용한다
-- plan metadata를 blockquote로 쓸 때는 각 metadata 줄 끝에 `<br>` hard line break를 넣는다. 빈 줄이나 `<br>` 없는 연속 blockquote metadata는 Markdown 렌더러가 한 문단으로 접을 수 있으므로 새 계획에 사용하지 않는다.
+- legacy blockquote 형식을 쓸 때는 각 metadata 줄 끝에 `<br>` hard line break를 넣는다.
 - `사용자 결과`는 기술 산출물이 아니라 사용자가 받는 최종 결과를 적는다. 기존 계획의 `User-Visible Outcome`은 legacy alias로만 허용한다
 - `진행 상태`와 `진행 스냅샷`은 새 UI나 progress DB가 아니라 plan Markdown의 사용자 진행 요약 계약이다. 기존 계획의 `Progress`/`Progress Snapshot`은 legacy alias로만 허용한다
 - `사용자 결과 요약`과 `사용자 진행 계획`은 reader-first presentation contract이며 approval, protected path, reviewer authority, prompt hierarchy를 바꾸지 않는다. 기존 계획의 `User Result Brief`/`User Progress Plan`은 legacy alias로만 허용한다

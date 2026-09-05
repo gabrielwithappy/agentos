@@ -23,6 +23,7 @@ class ExecPlanSummary:
     implementation_started_at: str
     implementation_completed_at: str
     implementation_duration: str
+    next_action: str = ""
 
 
 def _find_h1(text: str) -> str:
@@ -62,17 +63,66 @@ def _find_last_review_entry(text: str) -> str:
     return entries[-1] if entries else ""
 
 
+def extract_frontmatter(text: str) -> tuple[dict[str, str] | None, str]:
+    """Extract scalar YAML frontmatter and validate delimiter/key uniqueness/conflicts."""
+    stripped = text.lstrip()
+    if not stripped.startswith("---"):
+        return None, text
+
+    match = re.match(r"^\s*---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.DOTALL)
+    if not match:
+        raise ValueError(
+            "Invalid plan frontmatter: fix the opening/closing --- delimiters or duplicate keys, then rerun plan_lifecycle.py refresh."
+        )
+
+    raw_fm = match.group(1)
+    body = text[match.end():]
+
+    fm_data: dict[str, str] = {}
+    for line in raw_fm.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if ":" not in line:
+            continue
+        key, val = line.split(":", 1)
+        key = key.strip()
+        val = val.strip()
+        if key in fm_data:
+            raise ValueError(
+                "Invalid plan frontmatter: fix the opening/closing --- delimiters or duplicate keys, then rerun plan_lifecycle.py refresh."
+            )
+        fm_data[key] = val
+
+    # Check for duplicate conflicting metadata in body
+    conflicting = False
+    if "status" in fm_data and re.search(r"^>\s*\*\*상태:\*\*", body, re.MULTILINE):
+        conflicting = True
+    elif "reviewed" in fm_data and re.search(r"^>\s*reviewed:", body, re.MULTILINE):
+        conflicting = True
+    elif "usability_review_required" in fm_data and re.search(
+        r"^>\s*(?:\*\*usability_review_required:\*\*|usability_review_required:)", body, re.MULTILINE
+    ):
+        conflicting = True
+    else:
+        for k in fm_data:
+            if re.search(rf"^>\s*{re.escape(k)}:", body, re.MULTILINE):
+                conflicting = True
+                break
+
+    if conflicting:
+        raise ValueError(
+            "Conflicting plan metadata: keep the frontmatter field and remove the duplicate body metadata, then rerun plan_lifecycle.py refresh."
+        )
+
+    return fm_data, body
+
+
 def parse_exec_plan(text: str) -> ExecPlanSummary:
-    fm_match = re.search(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.DOTALL | re.MULTILINE)
-    fm_data = {}
-    if fm_match:
-        for line in fm_match.group(1).split("\n"):
-            if ":" in line:
-                key, val = line.split(":", 1)
-                fm_data[key.strip()] = val.strip()
+    fm_data, body = extract_frontmatter(text)
 
     def get_meta(key: str, old_label: str = None) -> str:
-        if fm_match and key in fm_data:
+        if fm_data is not None and key in fm_data:
             return fm_data[key]
         if old_label:
             return _find_meta_line(text, old_label)
@@ -95,6 +145,7 @@ def parse_exec_plan(text: str) -> ExecPlanSummary:
         implementation_started_at=get_meta("implementation_started_at"),
         implementation_completed_at=get_meta("implementation_completed_at"),
         implementation_duration=get_meta("implementation_duration"),
+        next_action=get_meta("next_action"),
     )
 
 
@@ -121,6 +172,11 @@ def upsert_meta_field(text: str, key: str, value: str) -> str:
         return text[:fm_match.start(1)] + new_block + text[fm_match.end(1):]
 
     # 2. Fallback to old blockquote format
+    if key == "status":
+        status_re = re.compile(r"^>\s*\*\*상태:\*\*.*$", re.MULTILINE)
+        if status_re.search(text):
+            return status_re.sub(f"> **상태:** {value}<br>", text, count=1)
+
     field_re = re.compile(rf"^>\s*{re.escape(key)}:\s*.*$", re.MULTILINE)
     new_line = f"> {key}: {value}<br>"
     if field_re.search(text):
